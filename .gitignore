@@ -6,3 +6,4 @@ disk.img
 deprecatos.iso
 ovmf_vars.fd
 slave.img
+.env
