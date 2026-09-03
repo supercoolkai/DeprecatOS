@@ -1,1 +1,3 @@
 hello!! if you're reading this, the readme is still in progress, please be patient...
+
+`firmware/` contains OVMF UEFI firmware from [TianoCore EDK2](https://github.com/tianocore/edk2), licensed under BSD-2-Clause-Patent.
