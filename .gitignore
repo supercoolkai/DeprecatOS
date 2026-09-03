@@ -1,0 +1,8 @@
+.misc
+build/*
+iso/*
+disk_root/*
+disk.img
+deprecatos.iso
+ovmf_vars.fd
+slave.img
