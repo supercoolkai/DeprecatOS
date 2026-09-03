@@ -11,6 +11,6 @@ qemu-system-x86_64 \
   -drive if=pflash,format=raw,file=ovmf_vars.fd \
   -drive file=disk.img,format=raw,if=ide,index=0 \
   -drive file=slave.img,format=raw,if=ide,index=1 \
-  -cdrom x86_32_os.iso \
+  -cdrom deprecatos.iso \
   -serial stdio \
   -s -S
