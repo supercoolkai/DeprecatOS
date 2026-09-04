@@ -1,14 +1,14 @@
+## **purpose**
+direct read and write capabilities for ATA ports (PIO currently, move to DMA soon)
+poll ports
+soon to be more (i think)
+
 ## **important ports**
    #### drive select IO port: 0x1F6
    #### Sectorcount: 0x1F2 
    #### LBAlo, LBAmid, LBAhi: 0x1F3-0x1F5 
    #### Command IO Port / status port: 0x1F7
    #### Data port: 0x1F0
-
-## **purpose**
-direct read and write capabilities for ATA ports (PIO currently, move to DMA soon)
-poll ports
-soon to be more (i think)
 
 ## **global variables**
 #### **identify_values**: a table containing all the values returned from *ata_identify*
