@@ -2,7 +2,7 @@ Hello!! this is my current passion project, DeprecatOS.
 
 Any documentation about any specific features are in docs/
 
-All `#define` macros are shown in `docs/terms/definedTerms.md`
+All `#define` macros are shown in `docs/definedTerms.md`
 
 ## features
 

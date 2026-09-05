@@ -4,7 +4,7 @@
 link between ring 3 and ring 0, essentially the gateway between the userland and kernel. all syscalls are housed here
 
 ## global variables
-**scratch:** a buffer array of size **BIT_32_PER_BLK** (see `docs/terms/definedTerms.md`)
+**scratch:** a buffer array of size **BIT_32_PER_BLK** (see `docs/definedTerms.md`)
 
 ## misc functions
 
