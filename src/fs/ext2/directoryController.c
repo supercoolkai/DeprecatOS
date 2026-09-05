@@ -8,10 +8,6 @@
 
 static uint16_t buf[BLOCK_SIZE / 2 * INODE_BLK_PTR_AMT];
 
-// Guys remember that 
-// curr_entry_size 0 means infinite  loop 
-// Not this guys job tho
-// This guy dumb
 static struct ext2_directory_entry *return_next_dir_entry(uint16_t *buf, uint32_t *pos)
 {
   struct ext2_directory_entry *entry = (struct ext2_directory_entry *)(((uint8_t *)buf) + *pos);
