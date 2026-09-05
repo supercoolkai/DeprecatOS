@@ -6,7 +6,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-static uint16_t buf[BLOCK_SIZE / 2 * INODE_BLK_PTR_AMT];
+static uint16_t blk_buf[BLOCK_SIZE / 2 * INODE_BLK_PTR_AMT];
 
 static struct ext2_directory_entry *return_next_dir_entry(uint16_t *buf, uint32_t *pos)
 {
@@ -148,8 +148,8 @@ bool lookup_path(const char *path, uint32_t *out)
     if ((ino.type_and_perms_lo & NO_PERMISSION_MASK) != INODE_DIR_TYPE)
       return false;
 
-    read_inode(&ino, buf);
-    if (!lookup(buf, name, &curr_inode_num, ino.size_lo))
+    read_inode(&ino, blk_buf);
+    if (!lookup(blk_buf, name, &curr_inode_num, ino.size_lo))
       return false;
 
     ind = j+1;
