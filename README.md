@@ -2,6 +2,8 @@ Hello!! this is my current passion project, DeprecatOS.
 
 Any documentation about any specific features are in docs/
 
+All `#define` macros are shown in `docs/terms/definedTerms.md`
+
 ## features
 
 ### boot & core
@@ -17,10 +19,10 @@ Any documentation about any specific features are in docs/
 ### processes & userland
 - ring 3 userland with TSS setup
 - round-robin scheduler with a pqueue
-- syscall interface (for full list see docs/userland/syscall.md)
+- syscall interface (for full list see `docs/userland/syscall.md`)
 
 ### filesystem
-- read-only ext2 support (for full feature list see docs/fs/ext2/README.md)
+- read-only ext2 support (for full feature list see `docs/fs/ext2/README.md`)
 
 ### drivers
 - ATA disk driver (for full feature list see docs/drivers/disk/ata)
