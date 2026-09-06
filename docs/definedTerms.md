@@ -42,6 +42,8 @@
 
 #### **HEXPRINTER_H** *(src/util/hex/hexPrinter.h)*
 
+#### **IDT_CONTROLLER_H** *(src/interrupts/idtController.h)*
+
 #### **INODE_BLK_PTR_AMT** *(src/fs/ext2/inode.h)*
 
 #### **INODE_DIR_TYPE** *(src/fs/ext2/directoryController.h, user/shell/shell.c)*
@@ -74,13 +76,13 @@
 
 #### **PAGING_H** *(src/memory/paging/paging.h)*
 
-#### **PIC1_CMD** *(src/drivers/timer/timerController.c)*
+#### **PIC1_CMD** *(src/interrupts/idtController.h)*
 
-#### **PIC1_DATA** *(src/drivers/timer/timerController.c)*
+#### **PIC1_DATA** *(src/interrupts/idtController.h)*
 
-#### **PIC2_CMD** *(src/drivers/timer/timerController.c)*
+#### **PIC2_CMD** *(src/interrupts/idtController.h)*
 
-#### **PIC2_DATA** *(src/drivers/timer/timerController.c)*
+#### **PIC2_DATA** *(src/interrupts/idtController.h)*
 
 #### **PIT_CH0** *(src/drivers/timer/timerController.c)*
 

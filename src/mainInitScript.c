@@ -1,3 +1,4 @@
+#include "interrupts/idtController.h"
 #include "drivers/timer/timerController.h"
 #include "drivers/serial/serialController.h"
 #include "drivers/fb/fbController.h"
@@ -17,6 +18,8 @@
 void mainInitScript(MBIInfo *info)
 {
   // controller init
+  idt_init();
+
   timer_init();
 
   serial_init();
