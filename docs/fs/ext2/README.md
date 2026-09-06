@@ -6,7 +6,7 @@
   - `ext2_directory_entry`: a wrapper for the ext2_inode struct, containing an inode_n, the size of that inode, the length of its name (the hi byte can sometimes be the type as well), and its name. 
   - `ext2_superblock`: bytes 1023 - 2047 of block 0. contains general information about the filesystem, including inode count, block count, blocks per group, inodes per group, etc.
 
-## controllers
+## overview
 
 ### `directoryController`
-as the name says, it is the main controller of directories on the kernel side. contains the tools for resolving paths, looking up dirs, etc. for more in-depth information, refer to `docs/fs/ext2/directoryController.md`
+as the name says, it is the main controller of directories on the kernel side. contains the tools for resolving paths, looking up dirs, etc.

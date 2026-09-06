@@ -4,7 +4,7 @@ Any documentation about any specific features are in docs/
 
 All `#define` macros are shown in `docs/definedTerms.md`
 
-## features
+## overview
 
 ### boot & core
 - x86-32 kernel, boot via GRUB multiboot from an ISO. built for QEMU, never tested on real hardware.
@@ -19,10 +19,10 @@ All `#define` macros are shown in `docs/definedTerms.md`
 ### processes & userland
 - ring 3 userland with TSS setup
 - round-robin scheduler with a pqueue
-- syscall interface (for full list see `docs/userland/syscall.md`)
+- syscall interface
 
 ### filesystem
-- read-only ext2 support (for full feature list see `docs/fs/ext2/README.md`)
+- read-only ext2 support
 
 ### drivers
 - ATA disk driver (for full feature list see docs/drivers/disk/ata)
@@ -30,6 +30,9 @@ All `#define` macros are shown in `docs/definedTerms.md`
 - PIT timer (ticks)
 - PS/2 keyboard driver
 - serial port driver
+
+### interrupts
+- IDT management 
 
 ### shell
 - standalone shell with crt0 and syscall stubs (for full command list see docs/userland/shell.md)
