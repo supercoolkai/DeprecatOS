@@ -1,5 +1,11 @@
 # Drivers
 
+
+## structs
+
+### `FBChar` in `src/drivers/fb/fbController.h`:
+primitive framebuffer character pairing a char with a color
+
 ## overview
 
 ### `serialController`
