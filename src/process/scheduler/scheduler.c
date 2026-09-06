@@ -1,7 +1,7 @@
 #include "process/scheduler/scheduler.h"
 #include "process/queue/processQueue.h"
 #include "memory/heap/kernelHeap.h"
-#include "process/cpu/tssController.h"
+#include "gdt/tssController.h"
 #include "drivers/fb/fbController.h"
 #include "memory/paging/paging.h"
 #include "util/hex/hexPrinter.h"

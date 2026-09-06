@@ -7,7 +7,6 @@
 typedef struct {
   uint32_t esp;
   uint32_t stack_addr;
-
   uint32_t malloc_addr;
 } Process;
 

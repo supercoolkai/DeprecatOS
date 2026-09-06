@@ -9,7 +9,7 @@
 #include "memory/paging/paging.h"
 #include "memory/heap/kernelHeap.h"
 #include "process/scheduler/scheduler.h"
-#include "process/cpu/tssController.h"
+#include "gdt/tssController.h"
 #include "userland/syscall/syscallController.h"
 #include "userland/userland.h"
 #include "drivers/disk/ata.h"

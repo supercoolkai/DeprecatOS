@@ -1,4 +1,4 @@
-#include "process/cpu/tssController.h"
+#include "gdt/tssController.h"
 #include <stdint.h>
 
 static tssInfo info;
