@@ -7,6 +7,7 @@
 primitive framebuffer character pairing a char with a color
 
 ## overview
+a bucket of software which communicates directly to the hardware
 
 ### `serialController`
 a driver to write and receive characters from serial port `COM1`

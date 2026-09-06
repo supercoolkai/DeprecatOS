@@ -15,6 +15,7 @@ a wrapper for the ext2_inode struct, containing an inode_n, the size of that ino
 bytes 1023 - 2047 of block 0. contains general information about the filesystem, including inode count, block count, blocks per group, inodes per group, etc.
 
 ## overview
+controls the `ext2_*` structs and the overall ext2 filesystem 
 
 ### `directoryController`
 as the name says, it is the main controller of directories on the kernel side. contains the tools for resolving paths, looking up dirs, etc.

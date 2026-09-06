@@ -8,6 +8,7 @@ represents one process, the fields of which being:
  - `uint32_t malloc_addr`: the malloc address of the process
 
 ## overview 
+contains all things to do with processes in the kernel. currently uses a round-robin scheduling algorithm
 
 ### `processQueue`
 a queue which takes `Process` structs. max size of 256

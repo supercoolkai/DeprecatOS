@@ -23,6 +23,7 @@ a header representing a block (a dynamic amount of allocated memory), the fields
  - `uint32_t is_free`: a "bool" representing whether or not it is free. 1 = free, 0 = used
 
 ## overview
+contains all things to do with memory management in the kernel.
 
 ### `memoryMap`:
 manages the memory map, currently only used in the `frameAllocator` to mark everything as free in `frame_alloc_init`
