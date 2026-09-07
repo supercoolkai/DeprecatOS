@@ -33,8 +33,8 @@ on drive `drive`, readies the ports and makes sure that the hardware is compatib
 ### `void ata_read48(uint8_t drive, uint64_t lba, uint16_t count, uint16_t *buf)`
 reads `count` sectors from drive `drive` and LBA `lba` returns these values to `buf`
 
-### `void ata_write48(uint8_t drive, uint64_t lba, uint16_t count)`
-writes `count` sectors to drive `drive` and LBA `lba`.
+### `void ata_write48(uint8_t drive, uint64_t lba, uint16_t count, uint16_t *buf)`
+writes `count` sectors from `buf` to drive `drive` and LBA `lba`.
 
 ### `void ata_init(void)`
 calls `ata_identify` for both ports, and initializes global variables **lba_sector_count** and **supports_read48**
