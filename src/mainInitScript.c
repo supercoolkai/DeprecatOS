@@ -1,4 +1,4 @@
-#include "interrupts/idtController.h"
+#include "idt/idtController.h"
 #include "drivers/timer/timerController.h"
 #include "drivers/serial/serialController.h"
 #include "drivers/fb/fbController.h"

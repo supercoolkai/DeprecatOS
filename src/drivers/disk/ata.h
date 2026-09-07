@@ -11,7 +11,7 @@
 
 bool ata_identify(uint8_t drive);
 void ata_read48(uint8_t drive, uint64_t lba, uint16_t count, uint16_t *buf);
-void ata_write48(uint8_t drive, uint64_t lba, uint16_t count, uint16_t *buf);
+void ata_write48(uint8_t drive, uint64_t lba, uint16_t count);
 void ata_init(void);
 
 #endif

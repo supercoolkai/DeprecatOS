@@ -18,24 +18,24 @@ soon to be more (i think)
 #### **lba_sector_count**: a count of the amount of sectors and valid LBAs there are. used for bounds checks
 
 ## **function analysis**
-### `poll()`
+### `void poll(void)`
 polls the port till it either returns an error or is ready for rw actions
 
-### `wait_bsy_clear()`
+### `static void wait_bsy_clear(void)`
 basically *poll* but it only waits for BSY not DRQ
 
-### `wait_100_ns()`
+### `static void wait_100_ns(void)`
 self explanatory, waits 100 nanoseconds
 
-### `ata_identify()`
-readies the ports and makes sure that the hardware is compatible with the ATA driver. also returns the 256 uint16_t values returned from the data port and puts it into **identify_values** 
+### `bool ata_identify(uint8_t drive)`
+on drive `drive`, readies the ports and makes sure that the hardware is compatible with the ATA driver. also returns the 256 uint16_t values returned from the data port and puts it into global table `identify_values` 
 
-### `ata_read48()`
-reads **count** sectors from drive **drive** and LBA **lba**
+### `void ata_read48(uint8_t drive, uint64_t lba, uint16_t count, uint16_t *buf)`
+reads `count` sectors from drive `drive` and LBA `lba` returns these values to `buf`
 
-### `ata_write48()`
-writes **count** sectors to drive **drive** and LBA **lba**
+### `void ata_write48(uint8_t drive, uint64_t lba, uint16_t count)`
+writes `count` sectors to drive `drive` and LBA `lba`.
 
-### `ata_init()`
+### `void ata_init(void)`
 calls `ata_identify` for both ports, and initializes global variables **lba_sector_count** and **supports_read48**
 

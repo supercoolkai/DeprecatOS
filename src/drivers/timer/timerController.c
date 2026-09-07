@@ -1,7 +1,7 @@
 #include <stdint.h>
 #include "portio.h"
 #include "drivers/timer/timerController.h"
-#include "interrupts/idtController.h"
+#include "idt/idtController.h"
 #include "process/scheduler/scheduler.h"
 
 #define TARGET_HZ 1000u

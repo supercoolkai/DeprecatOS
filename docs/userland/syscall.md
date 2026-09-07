@@ -12,6 +12,7 @@ link between ring 3 and ring 0, essentially the gateway between the userland and
 attempts to lookup the given path using `lookup_path()` and returns the given inode_n if it succeeds.
 
 ## syscalls
+do note that all syscalls return `(uint32_t) frame`
 
 ### `sys_write_char(char c):`
 write a given char from register `ebx` onto both serial and framebuffer with color **WHITE**

@@ -36,19 +36,27 @@
 
 #### **FBCONTROLLER_H** *(src/drivers/fb/fbController.h)*
 
+#### **FIRST_IRQ_STUB_VECTOR** *(src/idt/idtController.c)*
+
 #### **FRAMEALLOCATOR_H** *(src/memory/frameAlloc/frameAllocator.h)*
+
+#### **GDT_INDEX_1** in *(src/idt/idtController.c)*
 
 #### **GREEN** *(src/drivers/fb/fbController.h, user/shell/shell.c)*
 
 #### **HEXPRINTER_H** *(src/util/hex/hexPrinter.h)*
 
-#### **IDT_CONTROLLER_H** *(src/interrupts/idtController.h)*
+#### **IDT_CONTROLLER_H** *(src/idt/idtController.h)*
+
+#### **IDT_ENTRY_AMT** *(src/idt/idtController.c)*
 
 #### **INODE_BLK_PTR_AMT** *(src/fs/ext2/inode.h)*
 
 #### **INODE_DIR_TYPE** *(src/fs/ext2/directoryController.h, user/shell/shell.c)*
 
 #### **INODE_H** *(src/fs/ext2/inode.h)*
+
+#### **INTERRUPT_GATE_TYPE** *(src/idt/idtController.c)*
 
 #### **KERNEL_CEILING** *(src/memory/paging/paging.h)*
 
@@ -76,13 +84,13 @@
 
 #### **PAGING_H** *(src/memory/paging/paging.h)*
 
-#### **PIC1_CMD** *(src/interrupts/idtController.h)*
+#### **PIC1_CMD** *(src/idt/idtController.h)*
 
-#### **PIC1_DATA** *(src/interrupts/idtController.h)*
+#### **PIC1_DATA** *(src/idt/idtController.h)*
 
-#### **PIC2_CMD** *(src/interrupts/idtController.h)*
+#### **PIC2_CMD** *(src/idt/idtController.h)*
 
-#### **PIC2_DATA** *(src/interrupts/idtController.h)*
+#### **PIC2_DATA** *(src/idt/idtController.h)*
 
 #### **PIT_CH0** *(src/drivers/timer/timerController.c)*
 

@@ -2,7 +2,7 @@
 #include <stdint.h>
 #include "drivers/serial/serialController.h"
 #include "drivers/fb/fbController.h"
-#include "interrupts/idtController.h"
+#include "idt/idtController.h"
 #include "util/hex/hexPrinter.h"
 #include "memory/paging/paging.h"
 #include "process/scheduler/scheduler.h"

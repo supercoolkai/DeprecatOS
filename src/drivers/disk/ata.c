@@ -147,7 +147,7 @@ void ata_read48(uint8_t drive, uint64_t lba, uint16_t count, uint16_t *buf)
   }
 }
 
-void ata_write48(uint8_t drive, uint64_t lba, uint16_t count, uint16_t *buf)
+void ata_write48(uint8_t drive, uint64_t lba, uint16_t count)
 {
   if (lba + count > lba_sector_count) {
     panic("KERNEL PANIC: LBA OUT OF BOUNDS");

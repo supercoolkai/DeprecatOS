@@ -1,7 +1,7 @@
 #include "userland/syscall/syscallController.h"
 #include <stdint.h>
 #include "drivers/timer/timerController.h"
-#include "interrupts/idtController.h"
+#include "idt/idtController.h"
 #include "drivers/serial/serialController.h"
 #include "drivers/fb/fbController.h"
 #include "memory/paging/paging.h"

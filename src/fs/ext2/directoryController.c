@@ -59,7 +59,7 @@ static bool comp_name(const uint8_t *a, uint8_t len, const char *b)
   return true;
 }
 
-bool lookup(uint16_t *buf, const char *name, uint32_t *out, uint32_t size)
+static bool lookup(uint16_t *buf, const char *name, uint32_t *out, uint32_t size)
 {
   uint32_t cursor = 0;
   
