@@ -4,6 +4,9 @@ Any documentation about any specific features are in docs/
 
 All `#define` macros are shown in `docs/definedTerms.md`
 
+## kernel design
+i try to make this project what i call an "ultra-monolithic kernel". an ultra-monolithic kernel is an extreme approach to the standard monolithic kernel architecture, where although many popular kernel (like BSD, Linux, etc) are technically monolithic, they are highly modular. i dont like that, so in this architecture, everything that *can* be (reasonably) implemented kernel-side *is* kernel-side.
+
 ## overview
 
 ### boot & core
