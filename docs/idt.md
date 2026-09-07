@@ -1,9 +1,11 @@
 # Interrupt Descriptor Table
 
 ## global variables
-#### `idt_entry idt[IDT_ENTRY_AMT]`: the global idt, use `idt_set_gate` and `idt_set_gate_type` to set an `idt_entry` inside of it.
+#### `idt_entry idt[IDT_ENTRY_AMT]`:
+the global idt, use `idt_set_gate` and `idt_set_gate_type` to set an `idt_entry` inside of it.
 
-#### `idt_ptr idtp`: a pointer to the idt's address, loaded into the IDTR at the end of `idt_init()`
+#### `idt_ptr idtp`:
+a pointer to the idt's address, loaded into the IDTR at the end of `idt_init()`
 
 ## structs
 

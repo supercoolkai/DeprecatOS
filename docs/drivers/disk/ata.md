@@ -13,9 +13,13 @@ soon to be more (i think)
    #### Data port: 0x1F0
 
 ## **global variables**
-#### `static uint16_t identify_values[256]`: a table containing all the values returned from `ata_identify`
-#### `static bool supports_read48`: a bool value containing the value of whether or not the hardware supports `ata_read/write48` 
-#### `static uint64_t lba_sector_count`: a count of the amount of sectors and valid LBAs there are. used for bounds checks
+#### `static uint16_t identify_values[256]`: 
+a table containing all the values returned from `ata_identify`
+
+#### `static bool supports_read48`:
+a bool value containing the value of whether or not the hardware supports `ata_read/write48` 
+#### `static uint64_t lba_sector_count`:
+a count of the amount of sectors and valid LBAs there are. used for bounds checks
 
 ## **function analysis**
 ### `void poll(void)`

@@ -1,7 +1,8 @@
 # Global Descriptor Table 
 
 ## global variables
-#### `tssInfo info`: the global information for the tss. can be modified using `tss_set_esp()`
+#### `tssInfo info`:
+the global information for the tss. can be modified using `tss_set_esp()`
 
 ## structs
 
