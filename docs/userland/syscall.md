@@ -4,8 +4,7 @@
 link between ring 3 and ring 0, essentially the gateway between the userland and kernel. all syscalls are housed here
 
 ## global variables
-**scratch:** a buffer array of size **BIT_32_PER_BLK** (see `docs/definedTerms.md`)
-
+#### `static uint32_t scratch[BIT_32_PER_BLK]`: a buffer array used in numerous syscalls, most notably `sys_read_chunk()`
 ## misc functions
 
 ### `resolve_dir(const char *s)`

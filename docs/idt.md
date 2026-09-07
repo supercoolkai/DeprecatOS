@@ -1,9 +1,14 @@
 # Interrupt Descriptor Table
 
+## global variables
+#### `idt_entry idt[IDT_ENTRY_AMT]`: the global idt, use `idt_set_gate` and `idt_set_gate_type` to set an `idt_entry` inside of it.
+
+#### `idt_ptr idtp`: a pointer to the idt's address, loaded into the IDTR at the end of `idt_init()`
+
 ## structs
 
 ### `idt_entry` in `src/idt/idtController.c`:
-describes an interrupt descriptor entry, fields being:
+describes an interrupt descriptor entry (much like `gdt_entry` in the gdt) fields being:
  - `uint16_t offset_low`: the low 16 bits of the offset
  - `uint16_t selector`: the code segment selector for the gdt
  - `uint8_t zero`: unused

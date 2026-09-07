@@ -1,5 +1,8 @@
 # Exceptions
 
+## global variables
+#### `static const char *exc_names[32]`: a list of all the exception names 
+
 ## overview
 an exception handler powered by idt gates. automatically catches errors and announces them for better debugging. alternatively custom kernel panics are able to be called as well
 
