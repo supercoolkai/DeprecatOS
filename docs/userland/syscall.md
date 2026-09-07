@@ -6,10 +6,20 @@ link between ring 3 and ring 0, essentially the gateway between the userland and
 ## global variables
 #### `static uint32_t scratch[BIT_32_PER_BLK]`:
 a buffer array used in numerous syscalls, most notably `sys_read_chunk()`
-## misc functions
 
-### `resolve_dir(const char *s)`
+#### `static uint32_t (*syscall_table[])(uint32_t *)`:
+a table of syscalls which can be called through entering a syscall's index in the table alongside a frame.
+
+## function analysis (excludes syscalls)
+
+### `static uint32_t resolve_dir(const char *s)`
 attempts to lookup the given path using `lookup_path()` and returns the given inode_n if it succeeds.
+
+### `void syscall_init(void)`
+sets up the IDT gate at `SYSCALL_VECTOR_NUMBER` with attribute bytes `0xEE` (present, ring 3, type interrupt gate), and stub `syscall_stub`
+
+### `uint32_t syscall_handler(uint32_t esp)`
+called by a syscall IRQ, if the function # is valid then it calls/returns the function at `syscall_table[function_n]` with the provided frame as the parameter
 
 ## syscalls
 do note that all syscalls return `(uint32_t) frame`

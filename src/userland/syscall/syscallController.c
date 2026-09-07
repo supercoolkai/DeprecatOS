@@ -314,7 +314,6 @@ void syscall_init(void)
 
 uint32_t syscall_handler(uint32_t esp)
 {
-
   uint32_t *frame = (uint32_t *)esp;
 
   uint32_t eax = frame[7];

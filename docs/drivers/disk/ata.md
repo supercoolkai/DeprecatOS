@@ -1,9 +1,4 @@
-# **ATA Driver**
-
-## **purpose**
-direct read and write capabilities for ATA ports (PIO currently, move to DMA soon)
-poll ports
-soon to be more (i think)
+#ATA driver
 
 ## **important ports**
    #### drive select IO port: 0x1F6
@@ -20,6 +15,12 @@ a table containing all the values returned from `ata_identify`
 a bool value containing the value of whether or not the hardware supports `ata_read/write48` 
 #### `static uint64_t lba_sector_count`:
 a count of the amount of sectors and valid LBAs there are. used for bounds checks
+
+## overview
+direct read and write capabilities for ATA ports (PIO currently, move to DMA soon)
+poll ports
+soon to be more (i think)
+
 
 ## **function analysis**
 ### `void poll(void)`
