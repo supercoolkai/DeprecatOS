@@ -17,5 +17,5 @@ bytes 1023 - 2047 of block 0. contains general information about the filesystem,
 ## overview
 controls the `ext2_*` structs and the overall ext2 filesystem 
 
-### `directoryController`
+### `directory`
 as the name says, it is the main controller of directories on the kernel side. contains the tools for resolving paths, looking up dirs, etc.
