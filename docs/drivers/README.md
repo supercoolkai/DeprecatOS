@@ -6,6 +6,10 @@
 ### `FBChar` in `src/drivers/fb/fbController.h`:
 primitive framebuffer character pairing a char with a color
 
+## enums
+### `KeyCode` in `src/drivers/keyboard/keyboard.h`:
+primitive key enum, contains all keys on standard keyboard.
+
 ## overview
 a bucket of software which communicates directly to the hardware
 
