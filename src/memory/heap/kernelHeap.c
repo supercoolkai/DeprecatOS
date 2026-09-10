@@ -13,10 +13,10 @@ static uint32_t heap_end;
 
 void heap_init(void)
 {
-  map_kernel_page(0x400000, alloc_frame(), PAGE_PRESENT | PAGE_RW);
-
   heap_start = 0x400000;
   heap_end = 0x401000;
+
+  map_kernel_page(heap_start, alloc_frame(), PAGE_PRESENT | PAGE_RW);
 
   BlockHeader *h = (BlockHeader*)heap_start;
   h->size = 4096 - sizeof(BlockHeader);
