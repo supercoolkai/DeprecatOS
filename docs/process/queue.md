@@ -5,7 +5,7 @@
 the queue containing 256 `Process`es max, like `RingBuffer`'s array.
 
 #### `static unsigned char head`:
-the "top" of the queue, one above the last `Process` placed.
+the "top" of the queue, the last `Process` placed.
 
 #### `static unsigned char tail`:
 the "bottom" of the queue, the oldest `Process` on the queue and the first to get `pop()`ed
