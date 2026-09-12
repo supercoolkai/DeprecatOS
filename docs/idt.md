@@ -1,5 +1,40 @@
 # Interrupt Descriptor Table
 
+## data structure tables / related information
+
+### IDT entry format
+
+src: `src/idt/idtController.c`: `struct idt_entry`, `packed`, 8 bytes
+
+a tabular representation of the explanation in the **structs** section:
+
+| Off | Field | Type | Notes |
+|---|---|---|---|
+| 0 | `offset_low` | `uint16_t` | handler address bits 15:0 |
+| 2 | `selector` | `uint16_t` | code selector, always `0x08` |
+| 4 | `zero` | `uint8_t` | always 0 |
+| 5 | `type_attr` | `uint8_t` | gate type + DPL + present (table below) |
+| 6 | `offset_high` | `uint16_t` | handler address bits 31:16 |
+
+### IDT gate types & layout
+
+src: `src/idt/idtController.c`, `src/userland/syscall/syscallController.h`
+
+`type_attr` byte decode:
+
+| type_attr | P | DPL | gate | where |
+|---|---|---|---|---|
+| `0x8E` | 1 | 0 | 32-bit interrupt gate | default for every vector + IRQ/exception stubs |
+| `0xEE` | 1 | 3 | 32-bit interrupt gate | syscall vector `0x80` only (DPL 3 so ring 3 can `int 0x80`) |
+
+IDT gate vectors (occupancy map):
+
+| vector | handler | note |
+|---|---|---|
+| `0x00`–`0xFF` | `default_isr_stub` | all 256 filled first (`cli; hlt`) |
+| `0x21` (`FIRST_IRQ_STUB_VECTOR+1`) | `irq1_stub` | keyboard IRQ 1 |
+| `0x80` (`SYSCALL_VECTOR_NUMBER`) | `syscall_stub` | `int 0x80` gate, DPL 3 |
+
 ## global variables
 #### `idt_entry idt[IDT_ENTRY_AMT]`:
 the global idt, use `idt_set_gate` and `idt_set_gate_type` to set an `idt_entry` inside of it.
