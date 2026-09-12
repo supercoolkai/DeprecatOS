@@ -1,5 +1,40 @@
 # Scheduler
 
+## data structure tables / related information
+
+### "forged" task stack frame
+
+src: `src/process/scheduler/scheduler.c` (`create_process` / `create_user_process`), consumed by `src/boot.s` `irq0_stub`
+
+for each new brand new task, there must be an interrupt stack. so, to force the system to accept it, we "forge" a stack to look exactly like one from an interrupt, so that the ASM switch code's `popa; iret` "resumes" it into `entry`. let `frame[]` be our forged stack frame. `p->esp` points at `frame[0]`. there are two types of these frames:
+ - kernel frame: 44 bytes (11 dwords)
+ - user frame: 52 bytes (13 dwords: `iret` to ring 3 also pops `esp` and `ss`)
+
+order is fixed by `irq0_stub`: `pusha` (8 regs) then the CPU's iret frame. `pusha` stores high->low, so in memory low->high it's EDI...EAX
+
+a table for the forged frame's layout:
+
+| idx | off | slot | new-kernel value | new-user value |
+|---|---|---|---|---|
+| 0 | 0 | EDI | 0 | 0 |
+| 1 | 4 | ESI | 0 | 0 |
+| 2 | 8 | EBP | 0 | 0 |
+| 3 | 12 | ESP (ignored by `popa`) | 0 | 0 |
+| 4 | 16 | EBX | 0 | 0 |
+| 5 | 20 | EDX | 0 | 0 |
+| 6 | 24 | ECX | 0 | 0 |
+| 7 | 28 | EAX | 0 | 0 |
+| 8 | 32 | EIP | `entry` | `entry` |
+| 9 | 36 | CS | `0x08` | `0x1B` |
+| 10 | 40 | EFLAGS | `0x202` (IF set) | `0x202` (IF set) |
+| 11 | 44 | ESP | — | `user_stack_top` |
+| 12 | 48 | SS | — | `0x23` |
+
+> the `44` / `52` sizes and slot indices are hardcoded to the exact
+> push order in `boot.s`. if you change a push there, both must change.
+> will be fixed soon, hang tight!!
+---
+
 ## global variables
 #### `static Process *current`:
 the current process being run, fresh off of the `processQueue`
