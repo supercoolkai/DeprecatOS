@@ -1,4 +1,5 @@
 #include "userland/syscall/syscallController.h"
+#include "util/kprintf/kprintf.h"
 #include <stdint.h>
 #include "drivers/timer/timerController.h"
 #include "idt/idtController.h"
@@ -66,8 +67,7 @@ static uint32_t sys_exit_curr(uint32_t *frame)
 
   uint32_t res = (uint32_t) kill_current();
   if (res == 0xFFFFFFFF){
-    serial_write_string("\n\nKERNEL PANIC: TRIED TO EXIT WITH NO OTHER PROCESSES AVAILABLE");
-    fb_draw_string("\n\nKERNEL PANIC: TRIED TO EXIT WITH NO OTHER PROCESSES AVAILABLE", RED);
+    kprintf(KPRINTF_RED "\n\nKERNEL PANIC: TRIED TO EXIT WITH NO OTHER PROCESSES AVAILABLE" KPRINTF_RESET);
     for (;;)
       __asm__ volatile ("hlt");
   }

@@ -18,9 +18,11 @@
 
 #### **BLOCK_SIZE** *(src/fs/ext2/blockGroupDescriptor.h)*
 
-#### **BLUE** *(user/shell/shell.c)*
+#### **BLUE** *(src/drivers/fb/fbController.h, user/shell/shell.c)*
 
 #### **BUF_CAP** *(user/shell/shell.c)*
+
+#### **BUFFER_SIZE** *(src/util/kprintf/kprintf.c)*
 
 #### **CODE_ADDR** *(src/userland/userland.h)*
 
@@ -28,9 +30,17 @@
 
 #### **COM1** *(src/drivers/serial/serialController.c)*
 
+#### **CYAN** *(src/drivers/fb/fbController.h)*
+
+#### **DARK_GRAY** *(src/drivers/fb/fbController.h)*
+
 #### **DIRECTORYCONTROLLER_H** *(src/fs/ext2/directoryController.h)*
 
 #### **DIRECTORYENTRY_H** *(src/fs/ext2/directoryEntry.h)*
+
+#### **ESC_PREFIX** *(src/util/kprintf/kprintf.h)*
+
+#### **ESC_SUFFIX_LEN** *(src/util/kprintf/kprintf.h)*
 
 #### **EXCEPTIONS_H** *(src/exceptions/exceptions.h)*
 
@@ -41,6 +51,8 @@
 #### **FRAMEALLOCATOR_H** *(src/memory/frameAlloc/frameAllocator.h)*
 
 #### **GDT_INDEX_1** in *(src/idt/idtController.c)*
+
+#### **GRAY** *(src/drivers/fb/fbController.h)*
 
 #### **GREEN** *(src/drivers/fb/fbController.h, user/shell/shell.c)*
 
@@ -58,13 +70,45 @@
 
 #### **INTERRUPT_GATE_TYPE** *(src/idt/idtController.c)*
 
+#### **IS_PRINTING_FLAG** *(src/util/kprintf/kprintf.c)*
+
 #### **KERNEL_CEILING** *(src/memory/paging/paging.h)*
 
 #### **KERNELHEAP_H** *(src/memory/heap/kernelHeap.h)*
 
 #### **KEYBOARD_H** *(src/drivers/keyboard/keyboard.h)*
 
-#### **LIGHT_BLUE** *(user/shell/shell.c)*
+#### **KPRINTF_BLACK** *(src/util/kprintf/kprintf.h)*
+
+#### **KPRINTF_BLUE** *(src/util/kprintf/kprintf.h)*
+
+#### **KPRINTF_CYAN** *(src/util/kprintf/kprintf.h)*
+
+#### **KPRINTF_GREEN** *(src/util/kprintf/kprintf.h)*
+
+#### **KPRINTF_H** *(src/util/kprintf/kprintf.h)*
+
+#### **KPRINTF_MAGENTA** *(src/util/kprintf/kprintf.h)*
+
+#### **KPRINTF_RED** *(src/util/kprintf/kprintf.h)*
+
+#### **KPRINTF_RESET** *(src/util/kprintf/kprintf.h)*
+
+#### **KPRINTF_WHITE** *(src/util/kprintf/kprintf.h)*
+
+#### **KPRINTF_YELLOW** *(src/util/kprintf/kprintf.h)*
+
+#### **LIGHT_BLUE** *(src/drivers/fb/fbController.h, user/shell/shell.c)*
+
+#### **LIGHT_CYAN** *(src/drivers/fb/fbController.h)*
+
+#### **LIGHT_GREEN** *(src/drivers/fb/fbController.h)*
+
+#### **LIGHT_MAGENTA** *(src/drivers/fb/fbController.h)*
+
+#### **LIGHT_RED** *(src/drivers/fb/fbController.h)*
+
+#### **MAGENTA** *(src/drivers/fb/fbController.h)*
 
 #### **MAX_POLL_REPEAT** *(src/drivers/disk/ata.h)*
 
@@ -76,6 +120,8 @@
 
 #### **NO_PERMISSION_MASK** *(src/fs/ext2/directoryController.h, user/shell/shell.c)*
 
+#### **ORANGE** *(src/drivers/fb/fbController.h)*
+
 #### **PAGE_PRESENT** *(src/memory/paging/paging.h)*
 
 #### **PAGE_RW** *(src/memory/paging/paging.h)*
@@ -83,6 +129,8 @@
 #### **PAGE_USER** *(src/memory/paging/paging.h)*
 
 #### **PAGING_H** *(src/memory/paging/paging.h)*
+
+#### **PALETTE_LENGTH** *(src/util/kprintf/kprintf.c)*
 
 #### **PIC1_CMD** *(src/idt/idtController.h)*
 
@@ -117,6 +165,8 @@
 #### **STACK_ADDR** *(src/userland/userland.h)*
 
 #### **STACK_SIZE** *(src/process/scheduler/scheduler.h)*
+
+#### **STREQ_H** *(src/util/streq/streq.h)*
 
 #### **SUPERBLOCK_H** *(src/fs/ext2/superblock.h)*
 

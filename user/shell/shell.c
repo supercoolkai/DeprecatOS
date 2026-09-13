@@ -30,7 +30,7 @@ typedef struct {
   void (*fn)(char *args);
 } Command;
 
-int streq(char *a, char *b)
+int streq(const char *a, const char *b)
 {
   int i = 0;
 
@@ -528,6 +528,8 @@ int main(void)
   unsigned char c;
   uint32_t comp;
   char *args;
+
+  yield();
 
   for (;;)
   {

@@ -1,4 +1,5 @@
 #include "exceptions/exceptions.h"
+#include "util/kprintf/kprintf.h"
 #include <stdint.h>
 #include "drivers/serial/serialController.h"
 #include "drivers/fb/fbController.h"
@@ -131,22 +132,18 @@ uint32_t exception_handler(uint32_t esp)
     serial_write_string(exc_names[vector]);
     fb_draw_string(exc_names[vector], RED);
 
-    serial_write_string(", ERROR CODE: ");
-    fb_draw_string(", ERROR CODE: ", RED);
+    kprintf(KPRINTF_RED ", ERROR CODE: " KPRINTF_RESET);
 
     print_hex(error_code, RED);
-    serial_write_string("\n");
-    fb_draw_string("\n", RED);
+    kprintf(KPRINTF_RED "\n" KPRINTF_RESET);
 
     if (vector == 14) {
-      serial_write_string("CR2: ");
-      fb_draw_string("CR2: ", RED);
+      kprintf(KPRINTF_RED "CR2: " KPRINTF_RESET);
 
       serial_write_char(read_cr2());
       print_hex(read_cr2(), RED);
 
-      serial_write_string("\n");
-      fb_draw_string("\n", RED);
+      kprintf(KPRINTF_RED "\n" KPRINTF_RESET);
     }
 
     for (;;) __asm__ volatile ("hlt");
@@ -160,19 +157,15 @@ uint32_t exception_handler(uint32_t esp)
     serial_write_string(exc_names[vector]);
     fb_draw_string(exc_names[vector], YELLOW);
 
-    serial_write_string(", ERROR CODE: ");
-    fb_draw_string(", ERROR CODE: ", YELLOW);
+    kprintf(KPRINTF_YELLOW ", ERROR CODE: " KPRINTF_RESET);
 
     print_hex(error_code, YELLOW);
 
-    serial_write_string("\n");
-    fb_draw_string("\n", YELLOW);
+    kprintf(KPRINTF_YELLOW "\n" KPRINTF_RESET);
 
-    serial_write_string("PROCESS KILLED");
-    fb_draw_string("PROCESS KILLED", YELLOW);
+    kprintf(KPRINTF_YELLOW "PROCESS KILLED" KPRINTF_RESET);
 
-    serial_write_string("\n");
-    fb_draw_string("\n", YELLOW);
+    kprintf(KPRINTF_YELLOW "\n" KPRINTF_RESET);
 
   }
   return kill_current();

@@ -1,4 +1,5 @@
 #include "process/scheduler/scheduler.h"
+#include "util/kprintf/kprintf.h"
 #include "process/queue/processQueue.h"
 #include "memory/heap/kernelHeap.h"
 #include "gdt/tssController.h"
@@ -95,12 +96,10 @@ void create_user_process(uint32_t entry, uint32_t user_stack_top)
 
 uint32_t kill_current(void)
 {
-  serial_write_string("\nATTEMPTING PKILL\n");
-  fb_draw_string("\nATTEMPTING PKILL\n", YELLOW);
+  kprintf(KPRINTF_YELLOW "\nATTEMPTING PKILL\n" KPRINTF_RESET);
 
   if (pqueue_is_empty()){
-    serial_write_string("\nEPIC PKILL FAIL\n");
-    fb_draw_string("\nEPIC PKILL FAIL\n", RED);
+    kprintf(KPRINTF_RED "\nEPIC PKILL FAIL\n" KPRINTF_RESET);
     kfree((void *)0x00000000);
     return 0xFFFFFFFF; // No bueno but this prolly wont happen so its ok
   }

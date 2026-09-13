@@ -14,37 +14,73 @@
 #include "userland/userland.h"
 #include "drivers/disk/ata.h"
 #include "fs/block/blockController.h"
+#include "util/kprintf/kprintf.h"
 
 void mainInitScript(MBIInfo *info)
 {
-  // controller init
-  idt_init();
+  // controller init 
 
-  timer_init();
-
+  kprintf(KPRINTF_GREEN "* " KPRINTF_RESET KPRINTF_WHITE "Initializing the serial driver...           ");
   serial_init();
-
-  exceptions_init();
-
-  frame_alloc_init(info);
-  paging_init();
-  heap_init();
+  kprintf(KPRINTF_WHITE "[ " KPRINTF_RESET KPRINTF_GREEN "OK" KPRINTF_RESET KPRINTF_WHITE " ]\n");
   
+  kprintf(KPRINTF_GREEN "* " KPRINTF_RESET KPRINTF_WHITE "Initializing the IDT...                     ");
+  idt_init();
+  kprintf(KPRINTF_WHITE "[ " KPRINTF_RESET KPRINTF_GREEN "OK" KPRINTF_RESET KPRINTF_WHITE " ]\n");
 
+  kprintf(KPRINTF_GREEN "* " KPRINTF_RESET KPRINTF_WHITE "Initializing the timer driver...            ");
+  timer_init();
+  kprintf(KPRINTF_WHITE "[ " KPRINTF_RESET KPRINTF_GREEN "OK" KPRINTF_RESET KPRINTF_WHITE " ]\n");
+
+  kprintf(KPRINTF_GREEN "* " KPRINTF_RESET KPRINTF_WHITE "Initializing the exceptions handler...      ");
+  exceptions_init();
+  kprintf(KPRINTF_WHITE "[ " KPRINTF_RESET KPRINTF_GREEN "OK" KPRINTF_RESET KPRINTF_WHITE " ]\n");
+
+  kprintf(KPRINTF_GREEN "* " KPRINTF_RESET KPRINTF_WHITE "Initializing the frame allocator...         ");
+  frame_alloc_init(info);
+  kprintf(KPRINTF_WHITE "[ " KPRINTF_RESET KPRINTF_GREEN "OK" KPRINTF_RESET KPRINTF_WHITE " ]\n");
+
+  kprintf(KPRINTF_GREEN "* " KPRINTF_RESET KPRINTF_WHITE "Initializing the paging controller...       ");
+  paging_init();
+  kprintf(KPRINTF_WHITE "[ " KPRINTF_RESET KPRINTF_GREEN "OK" KPRINTF_RESET KPRINTF_WHITE " ]\n");
+
+  kprintf(KPRINTF_GREEN "* " KPRINTF_RESET KPRINTF_WHITE "Initializing the heap...                    ");
+  heap_init();
+  kprintf(KPRINTF_WHITE "[ " KPRINTF_RESET KPRINTF_GREEN "OK" KPRINTF_RESET KPRINTF_WHITE " ]\n");
+
+  kprintf(KPRINTF_GREEN "* " KPRINTF_RESET KPRINTF_WHITE "Initializing the keyboard...                ");
   keyboard_init();
+  kprintf(KPRINTF_WHITE "[ " KPRINTF_RESET KPRINTF_GREEN "OK" KPRINTF_RESET KPRINTF_WHITE " ]\n");
 
   fb_init(info);
+  kprintf_init();
 
+  kprintf(KPRINTF_GREEN "* " KPRINTF_RESET KPRINTF_WHITE "Initializing the scheduler...               ");
   scheduler_init();
+  kprintf(KPRINTF_WHITE "[ " KPRINTF_RESET KPRINTF_GREEN "OK" KPRINTF_RESET KPRINTF_WHITE " ]\n");
 
+  kprintf(KPRINTF_GREEN "* " KPRINTF_RESET KPRINTF_WHITE "Initializing the ATA driver...              ");
   ata_init();
+  kprintf(KPRINTF_WHITE "[ " KPRINTF_RESET KPRINTF_GREEN "OK" KPRINTF_RESET KPRINTF_WHITE " ]\n");
 
+  kprintf(KPRINTF_GREEN "* " KPRINTF_RESET KPRINTF_WHITE "Initializing the block driver...            ");
   block_init();
+  kprintf(KPRINTF_WHITE "[ " KPRINTF_RESET KPRINTF_GREEN "OK" KPRINTF_RESET KPRINTF_WHITE " ]\n");
 
+  kprintf(KPRINTF_GREEN "* " KPRINTF_RESET KPRINTF_WHITE "Initializing the GDT and TSS controller...  ");
   tss_init();
-  syscall_init();
+  kprintf(KPRINTF_WHITE "[ " KPRINTF_RESET KPRINTF_GREEN "OK" KPRINTF_RESET KPRINTF_WHITE " ]\n");
 
+  kprintf(KPRINTF_GREEN "* " KPRINTF_RESET KPRINTF_WHITE "Initializing the syscall controller...      ");
+  syscall_init();
+  kprintf(KPRINTF_WHITE "[ " KPRINTF_RESET KPRINTF_GREEN "OK" KPRINTF_RESET KPRINTF_WHITE " ]\n");
+
+  kprintf(KPRINTF_GREEN "* " KPRINTF_RESET KPRINTF_WHITE "Initializing the userland...                ");
   userland_init();
+  kprintf(KPRINTF_WHITE "[ " KPRINTF_RESET KPRINTF_GREEN "OK" KPRINTF_RESET KPRINTF_WHITE " ]\n");
+
+  kprintf(KPRINTF_GREEN "* " KPRINTF_RESET KPRINTF_WHITE "Welcome to " KPRINTF_RESET 
+          KPRINTF_CYAN "DeprecatOS (Indev 0.01)!\n" KPRINTF_RESET);
 
   while (1)
   {

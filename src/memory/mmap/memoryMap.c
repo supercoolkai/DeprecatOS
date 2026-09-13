@@ -1,4 +1,5 @@
 #include "memory/mmap/memoryMap.h"
+#include "util/kprintf/kprintf.h"
 #include "drivers/fb/fbController.h"
 #include "drivers/serial/serialController.h"
 #include "util/hex/hexPrinter.h"
@@ -8,20 +9,16 @@
 
 static void print_entry(uint32_t base, uint32_t len, uint32_t type)
 {
-  serial_write_string("base: ");
-  fb_draw_string("base: ", GREEN);
+  kprintf(KPRINTF_GREEN "base: " KPRINTF_RESET);
   print_hex(base, GREEN);
 
-  serial_write_string("\nlen: ");
-  fb_draw_string("\nlen: ", GREEN);
+  kprintf(KPRINTF_GREEN "\nlen: " KPRINTF_RESET);
   print_hex(len, GREEN);
 
-  serial_write_string("\ntype: ");
-  fb_draw_string("\ntype: ", GREEN);
+  kprintf(KPRINTF_GREEN "\ntype: " KPRINTF_RESET);
   print_hex(type, GREEN);
 
-  serial_write_string("\n\n");
-  fb_draw_string("\n\n", GREEN);
+  kprintf(KPRINTF_GREEN "\n\n" KPRINTF_RESET);
 }
 
 
@@ -35,8 +32,7 @@ void mmap_print(const MBIInfo *info)
 void mmap_walk(const MBIInfo *info, void (*fn)(uint32_t base, uint32_t len, uint32_t type))
 {
   if ((info->flags & (1 << 6)) == 0){
-    serial_write_string("Bad flags");
-    fb_draw_string("Bad flags", YELLOW);
+    kprintf(KPRINTF_YELLOW "Bad flags" KPRINTF_RESET);
     return;
   }
   

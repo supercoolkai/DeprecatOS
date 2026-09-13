@@ -1,4 +1,5 @@
 #include "memory/frameAlloc/frameAllocator.h"
+#include "util/kprintf/kprintf.h"
 #include "userland/userland.h"
 #include "memory/paging/paging.h"
 #include "process/scheduler/scheduler.h"
@@ -14,8 +15,7 @@ static void map_misc_pages(void)
     uint32_t curr_frame = alloc_frame();
 
     if (!curr_frame){
-      fb_draw_string("alloc_frame() failed in a map_misc_pages()'s misc frame init!\n", YELLOW);
-      serial_write_string("alloc_frame() failed in a map_misc_pages()'s misc frame init!\n");
+      kprintf(KPRINTF_YELLOW "alloc_frame() failed in a map_misc_pages()'s misc frame init!\n" KPRINTF_RESET);
       for (int j = 0; j < i; j++) {
         free_frame(frames[j]);
         frames[j] = 0;
@@ -39,8 +39,7 @@ void userland_init(void)
   uint32_t stack_frame = alloc_frame();
 
   if (!code_frame){
-    fb_draw_string("alloc_frame() failed in userland_init()'s code frame init!\n", YELLOW);
-    serial_write_string("alloc_frame() failed in userland_init()'s code frame init!\n");
+    kprintf(KPRINTF_YELLOW "alloc_frame() failed in userland_init()'s code frame init!\n" KPRINTF_RESET);
     if (stack_frame != 0)
       free_frame(stack_frame);
 
@@ -48,8 +47,7 @@ void userland_init(void)
   }
 
   if (!stack_frame){
-    fb_draw_string("alloc_frame() failed in userland_init()'s stack frame init!\n", YELLOW);
-    serial_write_string("alloc_frame() failed in userland_init()'s stack frame init!\n");
+    kprintf(KPRINTF_YELLOW "alloc_frame() failed in userland_init()'s stack frame init!\n" KPRINTF_RESET);
     free_frame(code_frame);
     return;
   }

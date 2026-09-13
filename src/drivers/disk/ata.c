@@ -1,4 +1,5 @@
 #include "drivers/disk/ata.h"
+#include "util/kprintf/kprintf.h"
 #include "drivers/fb/fbController.h"
 #include "drivers/serial/serialController.h"
 #include "exceptions/exceptions.h"
@@ -82,7 +83,7 @@ bool ata_identify(uint8_t drive) {
       panic("KERNEL PANIC: FLOATING BUS ON MASTER DRIVE");
     }
 
-    fb_draw_string("\nWARNING: FLOATING BUS ON SLAVE DRIVE", RED);
+    kprintf(KPRINTF_RED "\nWARNING: FLOATING BUS ON SLAVE DRIVE" KPRINTF_RESET);
     return false;
   }
   
@@ -94,7 +95,7 @@ bool ata_identify(uint8_t drive) {
       panic("KERNEL PANIC: INCOMPATIBLE HARDWARE ON MASTER DRIVE");
     }
 
-    fb_draw_string("\nWARNING: INCOMPATBILE HARDWARE ON SLAVE DRIVE", RED);
+    kprintf(KPRINTF_RED "\nWARNING: INCOMPATBILE HARDWARE ON SLAVE DRIVE" KPRINTF_RESET);
     return false;
   }
 
@@ -193,7 +194,7 @@ void ata_init(void)
   bool b = ata_identify(0xB0);
 
   if (!b) {
-    fb_draw_string("\nIdentification failed for the slave driver. Highly recommended to reboot and try again if you are sure this is not a hardware issue. Initialization has continued without.\n", YELLOW);  
+    kprintf(KPRINTF_YELLOW "\nIdentification failed for the slave driver. Highly recommended to reboot and try again if you are sure this is not a hardware issue. Initialization has continued without.\n" KPRINTF_RESET);
   }
   
   // get lba sector count for bounds check

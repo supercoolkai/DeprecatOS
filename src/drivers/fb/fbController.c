@@ -1,4 +1,5 @@
 #include "drivers/fb/fbController.h"
+#include "util/kprintf/kprintf.h"
 #include "memory/mmap/memoryMap.h"
 #include "drivers/serial/serialController.h"
 #include "memory/paging/paging.h"
@@ -44,24 +45,24 @@ void fb_init(MBIInfo *info)
 {
   // guards for hardware compatibility 
   if (!((info->flags) & (1 << 12))) {
-    serial_write_string("KERNEL PANIC: INCOMPATIBLE HARDWARE");
+    kprintf(KPRINTF_RED "KERNEL PANIC: INCOMPATIBLE HARDWARE" KPRINTF_RESET);
     for (;;)
       __asm__ volatile("hlt");
   }
   if(info->framebuffer_type != 1){
-    serial_write_string("KERNEL PANIC: INCOMPATIBLE HARDWARE");
+    kprintf(KPRINTF_RED "KERNEL PANIC: INCOMPATIBLE HARDWARE" KPRINTF_RESET);
     for (;;)
       __asm__ volatile("hlt");
   }
 
   if (info->framebuffer_addrHi != 0) {
-    serial_write_string("KERNEL PANIC: INCOMPATIBLE HARDWARE");
+    kprintf(KPRINTF_RED "KERNEL PANIC: INCOMPATIBLE HARDWARE" KPRINTF_RESET);
     for (;;)
       __asm__ volatile("hlt");
   }
 
   if (info->framebuffer_bpp != 32){
-    serial_write_string("KERNEL PANIC: INCOMPATIBLE HARDWARE");
+    kprintf(KPRINTF_RED "KERNEL PANIC: INCOMPATIBLE HARDWARE" KPRINTF_RESET);
     for (;;)
       __asm__ volatile("hlt");
   }
