@@ -77,10 +77,6 @@ void mainInitScript(MBIInfo *info)
 
   kprintf(KPRINTF_GREEN "* " KPRINTF_RESET KPRINTF_WHITE "Initializing the userland...                ");
   userland_init();
-  kprintf(KPRINTF_WHITE "[ " KPRINTF_RESET KPRINTF_GREEN "OK" KPRINTF_RESET KPRINTF_WHITE " ]\n");
-
-  kprintf(KPRINTF_GREEN "* " KPRINTF_RESET KPRINTF_WHITE "Welcome to " KPRINTF_RESET 
-          KPRINTF_CYAN "DeprecatOS (Indev 0.01)!\n" KPRINTF_RESET);
 
   while (1)
   {

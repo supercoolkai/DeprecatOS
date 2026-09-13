@@ -528,10 +528,6 @@ int main(void)
   unsigned char c;
   uint32_t comp;
   char *args;
-  
-  for (int i = 0; i < 5; i++){
-    yield();
-  }
 
   for (;;)
   {
