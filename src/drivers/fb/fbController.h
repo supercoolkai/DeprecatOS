@@ -17,6 +17,10 @@
 #define YELLOW 14
 #define WHITE 15
 
+#define GLYPH_WIDTH 8
+#define GLYPH_HEIGHT 16
+#define PALETTE_SIZE 16
+
 #include "memory/mmap/memoryMap.h"
 
 typedef struct {

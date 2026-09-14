@@ -47,7 +47,9 @@ void mmap_walk(const MBIInfo *info, void (*fn)(uint32_t base, uint32_t len, uint
     uint32_t len = entry->lenLo;
 
     if (entry->lenHi != 0 || entry->baseLo + len < entry->baseLo) {
-      len = 0xFFFFFFFF - entry->baseLo + 1;
+      // not to be confused with a generic error like in syscalls,
+      // completely unrelated 32-bit max-address range calc
+      len = 0xFFFFFFFF - entry->baseLo + 1; 
     }
 
     fn(entry->baseLo, len, entry->type);

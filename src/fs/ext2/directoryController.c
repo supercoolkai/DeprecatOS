@@ -100,7 +100,7 @@ bool lookup_path(const char *path, uint32_t *out)
     return false;
   
   int ind = 1;
-  uint32_t curr_inode_num = 2;
+  uint32_t curr_inode_num = ROOT_INODE_N;
 
   while (ind < len){
     // get the current subdir's length

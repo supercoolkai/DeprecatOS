@@ -3,7 +3,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-static Process *queue[256];
+static Process *queue[PQUEUE_SIZE_ELEMENTS];
 static unsigned char head;
 static unsigned char tail;
 

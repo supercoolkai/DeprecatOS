@@ -8,6 +8,8 @@
 #include "util/hex/hexPrinter.h"
 #include "userland/userland.h"
 #include "drivers/serial/serialController.h"
+#include "gdt/segments.h"
+#include "errors.h"
 #include <stddef.h>
 
 static Process *current;
@@ -57,16 +59,21 @@ void create_process(void (*entry)(void))
   if(p == NULL)
     return;
   
-  p->esp = p->malloc_addr + STACK_SIZE - 44;
+  p->esp = p->malloc_addr + STACK_SIZE - KERNEL_FRAME_SIZE;
 
   uint32_t *frame = (uint32_t *)p->esp;
 
+  // Btw the reason these are zeroed
+  // is because this is for the general 
+  // purpose registers, but cuz
+  // its a brand new process it has no history 
+  // so everything should be zeroed
   for (int i = 0; i < 8; i ++)
     frame[i] = 0;
   
-  frame[8] = (uint32_t) entry;
-  frame[9] = 0x08;
-  frame[10] = 0x202;
+  frame[FRAME_EIP_INDEX] = (uint32_t) entry;
+  frame[FRAME_CS_INDEX] = KERNEL_CODE_SEGMENT_SEL;
+  frame[FRAME_EFLAGS_INDEX] = INTERRUPT_AND_RESERVED_EFLAGS;
   
   pqueue_push(p);
 }
@@ -78,18 +85,23 @@ void create_user_process(uint32_t entry, uint32_t user_stack_top)
   if(p == NULL)
     return;
  
-  p->esp = p->malloc_addr + STACK_SIZE - 52;
+  p->esp = p->malloc_addr + STACK_SIZE - USER_FRAME_SIZE;
 
   uint32_t *frame = (uint32_t *)p->esp;
-
+  
+  // Btw the reason these are zeroed
+  // is because this is for the general 
+  // purpose registers, but cuz
+  // its a brand new process it has no history 
+  // so everything should be zeroed
   for (int i = 0; i < 8; i ++)
     frame[i] = 0;
   
-  frame[8] = entry;
-  frame[9] = 0x1B;
-  frame[10] = 0x202;
-  frame[11] = user_stack_top;
-  frame[12] = 0x23;
+  frame[FRAME_EIP_INDEX] = entry;
+  frame[FRAME_CS_INDEX] = USER_CODE_SEGMENT_SEL;
+  frame[FRAME_EFLAGS_INDEX] = INTERRUPT_AND_RESERVED_EFLAGS;
+  frame[FRAME_USER_ESP_INDEX] = user_stack_top;
+  frame[FRAME_SS_INDEX] = USER_DATA_SEGMENT_SEL;
   
   pqueue_push(p);
 }
@@ -101,7 +113,7 @@ uint32_t kill_current(void)
   if (pqueue_is_empty()){
     kprintf(KPRINTF_RED "\nEPIC PKILL FAIL\n" KPRINTF_RESET);
     kfree((void *)0x00000000);
-    return 0xFFFFFFFF; // No bueno but this prolly wont happen so its ok
+    return SYSCALL_ERROR; // No bueno but this prolly wont happen so its ok
   }
 
   Process *victim = current; 

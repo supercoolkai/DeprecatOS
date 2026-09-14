@@ -1,6 +1,6 @@
 #ifndef SYSCALL_H
 #define SYSCALL_H
-#define SENTINEL 0xDDDDDDDD
+#include "userland/syscall/syscallController.h"
 #include <stdint.h>
 
 uint32_t write_char(char c);

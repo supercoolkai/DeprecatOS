@@ -1,13 +1,12 @@
 #include "drivers/fb/fbController.h"
 #include "util/kprintf/kprintf.h"
 #include "memory/mmap/memoryMap.h"
-#include "drivers/serial/serialController.h"
 #include "memory/paging/paging.h"
 #include "memory/heap/kernelHeap.h"
 
 extern uint8_t font8x16[];
 
-static const uint32_t palette[16] = 
+static const uint32_t palette[PALETTE_SIZE] = 
 {
     0x000000,
     0x0000AA,
@@ -81,9 +80,9 @@ void fb_init(MBIInfo *info)
   width = info->framebuffer_width;
   height = info->framebuffer_height;
 
-  cols = width/8;
+  cols = width/GLYPH_WIDTH;
   //rows = height/16;
-  rows = height/16;
+  rows = height/GLYPH_HEIGHT;
 
   col = 0;
   row = 0;
@@ -106,13 +105,13 @@ void fb_init(MBIInfo *info)
 
 static void draw_cursor(void)
 {
-  uint32_t color_val = palette[15];
+  uint32_t color_val = palette[WHITE];
 
-  for(int r = 0; r < 16; r++){
-    for (int b = 0; b < 8; b++) {
-      uint32_t *line = (uint32_t *)(base + (row * 16 + r) * pitch);
+  for(int r = 0; r < GLYPH_HEIGHT; r++){
+    for (int b = 0; b < GLYPH_WIDTH; b++) {
+      uint32_t *line = (uint32_t *)(base + (row * GLYPH_HEIGHT + r) * pitch);
 
-      line[col * 8 + b] = color_val;
+      line[col * GLYPH_WIDTH + b] = color_val;
     }
   }
 
@@ -123,24 +122,24 @@ static void draw_cursor(void)
 
 static void draw_char(unsigned char c, unsigned char color)
 {
-  if (color >= 16) 
+  if (color >= PALETTE_SIZE) 
     return;
 
   uint32_t color_val = palette[color];
 
-  const uint8_t *glyph = &font8x16[c * 16];
+  const uint8_t *glyph = &font8x16[c * GLYPH_HEIGHT];
 
-  for (int r = 0; r < 16; r ++) {
-    for (int b = 0; b < 8; b++) {
+  for (int r = 0; r < GLYPH_HEIGHT; r ++) {
+    for (int b = 0; b < GLYPH_WIDTH; b++) {
       int val = (glyph[r] >> (7 - b)) & 1;
-      uint32_t *line = (uint32_t *)(base + (row * 16 + r) * pitch);
+      uint32_t *line = (uint32_t *)(base + (row * GLYPH_HEIGHT + r) * pitch);
 
       if (!val) {
-        line[col * 8 + b] = palette[0];
+        line[col * GLYPH_WIDTH + b] = palette[BLACK];
         continue;
       }
       
-      line[col * 8 + b] = color_val;
+      line[col * GLYPH_WIDTH + b] = color_val;
     }
   }
 

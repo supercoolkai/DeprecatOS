@@ -3,6 +3,7 @@
 #include "drivers/serial/serialController.h"
 #include "drivers/fb/fbController.h"
 #include "util/rb/ringBuffer.h"
+#include "idt/idtController.h"
 #include <stdbool.h>
 
 bool keys_down[KEY_COUNT] = {false};
@@ -313,7 +314,7 @@ unsigned char strip_key(unsigned char key)
 void keyboard_irq_handler(void)
 {
   keyboard_handler();
-  outb(0x20, 0x20);
+  outb(PIC1_CMD, PIC_EOI);
 }
 
 void keyboard_handler()
@@ -328,17 +329,17 @@ void keyboard_handler()
     return;
   }
 
-  if (scancode == 0xE0) {
+  if (scancode == KEY_EXTENDED_PREFIX) {
     e0_pending = true;
     return;
   }
 
-  if (scancode == 0xE1) {
+  if (scancode == KEY_PAUSE_PREFIX) {
     e1_skip = 5;
     return;
   }
 
-  bool released = scancode & 0x80;
+  bool released = scancode & KEY_RELEASE_BIT;
   unsigned char raw_key = scancode & 0x7F;
 
   KeyCode key;

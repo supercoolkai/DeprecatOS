@@ -1,18 +1,13 @@
 #include "shell/sys/syscall.h"
+#include "drivers/fb/fbController.h"
+#include "fs/block/blockController.h"
+#include "fs/ext2/directoryController.h"
+#include "userland/syscall/syscallController.h"
+#include "errors.h"
 #include <stdint.h>
 #include <stdbool.h>
 #define BUF_CAP 512
-#define BLACK 0
-#define BLUE 1
-#define GREEN 2
-#define RED 4
-#define LIGHT_BLUE 9
-#define YELLOW 14
-#define WHITE 15
-#define BIT_32_PER_BLK 1024
 #define COLS_PER_ROW_LS 5
-#define NO_PERMISSION_MASK 0xF000
-#define INODE_DIR_TYPE 0x4000
 
 static char buf[BUF_CAP];
 static uint32_t fs_buf[BIT_32_PER_BLK];
@@ -261,7 +256,7 @@ static void cmd_stat(char *args)
 
   uint32_t inode_n = resolve_dir(absolute_path);
 
-  if (inode_n == 0xFFFFFFFF) {
+  if (inode_n == SYSCALL_ERROR) {
     write_string("stat: file ");
     write_string((char *) absolute_path);
     write_string(" does not exist or is not a file\n");
@@ -313,7 +308,7 @@ static void cmd_cat(char *args)
 
   uint32_t inode_n = resolve_dir(path);
 
-  if (inode_n == 0xFFFFFFFF) {
+  if (inode_n == SYSCALL_ERROR) {
     write_string("cat: file ");
     write_string(args);
     write_string(" does not exist or is not a file\n");
@@ -335,7 +330,7 @@ static void cmd_cat(char *args)
       return;
     }
 
-    if (r == 0xFFFFFFFF) {
+    if (r == SYSCALL_ERROR) {
       write_string("cat: an unknown error occurred while reading file ");
       write_string(args);
       write_string("\n");
@@ -365,7 +360,7 @@ static void cmd_ls(char *args)
 
   uint32_t inode_n = resolve_dir(path);
 
-  if (inode_n == 0xFFFFFFFF) {
+  if (inode_n == SYSCALL_ERROR) {
     write_string("ls: directory ");
     write_string(args);
     write_string(" does not exist or is not a directory\n");
@@ -387,7 +382,7 @@ static void cmd_ls(char *args)
       return;
     }
 
-    if (r == 0xFFFFFFFF) {
+    if (r == SYSCALL_ERROR) {
       write_string("ls: an unknown error occurred while reading dir ");
       write_string(args);
       write_string("\n");
@@ -455,7 +450,7 @@ static void cmd_cd(char *args)
 
   uint32_t d = resolve_dir(path);
 
-  if (d == 0xFFFFFFFF)
+  if (d == SYSCALL_ERROR)
   {
     write_string("cd: dir not found\n");
     return;

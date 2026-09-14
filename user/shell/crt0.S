@@ -1,6 +1,9 @@
-.equ SYS_EXIT, 4
+#include "gdt/segments.h"
+.set SYS_EXIT, 4
 
-movw $0x23, %ax
+.global _start
+_start:
+movw $USER_DATA_SEGMENT_SEL, %ax
 movw %ax, %ds
 movw %ax, %es
 movw %ax, %fs

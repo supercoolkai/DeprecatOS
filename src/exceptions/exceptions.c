@@ -125,9 +125,9 @@ uint32_t exception_handler(uint32_t esp)
 
   uint32_t *frame = (uint32_t *)esp;
 
-  if((frame[11] & 3) == 0) {
-    uint32_t vector = frame[8];
-    uint32_t error_code = frame[9];
+  if((frame[FRAME_CS_INDEX_EXCEPTION] & 3) == 0) {
+    uint32_t vector = frame[FRAME_VECTOR_INDEX_EXCEPTION];
+    uint32_t error_code = frame[FRAME_ERROR_CODE_INDEX_EXCEPTION];
   
     serial_write_string(exc_names[vector]);
     fb_draw_string(exc_names[vector], RED);
@@ -137,7 +137,7 @@ uint32_t exception_handler(uint32_t esp)
     print_hex(error_code, RED);
     kprintf(KPRINTF_RED "\n" KPRINTF_RESET);
 
-    if (vector == 14) {
+    if (vector == PAGE_FAULT_VECTOR) {
       kprintf(KPRINTF_RED "CR2: " KPRINTF_RESET);
 
       serial_write_char(read_cr2());
@@ -150,9 +150,9 @@ uint32_t exception_handler(uint32_t esp)
 
   }
 
-  if((frame[11] & 3) == 3) {
-    uint32_t vector = frame[8];
-    uint32_t error_code = frame[9];
+  if((frame[FRAME_CS_INDEX_EXCEPTION] & 3) == 3) {
+    uint32_t vector = frame[FRAME_VECTOR_INDEX_EXCEPTION];
+    uint32_t error_code = frame[FRAME_ERROR_CODE_INDEX_EXCEPTION];
   
     serial_write_string(exc_names[vector]);
     fb_draw_string(exc_names[vector], YELLOW);

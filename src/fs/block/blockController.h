@@ -4,10 +4,12 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "fs/ext2/inode.h"
+#include "fs/ext2/blockGroupDescriptor.h"
 #include "drivers/disk/ata.h"
 
 #define WORDS_PER_BLK (BLOCK_SIZE / 2)
 #define BIT_32_PER_BLK (BLOCK_SIZE / 4)
+#define EXT2_SUPERBLOCK_OFFSET 1024
 
 void read_block(uint32_t block_n, uint16_t *buf);
 void block_init(void);

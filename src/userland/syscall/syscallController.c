@@ -1,4 +1,5 @@
 #include "userland/syscall/syscallController.h"
+#include "errors.h"
 #include "util/kprintf/kprintf.h"
 #include <stdint.h>
 #include "drivers/timer/timerController.h"
@@ -36,7 +37,7 @@ static uint32_t sys_write_string(uint32_t *frame)
   for (;;){
 
     if((uint32_t) s + i < KERNEL_CEILING || (uint32_t) s + i >= USER_SPACE_END){
-      frame[7] = 0xFFFFFFFF;
+      frame[7] = SYSCALL_ERROR;
       return (uint32_t) frame;
     }
     char c = s[i];
@@ -66,7 +67,7 @@ static uint32_t sys_exit_curr(uint32_t *frame)
   // standing on the victim's stack
 
   uint32_t res = (uint32_t) kill_current();
-  if (res == 0xFFFFFFFF){
+  if (res == SYSCALL_ERROR){
     kprintf(KPRINTF_RED "\n\nKERNEL PANIC: TRIED TO EXIT WITH NO OTHER PROCESSES AVAILABLE" KPRINTF_RESET);
     for (;;)
       __asm__ volatile ("hlt");
@@ -118,7 +119,7 @@ static uint32_t sys_write_string_color(uint32_t *frame)
   for (;;){
 
     if((uint32_t) s + i < KERNEL_CEILING || (uint32_t) s + i >= USER_SPACE_END){
-      frame[7] = 0xFFFFFFFF;
+      frame[7] = SYSCALL_ERROR;
       return (uint32_t) frame;
     }
     char c = s[i];
@@ -141,7 +142,7 @@ static uint32_t resolve_dir(const char *s)
   uint32_t i = 0;
   for (;;) {
     if ((uint32_t) s + i < KERNEL_CEILING || (uint32_t) s + i >= USER_SPACE_END)
-      return 0xFFFFFFFF;
+      return SYSCALL_ERROR;
 
     char c = s[i];
 
@@ -155,7 +156,7 @@ static uint32_t resolve_dir(const char *s)
   bool success = lookup_path(s, &ino);
 
   if (!success) {
-    return 0xFFFFFFFF;
+    return SYSCALL_ERROR;
   }
 
   return ino;
@@ -167,7 +168,7 @@ static uint32_t sys_read_chunk(uint32_t *frame)
   struct ext2_inode ino;
   
   if (!get_inode(ino_n, &ino)) {
-    frame[7] = 0xFFFFFFFF;
+    frame[7] = SYSCALL_ERROR;
     return (uint32_t) frame;
   }
 
@@ -175,7 +176,7 @@ static uint32_t sys_read_chunk(uint32_t *frame)
   uint32_t *buf = (uint32_t *) frame[6];
 
   if ((uint32_t) buf < KERNEL_CEILING || (uint32_t) buf > USER_SPACE_END - BLOCK_SIZE){
-    frame[7] = 0xFFFFFFFF;
+    frame[7] = SYSCALL_ERROR;
     return (uint32_t) frame;
   }
   
@@ -187,7 +188,7 @@ static uint32_t sys_read_chunk(uint32_t *frame)
 
   uint32_t block_n;
 
-  if (n < 12) {
+  if (n < INODE_BLK_PTR_AMT) {
     block_n = ino.dir_block_ptr[n];
   }
   else if(n < BIT_32_PER_BLK + INODE_BLK_PTR_AMT){
@@ -220,7 +221,7 @@ static uint32_t sys_read_chunk(uint32_t *frame)
   }
 
   if(block_n == 0) {
-    frame[7] = 0xFFFFFFFF;
+    frame[7] = SYSCALL_ERROR;
     return (uint32_t) frame;
   }
   
@@ -255,7 +256,7 @@ static uint32_t sys_write_string_len(uint32_t *frame)
   uint32_t len = frame[6];
   
   if (len > USER_SPACE_END - KERNEL_CEILING || base < KERNEL_CEILING || base > USER_SPACE_END - len) {
-    frame[7] = 0xFFFFFFFF;
+    frame[7] = SYSCALL_ERROR;
     return (uint32_t) frame;
   }
 
@@ -276,14 +277,14 @@ static uint32_t sys_get_stat(uint32_t *frame)
   struct ext2_inode ino;
   
   if (!get_inode(ino_n, &ino)) {
-    frame[7] = 0xFFFFFFFF;
+    frame[7] = SYSCALL_ERROR;
     return (uint32_t) frame;
   }
 
   uint32_t *buf = (uint32_t *) frame[6];
 
   if ((uint32_t) buf < KERNEL_CEILING || (uint32_t) buf > USER_SPACE_END - sizeof(struct ext2_inode)){
-    frame[7] = 0xFFFFFFFF;
+    frame[7] = SYSCALL_ERROR;
     return (uint32_t) frame;
   }
   
@@ -321,7 +322,7 @@ uint32_t syscall_handler(uint32_t esp)
   int length = sizeof(syscall_table) / sizeof(syscall_table[0]);
 
   if(eax > length || eax < 1){
-    frame[7] = 0xFFFFFFFF;
+    frame[7] = SYSCALL_ERROR;
     return esp;
   }
   

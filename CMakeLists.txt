@@ -20,6 +20,6 @@ include
 src
 )
 
-file(GLOB_RECURSE SOURCES "src/*.c" "src/*.s")
+file(GLOB_RECURSE SOURCES "src/*.c" "src/*.s" "src/*.S")
 
 add_executable(${PROJECT_NAME}.elf ${SOURCES})

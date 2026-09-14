@@ -11,7 +11,7 @@ a tabular representation of the explanation in the **structs** section:
 | Off | Field | Type | Notes |
 |---|---|---|---|
 | 0 | `offset_low` | `uint16_t` | handler address bits 15:0 |
-| 2 | `selector` | `uint16_t` | code selector, always `0x08` |
+| 2 | `selector` | `uint16_t` | code selector, always `0x08` (defined as `KERNEL_CODE_SEGMENT_SEL` in `src/gdt/segments.h`) |
 | 4 | `zero` | `uint8_t` | always 0 |
 | 5 | `type_attr` | `uint8_t` | gate type + DPL + present (table below) |
 | 6 | `offset_high` | `uint16_t` | handler address bits 31:16 |

@@ -14,8 +14,8 @@ static struct ext2_superblock *superblk;
 static uint16_t bgdt_buf[WORDS_PER_BLK];
 static uint16_t sprblk_buf[sizeof(struct ext2_superblock) / 2];
 static struct ext2_block_group_descriptor *bgdt;
-static uint16_t sectors_per_blk = BLOCK_SIZE / READ_48_AMT;
-static uint32_t superblk_pos = 1024;
+static uint16_t sectors_per_blk = BLOCK_SIZE / BYTES_PER_SECTOR;
+static uint32_t superblk_pos = EXT2_SUPERBLOCK_OFFSET;
 static uint32_t bgdt_blk_n = 1;
 
 static uint16_t buf[WORDS_PER_BLK];
@@ -68,7 +68,7 @@ static void indir_read_block(uint32_t block_n, int layer)
 void block_init(void)
 {
   //read_block(1, sprblk_buf)
-  ata_read48(ATA_MASTER, superblk_pos / READ_48_AMT, sizeof(struct ext2_superblock) / 512, sprblk_buf);
+  ata_read48(ATA_MASTER, superblk_pos / BYTES_PER_SECTOR, sizeof(struct ext2_superblock) / BYTES_PER_SECTOR, sprblk_buf);
   read_block(bgdt_blk_n, bgdt_buf);
 
   superblk = (struct ext2_superblock *) sprblk_buf;

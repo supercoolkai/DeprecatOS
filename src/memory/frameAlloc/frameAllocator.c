@@ -2,7 +2,7 @@
 #include "memory/frameAlloc/frameAllocator.h"
 #include "memory/mmap/memoryMap.h"
 
-static uint32_t frame_bitmap[32768];
+static uint32_t frame_bitmap[FRAME_BITMAP_LENGTH];
 extern char _ebss[];
 
 static void mark_free_region(uint32_t base, uint32_t len, uint32_t type)
@@ -19,7 +19,9 @@ static void mark_free_region(uint32_t base, uint32_t len, uint32_t type)
 
 void frame_alloc_init(const MBIInfo *info)
 {
-  for (uint32_t i = 0; i < 32768; i++){
+  for (uint32_t i = 0; i < FRAME_BITMAP_LENGTH; i++){
+    // means all frames used, NOT an error
+    // like in syscalls.
     frame_bitmap[i] = 0xFFFFFFFF;
   }
   
@@ -33,12 +35,12 @@ void frame_alloc_init(const MBIInfo *info)
 
 uint32_t alloc_frame(void)
 {
-  for (uint32_t i = 0; i < 32768; i++){
+  for (uint32_t i = 0; i < FRAME_BITMAP_LENGTH; i++){
     if (frame_bitmap[i] != 0xFFFFFFFF){
       for (uint32_t b = 0; b < 32; b++) {
         if (((frame_bitmap[i] >> b) & 1) == 0) {
           frame_bitmap[i] |= 1u << b;
-          return (i * 32 + b) * 4096;
+          return (i * 32 + b) * FRAME_SIZE_BYTES;
         }
       }
     }

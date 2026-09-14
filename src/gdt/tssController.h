@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 
+#define TSS_GDT_ENTRY_IND 5
+
 typedef struct{
   uint32_t link; // filler as well
   uint32_t esp0;

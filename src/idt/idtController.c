@@ -1,11 +1,10 @@
 #include <stdint.h>
 #include "portio.h"
 #include "idt/idtController.h"
+#include "gdt/segments.h"
 
-#define GDT_INDEX_1 0x08
 #define IDT_ENTRY_AMT 256
 #define INTERRUPT_GATE_TYPE 0x8E
-#define FIRST_IRQ_STUB_VECTOR 0x20
 
 struct idt_entry {
   uint16_t offset_low;
@@ -30,7 +29,7 @@ void idt_set_gate_type(int n, void (*handler)(void), uint8_t type)
 {
   uint32_t addr = (uint32_t)handler;
   idt[n].offset_low  = addr & 0xFFFF;
-  idt[n].selector    = GDT_INDEX_1;
+  idt[n].selector    = KERNEL_CODE_SEGMENT_SEL;
   idt[n].zero        = 0;
   idt[n].type_attr   = type;
   idt[n].offset_high = addr >> 16;
@@ -62,8 +61,8 @@ void idt_init(void)
 
   outb(PIC1_CMD,  0x11);
   outb(PIC2_CMD,  0x11);
-  outb(PIC1_DATA, 0x20);
-  outb(PIC2_DATA, 0x28);
+  outb(PIC1_DATA, PIC1_VECTOR_OFFSET);
+  outb(PIC2_DATA, PIC2_VECTOR_OFFSET);
   outb(PIC1_DATA, 0x04);
   outb(PIC2_DATA, 0x02);
   outb(PIC1_DATA, 0x01);

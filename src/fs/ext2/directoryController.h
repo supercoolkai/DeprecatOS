@@ -8,6 +8,8 @@
 #define INODE_DIR_TYPE 0x4000
 #define NAME_LEN 256
 
+#define ROOT_INODE_N 2
+
 struct dir_row 
 {
   uint32_t inode;

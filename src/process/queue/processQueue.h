@@ -4,6 +4,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#define PQUEUE_SIZE_ELEMENTS 256
+
 typedef struct {
   uint32_t esp;
   uint32_t stack_addr;

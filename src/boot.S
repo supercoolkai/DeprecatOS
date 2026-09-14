@@ -1,3 +1,4 @@
+#include "gdt/segments.h"
 .set MB_MAGIC,    0x1BADB002
 .set MB_FLAGS,    0x6
 .set MB_CHECKSUM, -(MB_MAGIC + MB_FLAGS)
@@ -64,9 +65,9 @@ _start:
     cli
 
     lgdt gdt_descriptor
-    ljmp $0x08, $reload_segments
+    ljmp $KERNEL_CODE_SEGMENT_SEL, $reload_segments
 reload_segments:
-    movw $0x10, %ax
+    movw $KERNEL_DATA_SEGMENT_SEL, %ax
     movw %ax, %ds
     movw %ax, %es
     movw %ax, %fs
@@ -112,7 +113,6 @@ syscall_stub:
     push %esp
     call syscall_handler
     movl %eax, %esp
-    //add $4, %esp
     popa
     iret
 

@@ -1,4 +1,5 @@
 #include "gdt/tssController.h"
+#include "gdt/segments.h"
 #include <stdint.h>
 
 static tssInfo info;
@@ -18,18 +19,21 @@ extern struct gdt_entry gdt[];
 void tss_init(void)
 {
   info.esp0 = (uint32_t) stack_top;
-  info.ss0 = 0x10;
-  info.IOBitmapOffset = 104 << 16;
+  info.ss0 = KERNEL_DATA_SEGMENT_SEL;
+  info.IOBitmapOffset = sizeof(tssInfo) << 16;
   
-  uint32_t base = (uint32_t)&info;
-  gdt[5].limit  = 103;
-  gdt[5].baseBits = base & 0xFFFF;
-  gdt[5].baseBitsContd = (base>>16) & 0xFF;
-  gdt[5].accessByte = 0x89;
-  gdt[5].flags = 0;
-  gdt[5].baseBitsTop = base >> 24;
 
-  uint16_t sel = 0x28;
+  // check the table in docs/gdt.md 
+  // if you don't know what these mean
+  uint32_t base = (uint32_t)&info;
+  gdt[TSS_GDT_ENTRY_IND].limit  = sizeof(tssInfo) - 1;
+  gdt[TSS_GDT_ENTRY_IND].baseBits = base & 0xFFFF;
+  gdt[TSS_GDT_ENTRY_IND].baseBitsContd = (base>>16) & 0xFF;
+  gdt[TSS_GDT_ENTRY_IND].accessByte = 0x89;
+  gdt[TSS_GDT_ENTRY_IND].flags = 0;
+  gdt[TSS_GDT_ENTRY_IND].baseBitsTop = base >> 24;
+
+  uint16_t sel = TSS_GDT_ENTRY_IND << 3;
   __asm__ volatile ("ltr %0" : : "r"(sel));
 }
 

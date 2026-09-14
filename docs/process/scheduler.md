@@ -29,10 +29,6 @@ a table for the forged frame's layout:
 | 10 | 40 | EFLAGS | `0x202` (IF set) | `0x202` (IF set) |
 | 11 | 44 | ESP | — | `user_stack_top` |
 | 12 | 48 | SS | — | `0x23` |
-
-> the `44` / `52` sizes and slot indices are hardcoded to the exact
-> push order in `boot.s`. if you change a push there, both must change.
-> will be fixed soon, hang tight!!
 ---
 
 ## global variables

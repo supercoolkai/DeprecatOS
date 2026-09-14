@@ -3,6 +3,10 @@
 
 #include <stdbool.h>
 
+#define KEY_EXTENDED_PREFIX 0xE0
+#define KEY_PAUSE_PREFIX 0xE1
+#define KEY_RELEASE_BIT 0x80
+
 typedef enum {
     KEY_NONE = 0,
 
