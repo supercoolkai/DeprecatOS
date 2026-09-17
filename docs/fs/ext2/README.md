@@ -74,6 +74,7 @@ src: `src/fs/ext2/blockGroupDescriptor.h`: asserted as 32 bytes, `packed`. `BLOC
 | 18 | `unused_trail[14]` | `uint8_t[14]` | pad to 32 |
 
 > block group descriptor table (BGDT) starts in the block following the superblock.
+> 
 > in this case, block 1.
 
 ### inode format
@@ -120,16 +121,20 @@ src: `src/fs/ext2/directoryEntry.h`: `packed`. header asserted as 8 bytes, `name
 
 | off | field | type | notes |
 |---|---|---|---|
-| 0 | `inode` | `uint32_t` | 0 ⇒ unused slot, skip |
-| 4 | `curr_entry_size` | `uint16_t` | `rec_len`; advance cursor by this |
+| 0 | `inode` | `uint32_t` | 0 -> unused slot, skip |
+| 4 | `curr_entry_size` | `uint16_t` | `rec_len`, advance cursor by this |
 | 6 | `name_len_lo` | `uint8_t` | name length low byte |
 | 7 | `type_or_name_len_hi` | `uint8_t` | file type if superblock req-features bit 1 set, else name_len high byte |
-| 8 | `name[]` | `uint8_t[]` | not NUL-terminated — compare by (len, bytes) |
+| 8 | `name[]` | `uint8_t[]` | not NUL-terminated, compare by (len, bytes) |
 
-> tips for navigation: 
+> tips for navigation:
+> 
 >     `rec_len==0` to prevent inf loop
+> 
 >     `rec_len<8` to check for incomplete entries
+> 
 >     `rec_len%4` to check for improperly formatted entries
+> 
 >     `8+name_len>rec_len` check whether `name_len` and `rec_len` is properly set
 
 ## structs
