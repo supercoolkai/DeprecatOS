@@ -32,7 +32,7 @@ base fields are off 0-83, extended fields are offset 84+
 | 64 | `last_fsck_time` | `uint32_t` | |
 | 68 | `check_interval` | `uint32_t` | |
 | 72 | `os_id` | `uint32_t` | |
-| 76 | `major_version` | `uint32_t` | ≥1 -> extended fields valid |
+| 76 | `major_version` | `uint32_t` | >=1 -> extended fields valid |
 | 80 | `reserved_id_user` | `uint16_t` | |
 | 82 | `reserved_id_group` | `uint16_t` | |
 | 84 | `first_unreserved_inode` | `uint32_t` | first non-reserved inode (root = 2) |

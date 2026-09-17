@@ -27,8 +27,8 @@ a table for the forged frame's layout:
 | 8 | 32 | EIP | `entry` | `entry` |
 | 9 | 36 | CS | `0x08` | `0x1B` |
 | 10 | 40 | EFLAGS | `0x202` (IF set) | `0x202` (IF set) |
-| 11 | 44 | ESP | — | `user_stack_top` |
-| 12 | 48 | SS | — | `0x23` |
+| 11 | 44 | ESP | - | `user_stack_top` |
+| 12 | 48 | SS | - | `0x23` |
 ---
 
 ## global variables
