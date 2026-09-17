@@ -3,6 +3,7 @@
 #include "drivers/serial/serialController.h"
 #include "util/streq/streq.h"
 #include <stdint.h>
+#include <stdbool.h>
 
 #define PALETTE_LENGTH 8
 #define IS_PRINTING_FLAG 1

@@ -10,8 +10,8 @@ a table of the struct:
 | off | field | type | notes |
 |---|---|---|---|
 | 0 | `esp` | `uint32_t` | saved stack pointer (into the forged/live frame) |
-| 4 | `stack_addr` | `uint32_t` | present in struct; scheduler drives off `malloc_addr` |
-| 8 | `malloc_addr` | `uint32_t` | base of the `kmalloc`'d `STACK_SIZE` stack; `0` = the bootstrap `current` with no stack |
+| 4 | `stack_addr` | `uint32_t` | present in struct, scheduler drives off `malloc_addr` |
+| 8 | `malloc_addr` | `uint32_t` | base of the `kmalloc`'d `STACK_SIZE` stack, `0` = the bootstrap `current` with no stack |
 
 `STACK_SIZE = 1024` (`scheduler.h`). kernel stack top = `malloc_addr + STACK_SIZE`; TSS `esp0` is set there on switch-in. Ready queue is a 256-slot ring (`pqueue_*`).
 
