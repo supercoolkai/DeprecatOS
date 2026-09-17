@@ -1,5 +1,28 @@
 # Syscall Controller
 
+## syscall number -> syscall map
+
+src: `user/shell/sys/syscall.c` (`int 0x80`, number in EAX). 
+
+| # | name | args (registers) | returns |
+|---|---|---|---|
+| 1 | `SYS_WRITE_CHAR` | ebx = char | |
+| 2 | `SYS_WRITE_STR` | ebx = str | |
+| 3 | `SYS_GET_TICKS` | | eax = ticks |
+| 4 | `SYS_EXIT` | | (no return) |
+| 5 | `SYS_READ_CHAR` | | eax = char |
+| 6 | `SYS_YIELD` | | |
+| 7 | `SYS_WRITE_CHAR_COLOR` | ebx = char, ecx = color | |
+| 8 | `SYS_WRITE_STR_COLOR` | ebx = str, ecx = color | |
+| 9 | `SYS_READ_CHUNK` | ebx = inode, edx = chunk#, ecx = buf | eax = bytes (0 = past EOF, `0xFFFFFFFF` = error) |
+| 10 | `SYS_RESOLVE_DIR` | ebx = path | eax = inode / status |
+| 11 | `SYS_WRITE_STR_LEN` | ebx = buf, ecx = len | |
+| 12 | `SYS_GET_STAT` | ebx = inode, ecx = buf (128 B) | eax bool → `0xFFFFFFFF` on fail |
+
+> `SYS_EXIT` is hardcoded as `.set SYS_EXIT, 4` in `user/shell/crt0.S`
+
+---
+
 ## purpose
 link between ring 3 and ring 0, essentially the gateway between the userland and kernel. all syscalls are housed here
 

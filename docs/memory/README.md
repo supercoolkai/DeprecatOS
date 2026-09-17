@@ -1,5 +1,19 @@
 # Memory Management
 
+## key addresses / layout:
+
+| symbol | value | meaning |
+|---|---|---|
+| `KERNEL_CEILING` | `0x40000000` | top of kernel identity region (1 GiB) |
+| heap_start | `0x400000` | kernel heap base (grows up toward ceiling) |
+| heap_end (init) | `0x401000` | one page; doubles on growth |
+| `CODE_ADDR` | `KERNEL_CEILING` | user code load address |
+| `MISC_PAGE_CNT` | `3` | user misc pages between code and stack |
+| `STACK_ADDR` | `KERNEL_CEILING + 0x1000*(MISC_PAGE_CNT+1)` | user stack top |
+| `USER_SPACE_END` | `KERNEL_CEILING + 0x1000*(MISC_PAGE_CNT+2)` | end of user window; every user-pointer check bounds against this |
+
+---
+
 ## structs
 
 ### `MBIInfo` in `src/memory/mmap/memoryMap.h`

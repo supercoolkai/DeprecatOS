@@ -2,5 +2,8 @@
 #define ERRORS_H
 
 #define SYSCALL_ERROR 0xFFFFFFFF
+#define BLOCK_ERROR 0
+#define INODE_ERROR 0
+#define GENERAL_ERROR 0xFFFFFFFF
 
 #endif

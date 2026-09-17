@@ -1,12 +1,11 @@
 #include "fs/ext2/directoryEntry.h"
 #include "fs/ext2/directoryController.h"
 #include "fs/ext2/inode.h"
+#include "memory/heap/kernelHeap.h"
 #include "fs/ext2/blockGroupDescriptor.h"
 #include "fs/block/blockController.h"
 #include <stdint.h>
 #include <stdbool.h>
-
-static uint16_t blk_buf[BLOCK_SIZE / 2 * INODE_BLK_PTR_AMT];
 
 static struct ext2_directory_entry *return_next_dir_entry(uint16_t *buf, uint32_t *pos)
 {
@@ -84,8 +83,11 @@ static bool lookup(uint16_t *buf, const char *name, uint32_t *out, uint32_t size
 
 bool lookup_path(const char *path, uint32_t *out)
 {
-  if (path[0] != '/')
+  uint16_t *blk_buf = kmalloc(BLOCK_SIZE / 2 * INODE_BLK_PTR_AMT * sizeof(uint16_t));
+  if (path[0] != '/'){
+    kfree(blk_buf);
     return false;
+  }
 
   int len = 0;
 
@@ -96,8 +98,10 @@ bool lookup_path(const char *path, uint32_t *out)
     len++;
   }
 
-  if (len == NAME_LEN)
+  if (len == NAME_LEN){
+    kfree(blk_buf);
     return false;
+  }
   
   int ind = 1;
   uint32_t curr_inode_num = ROOT_INODE_N;
@@ -142,18 +146,25 @@ bool lookup_path(const char *path, uint32_t *out)
 
     bool success = get_inode(curr_inode_num, &ino);
 
-    if (!success)
+    if (!success){
+      kfree(blk_buf);
       return false;
+    }
   
-    if ((ino.type_and_perms_lo & NO_PERMISSION_MASK) != INODE_DIR_TYPE)
+    if ((ino.type_and_perms_lo & NO_PERMISSION_MASK) != INODE_DIR_TYPE){
+      kfree(blk_buf);
       return false;
+    }
 
     read_inode(&ino, blk_buf);
-    if (!lookup(blk_buf, name, &curr_inode_num, ino.size_lo))
+    if (!lookup(blk_buf, name, &curr_inode_num, ino.size_lo)){
+      kfree(blk_buf);
       return false;
+    }
 
     ind = j+1;
   }
   *out = curr_inode_num;
+  kfree(blk_buf);
   return true;
 }

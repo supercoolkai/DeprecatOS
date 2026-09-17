@@ -1,5 +1,33 @@
 # Paging
 
+## data structure tables / related information
+src: `src/memory/paging/paging.h`, `src/memory/heap/kernelHeap.c`, `src/userland/userland.h`
+
+### flag bits:
+**page-entry flag bits** (passed to `map_kernel_page`):
+
+| macro | bit | meaning |
+|---|---|---|
+| `PAGE_PRESENT` | `0x1` | entry is valid |
+| `PAGE_RW` | `0x2` | writable |
+| `PAGE_USER` | `0x4` | ring-3 accessible |
+
+### PDE (page descriptor entry) format:
+
+| bits | field |
+|---|---|
+| 0 | present |
+| 1 | read/write |
+| 2 | user/supervisor |
+| 3 | write-through |
+| 4 | cache-disable |
+| 5 | accessed |
+| 6 | dirty (PTE) |
+| 7 | page-size (PDE) / PAT (PTE) |
+| 8 | global |
+| 9–11 | available for OS |
+| 12–31 | physical frame address (4 KiB-aligned) |
+
 ## global variables
 #### `static uint32_t *kernel_dir`:
 an address to the frame of the kernel directory (which is assigned in `paging_init()`)

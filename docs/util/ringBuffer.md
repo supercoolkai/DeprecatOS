@@ -1,5 +1,16 @@
 # Ring Buffer
 
+## ringBuffer struct format
+src `src/util/rb/ringBuffer.h`
+
+FIFO queue struct for keyboard scancode I/O
+
+| off | field | type | notes |
+|---|---|---|---|
+| 0 | `queue[256]` | `volatile unsigned char[256]` | |
+| 256 | `head` | `volatile unsigned char` | write index (wraps at 256) |
+| 257 | `tail` | `volatile unsigned char` | read index (wraps at 256) |
+
 ## overview
 a queue-like structure, specialized for `unsigned char`s. mainly for keyboard I/O
 

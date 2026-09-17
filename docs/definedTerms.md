@@ -12,11 +12,15 @@
 
 #### **BIT_32_PER_BLK** *(src/fs/block/blockController.h)*
 
+#### **BITMAPCONTROLLER_H** *(src/fs/ext2/bitmapController.h)*
+
 #### **BLACK** *(src/drivers/fb/fbController.h)*
 
 #### **BLOCKCONTROLLER_H** *(src/fs/block/blockController.h)*
 
 #### **BLOCKGROUPDESCRIPTOR_H** *(src/fs/ext2/blockGroupDescriptor.h)*
+
+#### **BLOCK_ERROR** *(src/errors.h)*
 
 #### **BLOCK_SIZE** *(src/fs/ext2/blockGroupDescriptor.h)*
 
@@ -96,6 +100,8 @@
 
 #### **FRAME_VECTOR_INDEX_EXCEPTION** *(src/exceptions/exceptions.h)*
 
+#### **GENERAL_ERROR** *(src/errors.h)*
+
 #### **GLYPH_HEIGHT** *(src/drivers/fb/fbController.h)*
 
 #### **GLYPH_WIDTH** *(src/drivers/fb/fbController.h)*
@@ -114,9 +120,13 @@
 
 #### **IDT_ENTRY_AMT** *(src/idt/idtController.c)*
 
+#### **INDIRECT_PTR_LAYERS** *(src/fs/block/blockController.h)*
+
 #### **INODE_BLK_PTR_AMT** *(src/fs/ext2/inode.h)*
 
 #### **INODE_DIR_TYPE** *(src/fs/ext2/directoryController.h)*
+
+#### **INODE_ERROR** *(src/errors.h)*
 
 #### **INODE_H** *(src/fs/ext2/inode.h)*
 

@@ -1,8 +1,8 @@
 #ifndef PAGING_H
 #define PAGING_H
-#define PAGE_PRESENT 0x1
-#define PAGE_RW 0x2
-#define PAGE_USER 0x4
+#define PAGE_PRESENT 1
+#define PAGE_RW (1 << 1)
+#define PAGE_USER (1 << 2)
 #define KERNEL_CEILING 0x40000000
 
 #include <stdint.h>

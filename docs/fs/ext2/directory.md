@@ -1,5 +1,15 @@
 # Directory Controller
 
+## dir_row struct format
+src `src/fs/ext2/directoryController.h`
+
+for `ls`'s output, `NAME_LEN` is hardcoded to 256
+
+| off | field | type |
+|---|---|---|
+| 0 | `inode` | `uint32_t` |
+| 4 | `name[256]` | `uint8_t[256]` |
+
 ## purpose
 basically the controller of directories, whatever information is necessary from directories, this gets it. 
 

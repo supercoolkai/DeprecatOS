@@ -26,9 +26,10 @@ i try to make this project what i call an "ultra-monolithic kernel". an ultra-mo
 
 ### filesystem
 - read-only ext2 support
+- RW ext2 support in-progress
 
 ### drivers
-- ATA disk driver (for full feature list see docs/drivers/disk/ata)
+- ATA disk driver (PIO for now, DMA soon trust me)
 - framebuffer text output (8x16 font)
 - PIT timer (ticks)
 - PS/2 keyboard driver
@@ -43,6 +44,7 @@ i try to make this project what i call an "ultra-monolithic kernel". an ultra-mo
 ### util
 - ring buffer
 - hex printer
+- kwrite (primitive version)
 
 ## **warnings:**
 the *cat/ls/cd* shell command may throw off the timer by a few milliseconds.

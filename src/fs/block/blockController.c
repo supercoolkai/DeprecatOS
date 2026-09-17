@@ -4,6 +4,7 @@
 #include "fs/ext2/directoryEntry.h"
 #include "fs/ext2/blockGroupDescriptor.h"
 #include "drivers/disk/ata.h"
+#include "memory/heap/kernelHeap.h"
 #include "exceptions/exceptions.h"
 #include "util/hex/hexPrinter.h"
 #include "drivers/fb/fbController.h"
@@ -18,24 +19,15 @@ static uint16_t sectors_per_blk = BLOCK_SIZE / BYTES_PER_SECTOR;
 static uint32_t superblk_pos = EXT2_SUPERBLOCK_OFFSET;
 static uint32_t bgdt_blk_n = 1;
 
-static uint16_t buf[WORDS_PER_BLK];
-
 static uint32_t inode_size;
 static uint32_t inodes_per_grp;
 static uint32_t blks_per_grp;
 static uint32_t frags_per_grp;
 static uint32_t ngroups;
 
-static uint16_t indirect_buf[3][WORDS_PER_BLK];
-
-static uint16_t *out_cursor;
-static uint32_t blocks_left;
 
 // dum block reading function. very simple math u just 
 // get lba get sectors then u get block.
-// 
-// for the functions which need to get access to a block. currentyl only here 
-// so static
 void read_block(uint32_t block_n, uint16_t *buf)
 {
   uint64_t lba = (uint64_t) (block_n * sectors_per_blk);
@@ -43,24 +35,31 @@ void read_block(uint32_t block_n, uint16_t *buf)
   ata_read48(ATA_MASTER, lba, sectors_per_blk, buf);
 }
 
-static void indir_read_block(uint32_t block_n, int layer)
+void write_block(uint32_t block_n, uint16_t *buf)
+{
+  uint64_t lba = (uint64_t) (block_n * sectors_per_blk);
+
+  ata_write48(ATA_MASTER, lba, sectors_per_blk, buf);
+}
+
+static void indir_read_block(uint16_t **out_cursor, uint32_t *blocks_left, uint32_t block_n, int layer, uint16_t (*indirect_buf) [WORDS_PER_BLK])
 {
   if (block_n == 0) 
     panic("KERNEL PANIC: BLOCK OUT OF RANGE");
 
   // baseo caseo
   if (layer == 0) {
-    read_block(block_n, out_cursor);
-    out_cursor += WORDS_PER_BLK;
-    blocks_left--;
+    read_block(block_n, *out_cursor);
+    *out_cursor += WORDS_PER_BLK;
+    (*blocks_left)--;
     return;
   }
 
   // recurse
   read_block(block_n, indirect_buf[layer-1]);
   uint32_t *entries = (uint32_t *) indirect_buf[layer-1];
-  for (int i = 0; i < BIT_32_PER_BLK && blocks_left > 0; i++) {
-    indir_read_block(entries[i], layer-1);
+  for (int i = 0; i < BIT_32_PER_BLK && *blocks_left > 0; i++) {
+    indir_read_block(out_cursor, blocks_left, entries[i], layer-1, indirect_buf);
   }
 }
 
@@ -86,11 +85,13 @@ void block_init(void)
 // read_inode to read contents
 bool get_inode(uint32_t inode_n, struct ext2_inode *out)
 {
+  uint16_t *buf = kmalloc(BLOCK_SIZE);
   uint32_t g = (inode_n - 1) / inodes_per_grp;
   uint32_t ind = (inode_n - 1) % inodes_per_grp;
   
   if (inode_n == 0 || inode_n > superblk->inode_cnt)
   {
+    kfree(buf);
     return false;
   }
 
@@ -99,6 +100,7 @@ bool get_inode(uint32_t inode_n, struct ext2_inode *out)
   
   read_block(blk, buf);
   *out = *(struct ext2_inode *)(((uint8_t *)buf) + off);
+  kfree(buf);
   return true;
 }
 
@@ -106,14 +108,15 @@ bool get_inode(uint32_t inode_n, struct ext2_inode *out)
 // self explanatory imo 
 void read_inode(struct ext2_inode *inode, uint16_t *out)
 {
-  out_cursor = out;
-  blocks_left = (inode->size_lo + BLOCK_SIZE - 1) / BLOCK_SIZE;
+  uint16_t (*indirect_buf)[WORDS_PER_BLK] = kmalloc(INDIRECT_PTR_LAYERS * BLOCK_SIZE);
+  uint32_t blocks_left = (inode->size_lo + BLOCK_SIZE - 1) / BLOCK_SIZE;
 
   for (int i = 0; i < INODE_BLK_PTR_AMT && blocks_left > 0; i++) {
-    indir_read_block(inode->dir_block_ptr[i], 0);
+    indir_read_block(&out, &blocks_left, inode->dir_block_ptr[i], 0, indirect_buf);
   }
   
-  if (blocks_left > 0) indir_read_block(inode->singly_indir_block_ptr, 1);
-  if (blocks_left > 0) indir_read_block(inode->doubly_indir_block_ptr, 2);
-  if (blocks_left > 0) indir_read_block(inode->triply_indir_block_ptr, 3); 
+  if (blocks_left > 0) indir_read_block(&out, &blocks_left, inode->singly_indir_block_ptr, 1, indirect_buf);
+  if (blocks_left > 0) indir_read_block(&out, &blocks_left,inode->doubly_indir_block_ptr, 2, indirect_buf);
+  if (blocks_left > 0) indir_read_block(&out, &blocks_left, inode->triply_indir_block_ptr, 3, indirect_buf); 
+  kfree(indirect_buf);
 }

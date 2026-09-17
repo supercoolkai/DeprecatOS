@@ -1,5 +1,20 @@
 # Heap Controller
 
+## data structure tables / related information
+
+### heap block header
+
+src: `src/memory/heap/kernelHeap.c`  `BlockHeader` (8 bytes, not asserted)
+
+bump/first-fit allocator each block is `[BlockHeader][payload]`. `kmalloc` rounds request up to a multiple of 4 and splits when the remainder exceeds a header.
+
+| off | field | type | notes |
+|---|---|---|---|
+| 0 | `size` | `uint32_t` | payload bytes (excludes header) |
+| 4 | `is_free` | `uint32_t` | 1 = free, 0 = in use |
+
+---
+
 ## global variables
 #### `static uint32_t heap_start`:
 the address of where the heap starts
