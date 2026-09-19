@@ -17,5 +17,6 @@ void write_block(uint32_t block_n, uint16_t *buf);
 void block_init(void);
 bool get_inode(uint32_t inode_n, struct ext2_inode *out);
 void read_inode(struct ext2_inode *inode, uint16_t *out);
+uint32_t write_inode(uint16_t *buf, uint32_t f_size, bool is_dir, struct ext2_inode *out);
 
 #endif

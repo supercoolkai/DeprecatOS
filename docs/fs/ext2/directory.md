@@ -10,12 +10,12 @@ for `ls`'s output, `NAME_LEN` is hardcoded to 256
 | 0 | `inode` | `uint32_t` |
 | 4 | `name[256]` | `uint8_t[256]` |
 
-## purpose
-basically the controller of directories, whatever information is necessary from directories, this gets it. 
-
 ## global variables
 #### `static uint16_t blk_buf[BLOCK_SIZE / 2 * INODE_BLK_PTR_AMT]`:
 a table which lookup_path() uses (soon to be replaced with a kmalloc)
+
+## overview
+basically the controller of directories, whatever information is necessary from directories, this gets it. 
 
 ## function analysis 
 ### `struct ext2_directory_entry *return_next_dir_entry(uint16_t *buf, uint32_t *pos)`

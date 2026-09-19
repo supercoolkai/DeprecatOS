@@ -6,6 +6,7 @@
 
 #define NO_PERMISSION_MASK 0xF000
 #define INODE_DIR_TYPE 0x4000
+#define INODE_FILE_TYPE 0x8000
 #define NAME_LEN 256
 
 #define ROOT_INODE_N 2

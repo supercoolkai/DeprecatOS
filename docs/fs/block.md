@@ -69,3 +69,6 @@ gets the real `ext2_inode` struct from the unique `inode_n` representing it. ret
 
 ### `void read_inode(struct ext2_inode *inode, uint16_t *out)`
 calls the `indir_read_block()` function to read an inode typically returned from `get_inode()` into the buffer `out`. do note that it completely trusts in `indir_read_block()` to work properly and does not return/warn anything if something goes wrong, only panics if the block is out of range.
+
+### `void write_inode(uint16_t *buf, uint32_t f_size, bool is_dir, struct ext2_inode *out)`
+a function similar to `indir_read_block()` but it writes an inode from scratch, with data `buf`. iterative because too complicated to do recursive (maybe i was too lazy idk. either way its fine). uses `f_size` as `size_lo`, so `f_size` MUST match `buf`'s size. returns the inode number of the created inode, and returns the actual inode as a pointer to `out`.

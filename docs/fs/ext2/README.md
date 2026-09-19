@@ -156,3 +156,6 @@ controls the `ext2_*` structs and the overall ext2 filesystem
 
 ### `directory`
 as the name says, it is the main controller of directories on the kernel side. contains the tools for resolving paths, looking up dirs, etc.
+
+### `bitmap`
+like `block` and `frameAlloc`, but manages the bitmaps instead of the frames or blocks. essentially if a bit is `1`, then that block/inode number is occupied, and if it's `0`, then that block/inode number is free and able to be allocated. also able to free bits from the bitmap, essentially setting a given block/inode's bit to `0`. this also manages the superblock's `unalloc_(block/inode)_cnt` as well as the block's block group descriptor's `unalloc_(inode/block)_cnt`

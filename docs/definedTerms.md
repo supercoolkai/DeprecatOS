@@ -110,6 +110,10 @@
 
 #### **GREEN** *(src/drivers/fb/fbController.h)*
 
+#### **HEAP_END_MIN** *(src/memory/heap/kernelHeap.h)*
+
+#### **HEAP_START** *(src/memory/heap/kernelHeap.h)*
+
 #### **HEXPRINTER_H** *(src/util/hex/hexPrinter.h)*
 
 #### **IDENTIFY_CMD** *(src/drivers/disk/ata.h)*
@@ -127,6 +131,8 @@
 #### **INODE_DIR_TYPE** *(src/fs/ext2/directoryController.h)*
 
 #### **INODE_ERROR** *(src/errors.h)*
+
+#### **INODE_FILE_TYPE** *(src/fs/ext2/directoryController.h)*
 
 #### **INODE_H** *(src/fs/ext2/inode.h)*
 

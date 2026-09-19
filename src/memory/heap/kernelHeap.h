@@ -3,8 +3,9 @@
 
 #include <stdint.h>
 
-#define HEAP_START 0x400000
-#define HEAP_END_MIN 0x401000
+#define HEAP_START 0x10000000
+#define HEAP_END_MIN 0x10001000
+
 
 void heap_init(void);
 void* kmalloc(uint32_t size);
