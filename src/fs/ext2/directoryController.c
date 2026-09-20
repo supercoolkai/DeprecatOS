@@ -4,6 +4,8 @@
 #include "memory/heap/kernelHeap.h"
 #include "fs/ext2/blockGroupDescriptor.h"
 #include "fs/block/blockController.h"
+#include "util/kprintf/kprintf.h"
+#include "drivers/timer/timerController.h"
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -167,4 +169,84 @@ bool lookup_path(const char *path, uint32_t *out)
   *out = curr_inode_num;
   kfree(blk_buf);
   return true;
+}
+
+// !!! NOT A WRAPPER OF PUT_INODE() !!!
+// Step 2 of the inode writing pipeline,
+// kinda like get_inode() and read_inode()
+bool dir_insert(uint32_t parent_inode_n, const char *name, uint32_t child_inode_n)
+{
+  uint32_t len = 0;
+  while (len < NAME_LEN && name[len] != 0)
+    len++;
+
+  if (len == 0 || len >= NAME_LEN)
+    return false;
+
+  struct ext2_inode child_inode;
+  if (!get_inode(child_inode_n, &child_inode)) {
+    return false;
+  }
+
+  struct ext2_inode parent_inode;
+  if (!get_inode(parent_inode_n, &parent_inode)) {
+    return false;
+  }
+  
+  if ((parent_inode.type_and_perms_lo & NO_PERMISSION_MASK) != INODE_DIR_TYPE) {
+    return false;
+  }
+
+  uint32_t needed = ALIGN4(8 + len);
+  uint16_t *scratch = kmalloc(BLOCK_SIZE);
+
+  for (uint32_t i = 0; i < parent_inode.size_lo / BLOCK_SIZE && i < INODE_BLK_PTR_AMT; i++) {
+    read_block(parent_inode.dir_block_ptr[i], scratch);
+
+    uint32_t cursor = 0;
+    while (cursor < BLOCK_SIZE) {
+      struct ext2_directory_entry *entry = (struct ext2_directory_entry *)((uint8_t *)scratch + cursor);
+
+      uint32_t true_size = ALIGN4(8 + entry->name_len_lo);
+
+      if (entry->curr_entry_size < 8 || true_size > entry->curr_entry_size || cursor + entry->curr_entry_size > BLOCK_SIZE) {
+        kfree(scratch);
+        return false;
+      } 
+
+      uint32_t slack = entry->curr_entry_size - true_size;
+
+      if (slack >= needed){
+        struct ext2_directory_entry *new = (struct ext2_directory_entry *)(((uint8_t *) entry) + true_size);
+
+        entry->curr_entry_size = true_size;
+        new->curr_entry_size = slack;
+        new->inode = child_inode_n;
+        new->name_len_lo = len;
+        for (uint32_t j = 0; j < len; j++) {
+          new->name[j] = name[j];
+        }
+        new->type = ((child_inode.type_and_perms_lo & NO_PERMISSION_MASK) == INODE_DIR_TYPE) ? 2 : 1;
+        write_block(parent_inode.dir_block_ptr[i], scratch);
+
+
+        kfree(scratch);
+
+        child_inode.hard_link_cnt++;
+        if (!set_inode(child_inode_n, &child_inode))
+          return false;
+
+        parent_inode.last_mod_time = timer_get_tick();
+        
+        if (!set_inode(parent_inode_n, &parent_inode))
+          return false;
+
+        return true;
+      }
+      cursor += entry->curr_entry_size;
+    }
+  }
+  
+  kfree(scratch);
+  return false;
 }

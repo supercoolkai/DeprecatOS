@@ -82,6 +82,24 @@ static void indir_read_block(uint16_t **out_cursor, uint32_t *blocks_left, uint3
   }
 }
 
+static void indir_free_block(uint32_t block_n, uint32_t layer, uint32_t (*indirect_buf)[BIT_32_PER_BLK])
+{
+  if (block_n == 0)
+    return;
+
+  if (layer == 0) {
+    free_block(block_n);
+    return;
+  }
+
+  read_block(block_n, (uint16_t *) indirect_buf[layer-1]);
+  uint32_t *entries = (uint32_t *) indirect_buf[layer-1];
+  for(int i = 0; i < BIT_32_PER_BLK; i++) {
+    indir_free_block(entries[i], layer-1, indirect_buf);
+  }
+  free_block(block_n);
+}
+
 // init globals n stuff for future reference
 void block_init(void)
 {
@@ -119,6 +137,29 @@ bool get_inode(uint32_t inode_n, struct ext2_inode *out)
   
   read_block(blk, buf);
   *out = *(struct ext2_inode *)(((uint8_t *)buf) + off);
+  kfree(buf);
+  return true;
+}
+
+// set inode
+bool set_inode(uint32_t inode_n, struct ext2_inode *in)
+{
+  uint16_t *buf = kmalloc(BLOCK_SIZE);
+  uint32_t g = (inode_n - 1) / inodes_per_grp;
+  uint32_t ind = (inode_n - 1) % inodes_per_grp;
+  
+  if (inode_n == 0 || inode_n > superblk->inode_cnt)
+  {
+    kfree(buf);
+    return false;
+  }
+
+  uint32_t blk = bgdt[g].inode_table_start_addr + (ind * inode_size) / BLOCK_SIZE;
+  uint32_t off = (ind * inode_size) % BLOCK_SIZE;
+  
+  read_block(blk, buf);
+  *(struct ext2_inode *)(((uint8_t *)buf) + off) = *in;
+  write_block(blk, buf);
   kfree(buf);
   return true;
 }
@@ -188,6 +229,12 @@ uint32_t write_inode(uint16_t *buf, uint32_t f_size, bool is_dir, struct ext2_in
   for (int i = 0 ; i < INODE_BLK_PTR_AMT && blocks_left > 0; i++) {
     block_n = alloc_block();
     if (block_n == BLOCK_ERROR) {
+      uint32_t (*unwind_buf)[BIT_32_PER_BLK] = kmalloc(INDIRECT_PTR_LAYERS * BLOCK_SIZE);
+      for (int j = 0; j < INODE_BLK_PTR_AMT; j++) {
+        indir_free_block(inode.dir_block_ptr[j], 0, unwind_buf);
+      }
+
+      kfree(unwind_buf);
       free_inode(inode_n);
       return BLOCK_ERROR;
     }
@@ -211,6 +258,13 @@ uint32_t write_inode(uint16_t *buf, uint32_t f_size, bool is_dir, struct ext2_in
 
   uint32_t triple_ptr_temp = alloc_block();
   if (triple_ptr_temp == BLOCK_ERROR) { 
+
+    uint32_t (*unwind_buf)[BIT_32_PER_BLK] = kmalloc(INDIRECT_PTR_LAYERS * BLOCK_SIZE);
+    for (int i = 0; i < INODE_BLK_PTR_AMT; i++) {
+      indir_free_block(inode.dir_block_ptr[i], 0, unwind_buf);
+    }
+    
+    kfree(unwind_buf);
     free_inode(inode_n);
     return BLOCK_ERROR;
   }
@@ -226,6 +280,21 @@ uint32_t write_inode(uint16_t *buf, uint32_t f_size, bool is_dir, struct ext2_in
     has_double = false;
     uint32_t doubly_indir_blk_ptr = alloc_block();
     if (doubly_indir_blk_ptr == BLOCK_ERROR) {
+      uint32_t (*unwind_buf)[BIT_32_PER_BLK] = kmalloc(INDIRECT_PTR_LAYERS * BLOCK_SIZE);
+      for (int i = 0; i < INODE_BLK_PTR_AMT; i++) {
+        indir_free_block(inode.dir_block_ptr[i], 0, unwind_buf);
+      }
+
+      for (int i = 0; i < BIT_32_PER_BLK; i++) {
+        indir_free_block(curr_triply_indir_blk[i], 2, unwind_buf);
+      }
+      
+      indir_free_block(inode.singly_indir_block_ptr, 1, unwind_buf);
+      indir_free_block(inode.doubly_indir_block_ptr, 2, unwind_buf);
+
+      kfree(unwind_buf);
+      kfree(curr_triply_indir_blk);
+      free_block(triple_ptr_temp);
       free_inode(inode_n);
       return BLOCK_ERROR;
     }
@@ -237,6 +306,27 @@ uint32_t write_inode(uint16_t *buf, uint32_t f_size, bool is_dir, struct ext2_in
       uint32_t indir_blk_ptr = alloc_block();
       
       if (indir_blk_ptr == BLOCK_ERROR) {
+        uint32_t (*unwind_buf)[BIT_32_PER_BLK] = kmalloc(INDIRECT_PTR_LAYERS * BLOCK_SIZE);
+        for (int i = 0; i < INODE_BLK_PTR_AMT; i++) {
+            indir_free_block(inode.dir_block_ptr[i], 0, unwind_buf);
+        }
+        
+        indir_free_block(inode.singly_indir_block_ptr, 1, unwind_buf);
+        indir_free_block(inode.doubly_indir_block_ptr, 2, unwind_buf);
+
+        for (int i = 0; i < BIT_32_PER_BLK; i++) {
+          indir_free_block(curr_triply_indir_blk[i], 2, unwind_buf);
+        }
+
+        for (int i = 0; i < BIT_32_PER_BLK; i++) {
+          indir_free_block(curr_doubly_indir_blk[i], 1, unwind_buf);
+        }
+
+        kfree(unwind_buf);
+        kfree(curr_triply_indir_blk);
+        kfree(curr_doubly_indir_blk);
+        free_block(doubly_indir_blk_ptr);
+        free_block(triple_ptr_temp);
         free_inode(inode_n);
         return BLOCK_ERROR;
       }
@@ -246,12 +336,34 @@ uint32_t write_inode(uint16_t *buf, uint32_t f_size, bool is_dir, struct ext2_in
       for (uint32_t indir_blk_ptr_idx = 0; indir_blk_ptr_idx < BLOCK_SIZE / 4 && blocks_left > 0; indir_blk_ptr_idx ++){
         block_n = alloc_block();
         if (block_n == BLOCK_ERROR) {
-          // do note that this leaves
-          // a ton of allocated blocks
-          // on error. best u can do
-          // is leave the blocks but 
-          // unallocate the inode
-      
+          uint32_t (*unwind_buf)[BIT_32_PER_BLK] = kmalloc(INDIRECT_PTR_LAYERS * BLOCK_SIZE);
+          
+          for (int i = 0; i < INODE_BLK_PTR_AMT; i++) {
+            indir_free_block(inode.dir_block_ptr[i], 0, unwind_buf);
+          }
+          indir_free_block(inode.singly_indir_block_ptr, 1, unwind_buf);
+          indir_free_block(inode.doubly_indir_block_ptr, 2, unwind_buf);
+          
+          for (int i = 0; i < BIT_32_PER_BLK; i++) {
+            indir_free_block(curr_triply_indir_blk[i], 2, unwind_buf);
+          }
+
+          for (int i = 0; i < BIT_32_PER_BLK; i++) {
+            indir_free_block(curr_doubly_indir_blk[i], 1, unwind_buf);
+          }
+
+          for (int i = 0; i < BIT_32_PER_BLK; i++) {
+            indir_free_block(curr_indir_blk[i], 0, unwind_buf);
+          }
+
+
+          kfree(unwind_buf);
+          kfree(curr_triply_indir_blk);
+          kfree(curr_doubly_indir_blk);
+          kfree(curr_indir_blk);
+          free_block(indir_blk_ptr);
+          free_block(doubly_indir_blk_ptr);
+          free_block(triple_ptr_temp);
           free_inode(inode_n);
           return BLOCK_ERROR;
         }
@@ -345,9 +457,10 @@ uint32_t write_inode(uint16_t *buf, uint32_t f_size, bool is_dir, struct ext2_in
 uint32_t put_inode(uint16_t *buf, uint32_t f_size, bool is_dir, struct ext2_inode *out)
 {
   uint32_t inode_n = write_inode(buf, f_size, is_dir, out);
-  uint32_t group_n = (inode_n - first_inode_n) / inodes_per_grp;
 
   if (inode_n == INODE_ERROR) return INODE_ERROR;
+  
+  uint32_t group_n = (inode_n - first_inode_n) / inodes_per_grp;
 
   if (group_n >= ngroups || inode_n > superblk->inode_cnt) {
     // note that i  am not freeing this inode number, because
@@ -365,24 +478,9 @@ uint32_t put_inode(uint16_t *buf, uint32_t f_size, bool is_dir, struct ext2_inod
   // and unlink_inode(). btw, if you couldn't tell
   // this comment envelops the rest of this function,
   // not just the next line.
-
-  uint32_t table_idx = (inode_n - 1) % inodes_per_grp;
   
-  // btw this doesnt contain the actual data the inode contains,
-  // only teh metadata of the inode
-  uint32_t containing_blk_n = bgdt[group_n].inode_table_start_addr + (table_idx * inode_size) / BLOCK_SIZE;
-  uint32_t blk_offset = (table_idx * inode_size) % BLOCK_SIZE;
+  set_inode(inode_n, out);
 
-  uint16_t *blk = kmalloc(BLOCK_SIZE);
-
-  read_block(containing_blk_n, blk);
-
-  *(struct ext2_inode *)(((uint8_t *)blk) + blk_offset) = *out;
-
-  write_block(containing_blk_n, blk);
-
-  kfree(blk);
-  
   if (is_dir){
     bgdt[group_n].dir_cnt++;
     write_block(bgdt_blk_n, (uint16_t *) bgdt);
@@ -391,3 +489,4 @@ uint32_t put_inode(uint16_t *buf, uint32_t f_size, bool is_dir, struct ext2_inod
 
   return inode_n;
 }
+

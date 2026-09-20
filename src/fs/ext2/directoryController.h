@@ -18,7 +18,7 @@ struct dir_row
 };
 
 bool ls_dir(uint16_t *buf, struct dir_row *out, uint32_t *len, uint32_t size, uint32_t max);
-//bool lookup(uint16_t *buf, const char *name, uint32_t *out, uint32_t size);
 bool lookup_path(const char *path, uint32_t *out);
+bool dir_insert(uint32_t parent_inode_n, const char *name, uint32_t child_inode_n);
 
 #endif

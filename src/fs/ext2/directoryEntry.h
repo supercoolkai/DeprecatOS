@@ -4,11 +4,13 @@
 #include <stdint.h>
 #include <stddef.h>
 
+#define ALIGN4(x) (((x) + 3) & ~3)
+
 struct ext2_directory_entry {
   uint32_t inode;
   uint16_t curr_entry_size;
   uint8_t name_len_lo;
-  uint8_t type_or_name_len_hi;
+  uint8_t type;
 
   uint8_t name[];
 } __attribute__((packed));

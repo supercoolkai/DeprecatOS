@@ -212,6 +212,9 @@ bool free_inode(uint32_t inode_n)
 
 bool free_block(uint32_t block_n)
 {
+  if (block_n == 0)
+    return false;
+
   uint32_t group_n = (block_n - first_block_n) / blks_per_grp;
   
   if (group_n >= ngroups || block_n >= superblk->block_cnt) {
