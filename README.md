@@ -64,5 +64,12 @@ this is a **hobby OS**, expect crashes, incomplete features, and broken changes 
 - qemu-system-x86_64
 - e2fsprogs (with mke2fs -d support)
 
+## how to setup filesystem
+the filesystem (updated with *mkdish.sh*) uses a directory called `disk_root` as its root directory. since it's not in this git repository, you must create it yourself using:
+`mkdir -p disk_root` 
+while in the project's main directory. then, you can add files of your choice onto it. afterwards, finally run:
+`./mkdisk.sh
+./rebuild.sh`
+
 ## btw:
 `firmware/` contains OVMF UEFI firmware from [TianoCore EDK2](https://github.com/tianocore/edk2), licensed under BSD-2-Clause-Patent.
