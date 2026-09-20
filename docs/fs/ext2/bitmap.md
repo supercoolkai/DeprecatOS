@@ -40,6 +40,12 @@ a dedicated allocator for the block/inode bitmap. currently supports freeing and
 
 ## function analysis
 
+### `void set_bitmap_controller_bgdt(struct ext2_block_group_descriptor *new_bgdt)`
+sets `bgdt` to `new_bgdt` in order to maintain sync between all files using `bgdt`
+
+### `void set_bitmap_controller_superblk(struct ext2_superblock *new_superblk)`
+sets `superblk` to `new_superblk` in order to maintain sync between all files using `superblk`
+
 ### `void ext2_bitmap_init(void)`
 the init function of the file, much like `block_init()` in the block controller. 
 

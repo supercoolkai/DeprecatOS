@@ -55,6 +55,12 @@ controller of the blocks in the filesystem, currently only supports read functio
 
 ## function analysis
 
+### `void set_block_controller_bgdt(struct ext2_block_group_descriptor *new_bgdt)`
+sets `bgdt` to `new_bgdt` in order to maintain sync between all files using `bgdt`
+
+### `void set_block_controller_superblk(struct ext2_superblock *new_superblk)`
+sets `superblk` to `new_superblk` in order to maintain sync between all files using `superblk`
+
 ### `void read_block(uint32_t block_n, uint16_t *buf)`
 reads a full block into `buf` using `ata_read48()` from the ata driver in `src/drivers/disk/ata.h`
 
@@ -72,3 +78,6 @@ calls the `indir_read_block()` function to read an inode typically returned from
 
 ### `void write_inode(uint16_t *buf, uint32_t f_size, bool is_dir, struct ext2_inode *out)`
 a function similar to `indir_read_block()` but it writes an inode from scratch, with data `buf`. iterative because too complicated to do recursive (maybe i was too lazy idk. either way its fine). uses `f_size` as `size_lo`, so `f_size` MUST match `buf`'s size. returns the inode number of the created inode, and returns the actual inode as a pointer to `out`.
+
+### `void put_inode(uint16_t *buf, uint32_t f_size, bool is_dir, struct ext2_inode *out)`
+a wrapper of `write_inode()` which wires it into the `bgdt`.

@@ -9,7 +9,7 @@
 struct ext2_block_group_descriptor{
   uint32_t block_bitmap_addr;
   uint32_t inode_bitmap_addr;
-  uint32_t inode_start_addr;
+  uint32_t inode_table_start_addr;
   uint16_t unalloc_block_cnt;
   uint16_t unalloc_inode_cnt;
   uint16_t dir_cnt;

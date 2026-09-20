@@ -24,11 +24,26 @@ static uint32_t superblk_pos = EXT2_SUPERBLOCK_OFFSET;
 static uint32_t bgdt_blk_n = 1;
 
 static uint32_t inode_size;
+static uint32_t first_inode_n = 1;
 static uint32_t inodes_per_grp;
 static uint32_t blks_per_grp;
 static uint32_t frags_per_grp;
 static uint32_t ngroups;
 
+
+// a quick connection point between
+// different files using the bgdt,
+// put this in all files using bgdt
+void set_block_controller_bgdt(struct ext2_block_group_descriptor *new_bgdt){
+  bgdt = new_bgdt;
+}
+
+// a quick connection point between
+// different files using the superblock,
+// put this in all files using the superblock
+void set_block_controller_superblk(struct ext2_superblock *new_superblk){
+  superblk = new_superblk;
+}
 
 // dum block reading function. very simple math u just 
 // get lba get sectors then u get block.
@@ -99,7 +114,7 @@ bool get_inode(uint32_t inode_n, struct ext2_inode *out)
     return false;
   }
 
-  uint32_t blk = bgdt[g].inode_start_addr + (ind * inode_size) / BLOCK_SIZE;
+  uint32_t blk = bgdt[g].inode_table_start_addr + (ind * inode_size) / BLOCK_SIZE;
   uint32_t off = (ind * inode_size) % BLOCK_SIZE;
   
   read_block(blk, buf);
@@ -320,6 +335,59 @@ uint32_t write_inode(uint16_t *buf, uint32_t f_size, bool is_dir, struct ext2_in
     free_block(triple_ptr_temp);
     
   *out = inode;
+
+  return inode_n;
+}
+
+
+// essentially a wrapper of write_inode(), but it links it to the BGDT's inode table (offset 8)
+// and updates a few other things.
+uint32_t put_inode(uint16_t *buf, uint32_t f_size, bool is_dir, struct ext2_inode *out)
+{
+  uint32_t inode_n = write_inode(buf, f_size, is_dir, out);
+  uint32_t group_n = (inode_n - first_inode_n) / inodes_per_grp;
+
+  if (inode_n == INODE_ERROR) return INODE_ERROR;
+
+  if (group_n >= ngroups || inode_n > superblk->inode_cnt) {
+    // note that i  am not freeing this inode number, because
+    // it is extremely likely the inode_n returned is completely wrong,
+    // hence the bitmap free-er function will either
+    // fail to free any inode, or worse free an inode
+    // which isn't the inode we're trying to free.
+    panic("write_inode() failed to return a correct value!! disk corruption likely :-(");
+  }
+
+  // do note this naively overwrites the inode table
+  // which may lead to unforeseeable problems
+  // in the future. this will most likely
+  // be fixed once i implement delete_inode()
+  // and unlink_inode(). btw, if you couldn't tell
+  // this comment envelops the rest of this function,
+  // not just the next line.
+
+  uint32_t table_idx = (inode_n - 1) % inodes_per_grp;
+  
+  // btw this doesnt contain the actual data the inode contains,
+  // only teh metadata of the inode
+  uint32_t containing_blk_n = bgdt[group_n].inode_table_start_addr + (table_idx * inode_size) / BLOCK_SIZE;
+  uint32_t blk_offset = (table_idx * inode_size) % BLOCK_SIZE;
+
+  uint16_t *blk = kmalloc(BLOCK_SIZE);
+
+  read_block(containing_blk_n, blk);
+
+  *(struct ext2_inode *)(((uint8_t *)blk) + blk_offset) = *out;
+
+  write_block(containing_blk_n, blk);
+
+  kfree(blk);
+  
+  if (is_dir){
+    bgdt[group_n].dir_cnt++;
+    write_block(bgdt_blk_n, (uint16_t *) bgdt);
+    set_bitmap_controller_bgdt(bgdt);
+  }
 
   return inode_n;
 }
