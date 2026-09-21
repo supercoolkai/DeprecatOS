@@ -17,12 +17,14 @@
 #define DATA_PORT 0x1F0
 #define ALT_STATUS_PORT 0x3F6
 #define ERR_PORT 0x1F1
+#define DEVICE_CONTROL_PORT ALT_STATUS_PORT
 
 #define BSY_BIT (1 << 7)
 #define DRQ_BIT (1 << 3)
 #define DF_BIT (1 << 5)
 #define ERR_BIT 1
 #define READ48_SUPPORT_BIT (1 << 10)
+#define NIEN_BIT 0x02
 
 #define READ_EXT 0x24
 #define WRITE_EXT 0x34

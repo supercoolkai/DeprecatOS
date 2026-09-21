@@ -125,6 +125,8 @@ void ata_read48(uint8_t drive, uint64_t lba, uint16_t count, uint16_t *buf)
   outb(LBA_MID_PORT, lba >> 8);
   outb(LBA_HI_PORT, lba >> 16);
   outb(COMMAND_IO_PORT, READ_EXT);
+  for (int k = 0; k < 4; k++)
+    wait_100_ns();
   
   // nav through all sectors sent and output to buf
   for (int i = 0; i < count; i++) {
@@ -172,7 +174,12 @@ void ata_write48(uint8_t drive, uint64_t lba, uint16_t count, uint16_t *buf)
     for (int k = 0; k < 4; k++)
         wait_100_ns();
   }
+  wait_bsy_clear();
   outb(COMMAND_IO_PORT, FLUSH_EXT_CMD);
+  
+  for (int k = 0; k < 4; k++)
+    wait_100_ns();
+
   wait_bsy_clear();
 }
 
@@ -186,6 +193,8 @@ void ata_init(void)
   if (!b) {
     kprintf(KPRINTF_YELLOW "\nIdentification failed for the slave driver. Highly recommended to reboot and try again if you are sure this is not a hardware issue. Initialization has continued without.\n" KPRINTF_RESET);
   }
+
+  outb(DEVICE_CONTROL_PORT, NIEN_BIT);
   
   // get lba sector count for bounds check
   lba_sector_count = (uint64_t)identify_values[LBA_SECTOR_COUNT_LO_IND]

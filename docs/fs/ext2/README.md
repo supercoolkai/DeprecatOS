@@ -124,7 +124,7 @@ src: `src/fs/ext2/directoryEntry.h`: `packed`. header asserted as 8 bytes, `name
 | 0 | `inode` | `uint32_t` | 0 -> unused slot, skip |
 | 4 | `curr_entry_size` | `uint16_t` | `rec_len`, advance cursor by this |
 | 6 | `name_len_lo` | `uint8_t` | name length low byte |
-| 7 | `type_or_name_len_hi` | `uint8_t` | file type if superblock req-features bit 1 set, else name_len high byte |
+| 7 | `type` | `uint8_t` | file type if superblock req-features bit 1 set, else name_len high byte |
 | 8 | `name[]` | `uint8_t[]` | not NUL-terminated, compare by (len, bytes) |
 
 > tips for navigation:

@@ -1,6 +1,6 @@
 #ifndef SCHEDULER_H
 #define SCHEDULER_H
-#define STACK_SIZE 1024
+#define STACK_SIZE 16384
 
 #ifndef __ASSEMBLER__
 #include <stdint.h>

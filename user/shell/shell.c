@@ -154,7 +154,10 @@ static void cmd_help(char *args)
                "cat [path ...]: Reads the bytes of a given file.\n"
                "ls [path ...]: Lists the subdirectories/files of a directory.\n"
                "cd [path ...]: Changes the current directory into the entered path.\n"
-               "stat [-t, -s, -l] [path ...]: Lists the properties of the given file/dir.\n");
+               "stat [-t, -s, -l] [path ...]: Lists the properties of the given file/dir.\n"
+               "mkdir [path ...]: Makes a new directory with the given path. "
+               "Do note that it does not create the path, it only creates the "
+               "directory listed at the end of that path.\n");
 }
 
 static void cmd_echo(char *args)
@@ -504,7 +507,50 @@ static void cmd_cd(char *args)
   }
 
   dir[to_write] = 0;
+}
 
+static void cmd_mkdir(char *args)
+{
+  char *path = (char *) return_path(args);
+
+  if (path == 0) {
+    write_string("mkdir: current path is too long to fully parse\n");
+    return;
+  }
+  
+  if (args[0] == 0) {
+    write_string("mkdir: no path provided\n");
+    return;
+  }
+
+  if (resolve_dir((const char *)path) != SYSCALL_ERROR){
+    write_string("mkdir: cannot create directory, already exists\n");
+    return;
+  }
+
+  int last = -1;
+
+  for (int i = 0; path[i] != 0; i++) {
+    if (path[i] == '/') last = i;
+  }
+
+  char *leaf = path + last + 1;
+
+  path[last] = 0;
+
+  char *parent = (last == 0) ? "/" : path;
+
+  uint32_t parent_n = resolve_dir((const char *) parent);
+
+  if (parent_n == SYSCALL_ERROR) {
+    write_string("mkdir: given path does not exist\n");
+    return;
+  }
+
+  if (mkdir(parent_n, leaf) == SYSCALL_ERROR) {
+    write_string("mkdir: failed (out of space or disk error)\n");
+    return;
+  }
 }
 
 static Command commands[] =
@@ -516,6 +562,7 @@ static Command commands[] =
   {"ls", cmd_ls},
   {"cd", cmd_cd},
   {"stat", cmd_stat},
+  {"mkdir", cmd_mkdir},
 };
 
 int main(void)

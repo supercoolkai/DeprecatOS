@@ -1,5 +1,7 @@
 # Defined Terms
 
+#### **ALIGN4** *(src/fs/ext2/directoryEntry.h)*
+
 #### **ALT_STATUS_PORT** *(src/drivers/disk/ata.h)*
 
 #### **ATA_H** *(src/drivers/disk/ata.h)*
@@ -47,6 +49,8 @@
 #### **DARK_GRAY** *(src/drivers/fb/fbController.h)*
 
 #### **DATA_PORT** *(src/drivers/disk/ata.h)*
+
+#### **DEVICE_CONTROL_PORT** *(src/drivers/disk/ata.h)*
 
 #### **DF_BIT** *(src/drivers/disk/ata.h)*
 
@@ -218,6 +222,8 @@
 
 #### **NAME_LEN** *(src/fs/ext2/directoryController.h)*
 
+#### **NIEN_BIT** *(src/drivers/disk/ata.h)*
+
 #### **NO_PERMISSION_MASK** *(src/fs/ext2/directoryController.h)*
 
 #### **ORANGE** *(src/drivers/fb/fbController.h)*
@@ -307,6 +313,8 @@
 #### **SYS_GET_STAT** *(user/shell/sys/syscall.c)*
 
 #### **SYS_GET_TICKS** *(user/shell/sys/syscall.c)*
+
+#### **SYS_MAKE_DIR** *(user/shell/sys/syscall.c)*
 
 #### **SYS_READ_CHAR** *(user/shell/sys/syscall.c)*
 

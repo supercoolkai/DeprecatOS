@@ -6,6 +6,7 @@
 #include "fs/block/blockController.h"
 #include "util/kprintf/kprintf.h"
 #include "drivers/timer/timerController.h"
+#include "errors.h"
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -171,6 +172,28 @@ bool lookup_path(const char *path, uint32_t *out)
   return true;
 }
 
+static bool resolve_name_in(struct ext2_inode inode, const char *name)
+{
+  uint16_t *scan = kmalloc(BLOCK_SIZE);
+  for (uint32_t i = 0; i < inode.size_lo / BLOCK_SIZE && i < INODE_BLK_PTR_AMT; i++) {
+    read_block(inode.dir_block_ptr[i], scan);
+
+    uint32_t cursor = 0;
+    while (cursor < BLOCK_SIZE) {
+      struct ext2_directory_entry *entry = (struct ext2_directory_entry *)((uint8_t *)scan + cursor);
+      if (entry->curr_entry_size < 8) break;
+      if (entry->inode != 0 && comp_name(entry->name, entry->name_len_lo, name)) {
+        kfree(scan);
+        return false;
+      }
+      cursor += entry->curr_entry_size;
+    }
+  }
+
+  kfree(scan);
+  return true;
+}
+
 // !!! NOT A WRAPPER OF PUT_INODE() !!!
 // Step 2 of the inode writing pipeline,
 // kinda like get_inode() and read_inode()
@@ -206,13 +229,39 @@ bool dir_insert(uint32_t parent_inode_n, const char *name, uint32_t child_inode_
     uint32_t cursor = 0;
     while (cursor < BLOCK_SIZE) {
       struct ext2_directory_entry *entry = (struct ext2_directory_entry *)((uint8_t *)scratch + cursor);
-
       uint32_t true_size = ALIGN4(8 + entry->name_len_lo);
 
       if (entry->curr_entry_size < 8 || true_size > entry->curr_entry_size || cursor + entry->curr_entry_size > BLOCK_SIZE) {
         kfree(scratch);
         return false;
       } 
+
+      if (entry->inode == 0 && entry->curr_entry_size >= needed) {
+        entry->inode = child_inode_n;
+        entry->name_len_lo = len;
+        for (uint32_t j = 0; j < len; j++) {
+          entry->name[j] = name[j];
+        }
+        entry->type = ((child_inode.type_and_perms_lo & NO_PERMISSION_MASK) == INODE_DIR_TYPE) ? 2 : 1;
+        write_block(parent_inode.dir_block_ptr[i], scratch);
+
+        kfree(scratch);
+
+        child_inode.hard_link_cnt++;
+        if(parent_inode_n == child_inode_n) {
+          child_inode.last_mod_time = timer_get_tick();
+
+          if (!set_inode(child_inode_n, &child_inode)) return false;
+        }
+        else{
+          if (!set_inode(child_inode_n, &child_inode)) return false;
+          parent_inode.last_mod_time = timer_get_tick();
+          if (!set_inode(parent_inode_n, &parent_inode)) return false;
+        }
+
+        return true;
+      }
+
 
       uint32_t slack = entry->curr_entry_size - true_size;
 
@@ -233,13 +282,16 @@ bool dir_insert(uint32_t parent_inode_n, const char *name, uint32_t child_inode_
         kfree(scratch);
 
         child_inode.hard_link_cnt++;
-        if (!set_inode(child_inode_n, &child_inode))
-          return false;
+        if(parent_inode_n == child_inode_n) {
+          child_inode.last_mod_time = timer_get_tick();
 
-        parent_inode.last_mod_time = timer_get_tick();
-        
-        if (!set_inode(parent_inode_n, &parent_inode))
-          return false;
+          if (!set_inode(child_inode_n, &child_inode)) return false;
+        }
+        else{
+          if (!set_inode(child_inode_n, &child_inode)) return false;
+          parent_inode.last_mod_time = timer_get_tick();
+          if (!set_inode(parent_inode_n, &parent_inode)) return false;
+        }
 
         return true;
       }
@@ -249,4 +301,63 @@ bool dir_insert(uint32_t parent_inode_n, const char *name, uint32_t child_inode_
   
   kfree(scratch);
   return false;
+}
+
+bool make_dir(uint32_t parent_inode_n, const char *name)
+{
+  uint32_t len = 0;
+  while (len < NAME_LEN && name[len] != 0)
+    len++;
+
+  if (len == 0 || len >= NAME_LEN)
+    return false;
+
+  struct ext2_inode parent_inode;
+  if (!get_inode(parent_inode_n, &parent_inode)) 
+    return false;
+
+  if (!resolve_name_in(parent_inode, name)){
+    kprintf(KPRINTF_RED "make_dir: directory already exists in given path\n" KPRINTF_RESET);
+    return false;
+  }
+
+  if ((parent_inode.type_and_perms_lo & NO_PERMISSION_MASK) != INODE_DIR_TYPE) {
+    return false;
+  }
+
+  uint16_t *buf = kmalloc(BLOCK_SIZE);
+  for (uint32_t i = 0; i < WORDS_PER_BLK; i++) {
+    buf[i] = 0;
+  }
+
+  struct ext2_directory_entry *seed = (struct ext2_directory_entry *)buf;
+  seed->curr_entry_size = BLOCK_SIZE;
+
+  struct ext2_inode ino;
+  uint32_t child_n = put_inode(buf, BLOCK_SIZE, true, &ino);
+
+  if (child_n == INODE_ERROR) {
+    kfree(buf);
+    return false;
+  }
+  
+  if(!dir_insert(child_n, ".", child_n)){
+    kprintf(KPRINTF_RED "make_dir: dir_insert() failed mid call, disk corruption occurred!\n" KPRINTF_RESET);
+    kfree(buf);
+    return false;
+  }
+  if (!dir_insert(child_n, "..", parent_inode_n)){
+    kprintf(KPRINTF_RED "make_dir: dir_insert() failed mid call, disk corruption occurred!\n" KPRINTF_RESET);
+    kfree(buf);
+    return false;
+  }
+  if (!dir_insert(parent_inode_n, name, child_n)){
+    kprintf(KPRINTF_RED "make_dir: dir_insert() failed mid call, disk corruption occurred!\n" KPRINTF_RESET);
+    kfree(buf);
+    return false;
+  }
+
+  kfree(buf);
+
+  return true;
 }

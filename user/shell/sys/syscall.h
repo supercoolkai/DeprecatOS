@@ -15,5 +15,6 @@ uint32_t read_chunk(uint32_t inode_n, uint32_t chunk_num, uint32_t *buf);
 uint32_t resolve_dir(const char *c);
 uint32_t write_string_len(const char *buf, uint32_t len);
 uint32_t get_stat(uint32_t inode_n, uint32_t *buf);
+uint32_t mkdir(uint32_t inode_n, const char *name);
 
 #endif
