@@ -315,6 +315,40 @@ static uint32_t sys_make_dir(uint32_t *frame)
   return (uint32_t) frame;
 }
 
+static uint32_t sys_remove_inode(uint32_t *frame)
+{
+  uint32_t parent_inode_n = frame[4];
+
+  uint32_t base = frame[6];
+
+  if (base < KERNEL_CEILING || base > USER_SPACE_END - NAME_LEN) {
+    frame[7] = SYSCALL_ERROR;
+    return (uint32_t) frame;
+  }
+
+  const char *name = (const char *) base;
+
+  frame[7] = unlink_inode(parent_inode_n, name) ? 0 : SYSCALL_ERROR;
+  return (uint32_t) frame;
+}
+
+static uint32_t sys_remove_dir(uint32_t *frame)
+{
+  uint32_t parent_inode_n = frame[4];
+
+  uint32_t base = frame[6];
+
+  if (base < KERNEL_CEILING || base > USER_SPACE_END - NAME_LEN) {
+    frame[7] = SYSCALL_ERROR;
+    return (uint32_t) frame;
+  }
+
+  const char *name = (const char *) base;
+
+  frame[7] = unlink_dir(parent_inode_n, name) ? 0 : SYSCALL_ERROR;
+  return (uint32_t) frame;
+}
+
 static uint32_t (*syscall_table[])(uint32_t *) = {
   sys_write_char,
   sys_write_string,
@@ -329,6 +363,8 @@ static uint32_t (*syscall_table[])(uint32_t *) = {
   sys_write_string_len,
   sys_get_stat,
   sys_make_dir,
+  sys_remove_inode,
+  sys_remove_dir,
 };
 
 void syscall_init(void)

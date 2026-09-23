@@ -16,5 +16,7 @@ uint32_t resolve_dir(const char *c);
 uint32_t write_string_len(const char *buf, uint32_t len);
 uint32_t get_stat(uint32_t inode_n, uint32_t *buf);
 uint32_t mkdir(uint32_t inode_n, const char *name);
+uint32_t rm_inode(uint32_t inode_n, const char *name);
+uint32_t rm_dir(uint32_t inode_n, const char *name);
 
 #endif

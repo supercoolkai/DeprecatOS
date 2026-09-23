@@ -7,6 +7,7 @@
 #include "util/kprintf/kprintf.h"
 #include "drivers/timer/timerController.h"
 #include "errors.h"
+#include "util/streq/streq.h"
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -172,7 +173,7 @@ bool lookup_path(const char *path, uint32_t *out)
   return true;
 }
 
-static bool resolve_name_in(struct ext2_inode inode, const char *name)
+static bool name_in(struct ext2_inode inode, const char *name, uint32_t *out)
 {
   uint16_t *scan = kmalloc(BLOCK_SIZE);
   for (uint32_t i = 0; i < inode.size_lo / BLOCK_SIZE && i < INODE_BLK_PTR_AMT; i++) {
@@ -181,8 +182,35 @@ static bool resolve_name_in(struct ext2_inode inode, const char *name)
     uint32_t cursor = 0;
     while (cursor < BLOCK_SIZE) {
       struct ext2_directory_entry *entry = (struct ext2_directory_entry *)((uint8_t *)scan + cursor);
-      if (entry->curr_entry_size < 8) break;
+      uint32_t true_size = ALIGN4(8 + entry->name_len_lo);
+      if (entry->curr_entry_size < 8 || true_size > entry->curr_entry_size || cursor + entry->curr_entry_size > BLOCK_SIZE) break;
       if (entry->inode != 0 && comp_name(entry->name, entry->name_len_lo, name)) {
+        kfree(scan);
+        *out = entry->inode;
+        return true;
+      }
+      cursor += entry->curr_entry_size;
+    }
+  }
+
+  kfree(scan);
+  *out = INODE_ERROR;
+  return false;
+}
+
+
+static bool dir_is_empty(struct ext2_inode inode)
+{
+  uint16_t *scan = kmalloc(BLOCK_SIZE);
+  for (uint32_t i = 0; i < inode.size_lo / BLOCK_SIZE && i < INODE_BLK_PTR_AMT; i++) {
+    read_block(inode.dir_block_ptr[i], scan);
+
+    uint32_t cursor = 0;
+    while (cursor < BLOCK_SIZE) {
+      struct ext2_directory_entry *entry = (struct ext2_directory_entry *)((uint8_t *)scan + cursor);
+      uint32_t true_size = ALIGN4(8 + entry->name_len_lo);
+      if (entry->curr_entry_size < 8 || true_size > entry->curr_entry_size || cursor + entry->curr_entry_size > BLOCK_SIZE) break;
+      if (entry->inode != 0 && !comp_name(entry->name, entry->name_len_lo, ".") && !comp_name(entry->name, entry->name_len_lo, "..")) {
         kfree(scan);
         return false;
       }
@@ -303,6 +331,93 @@ bool dir_insert(uint32_t parent_inode_n, const char *name, uint32_t child_inode_
   return false;
 }
 
+bool dir_remove(uint32_t parent_inode_n, const char *name, uint32_t *removed_inode_n)
+{
+  uint32_t len = 0;
+  while (len < NAME_LEN && name[len] != 0)
+    len++;
+
+  if (len == 0 || len >= NAME_LEN)
+    return false;
+
+  struct ext2_inode parent_inode;
+
+  if (!get_inode(parent_inode_n, &parent_inode)) 
+    return false;
+  
+  if ((parent_inode.type_and_perms_lo & NO_PERMISSION_MASK) != INODE_DIR_TYPE) 
+    return false;
+
+  uint16_t *scratch = kmalloc(BLOCK_SIZE);
+  for (uint32_t i = 0; i < parent_inode.size_lo / BLOCK_SIZE && i < INODE_BLK_PTR_AMT; i++) {
+    read_block(parent_inode.dir_block_ptr[i], scratch);
+
+    uint32_t cursor = 0;
+    struct ext2_directory_entry *prev = (struct ext2_directory_entry *)((uint8_t *)scratch);
+    while (cursor < BLOCK_SIZE) {
+      struct ext2_directory_entry *entry = (struct ext2_directory_entry *)((uint8_t *)scratch + cursor);
+      uint32_t true_size = ALIGN4(8 + entry->name_len_lo);
+      
+      if (entry->curr_entry_size < 8 || true_size > entry->curr_entry_size || cursor + entry->curr_entry_size > BLOCK_SIZE){
+        kfree(scratch);
+        return false;
+      }
+
+      if (entry->inode != 0 && comp_name(entry->name, entry->name_len_lo, name)) {
+        uint32_t inode_n = entry->inode;
+        if (cursor == 0) {
+          entry->inode = 0;
+          write_block(parent_inode.dir_block_ptr[i], scratch);
+          kfree(scratch);
+          
+          *removed_inode_n = inode_n;
+        }
+        else {
+          prev->curr_entry_size += entry->curr_entry_size;
+
+          write_block(parent_inode.dir_block_ptr[i], scratch);
+          kfree(scratch);
+        
+          *removed_inode_n = inode_n;
+        }
+        
+        struct ext2_inode inode;
+        if (!get_inode(inode_n, &inode)){
+          return false;
+        }
+
+        inode.hard_link_cnt--;
+        if(parent_inode_n == inode_n) {
+          inode.last_mod_time = timer_get_tick();
+
+          if (!set_inode(inode_n, &inode)) {
+            return false;
+          }
+        }
+        else{
+          if (!set_inode(inode_n, &inode)) {
+            return false;
+          }
+          parent_inode.last_mod_time = timer_get_tick();
+          if (!set_inode(parent_inode_n, &parent_inode)) {
+            return false;
+          }
+        }
+
+        return true;
+      }
+      cursor += entry->curr_entry_size;
+
+      prev = entry;
+    }
+  }
+
+  kfree(scratch);
+
+
+  return false;
+}
+
 bool make_dir(uint32_t parent_inode_n, const char *name)
 {
   uint32_t len = 0;
@@ -316,12 +431,15 @@ bool make_dir(uint32_t parent_inode_n, const char *name)
   if (!get_inode(parent_inode_n, &parent_inode)) 
     return false;
 
-  if (!resolve_name_in(parent_inode, name)){
-    kprintf(KPRINTF_RED "make_dir: directory already exists in given path\n" KPRINTF_RESET);
+
+  if ((parent_inode.type_and_perms_lo & NO_PERMISSION_MASK) != INODE_DIR_TYPE) {
+    kprintf(KPRINTF_RED "make_dir: given parent directory is not a directory\n" KPRINTF_RESET);
     return false;
   }
 
-  if ((parent_inode.type_and_perms_lo & NO_PERMISSION_MASK) != INODE_DIR_TYPE) {
+  uint32_t temp;
+  if (name_in(parent_inode, name, &temp)){
+    kprintf(KPRINTF_RED "make_dir: directory already exists in given path\n" KPRINTF_RESET);
     return false;
   }
 
@@ -358,6 +476,122 @@ bool make_dir(uint32_t parent_inode_n, const char *name)
   }
 
   kfree(buf);
+
+  return true;
+}
+
+bool unlink_inode(uint32_t parent_inode_n, const char *name)
+{
+  struct ext2_inode parent_inode;
+  if (!get_inode(parent_inode_n, &parent_inode)) {
+    return false;
+  }
+
+  if ((parent_inode.type_and_perms_lo & NO_PERMISSION_MASK) != INODE_DIR_TYPE) {
+    kprintf(KPRINTF_RED "unlink_inode: given parent directory is not a directory\n" KPRINTF_RESET);
+    return false;
+  }
+
+  uint32_t remove_inode_n;
+
+  if (!name_in(parent_inode, name, &remove_inode_n)) {
+    kprintf(KPRINTF_RED "unlink_inode: given path does not exist\n" KPRINTF_RESET);
+    return false;
+  }
+
+  struct ext2_inode to_remove;
+  if (!get_inode(remove_inode_n, &to_remove))
+    return false;
+
+  if ((to_remove.type_and_perms_lo & NO_PERMISSION_MASK) == INODE_DIR_TYPE) {
+    kprintf(KPRINTF_RED "unlink_inode: given path is a directory\n" KPRINTF_RESET);
+    return false;
+  }
+
+  uint32_t removed;
+  if (!dir_remove(parent_inode_n, name, &removed)){
+    kprintf(KPRINTF_RED "unlink_inode: dir_remove() failed mid call, disk corruption occurred!\n" KPRINTF_RESET);
+    return false;
+  }
+
+  struct ext2_inode removed_inode;
+  if (!get_inode(removed, &removed_inode)) 
+    return false;
+
+  if (removed_inode.hard_link_cnt == 0) {
+    if (!delete_inode(removed)){
+      kprintf(KPRINTF_RED "unlink_inode: delete_inode() failed mid call, disk corruption occurred!\n" KPRINTF_RESET);
+      return false;
+    }
+  }
+
+  return true;
+}
+
+bool unlink_dir(uint32_t parent_inode_n, const char *name)
+{
+  if (streq(name, ".") || streq(name, "..")) {
+    kprintf(KPRINTF_RED "unlink_dir: cannot remove . or ..\n" KPRINTF_RESET);
+    return false;
+  }
+
+  struct ext2_inode parent_inode;
+  if (!get_inode(parent_inode_n, &parent_inode)) {
+    return false;
+  }
+
+  if ((parent_inode.type_and_perms_lo & NO_PERMISSION_MASK) != INODE_DIR_TYPE) {
+    kprintf(KPRINTF_RED "unlink_dir: given parent directory is not a directory\n" KPRINTF_RESET);
+    return false;
+  }
+
+  uint32_t remove_inode_n;
+
+  if (!name_in(parent_inode, name, &remove_inode_n)) {
+    kprintf(KPRINTF_RED "unlink_dir: given path does not exist\n" KPRINTF_RESET);
+    return false;
+  }
+
+
+  struct ext2_inode to_remove;
+  if (!get_inode(remove_inode_n, &to_remove))
+    return false;
+
+  if ((to_remove.type_and_perms_lo & NO_PERMISSION_MASK) != INODE_DIR_TYPE) {
+    kprintf(KPRINTF_RED "unlink_dir: given path is not a directory\n" KPRINTF_RESET);
+    return false;
+  }
+
+  if (!dir_is_empty(to_remove)){
+    kprintf(KPRINTF_RED "unlink_dir: given path is not empty\n" KPRINTF_RESET);
+    return false;
+  }
+
+  uint32_t removed;
+  if (!dir_remove(parent_inode_n, name, &removed)){
+    kprintf(KPRINTF_RED "unlink_dir: dir_remove() failed mid call, disk corruption occurred!\n" KPRINTF_RESET);
+    return false;
+  }
+
+  if (!get_inode(parent_inode_n, &parent_inode)){
+    return false;
+  }
+
+  parent_inode.hard_link_cnt--;
+
+  if (!set_inode(parent_inode_n, &parent_inode)) {
+    kprintf(KPRINTF_RED "unlink_dir: set_inode() failed mid call, disk corruption occurred!\n" KPRINTF_RESET);
+    return false;
+  }
+
+  struct ext2_inode removed_inode;
+  if (!get_inode(removed, &removed_inode)) 
+    return false;
+
+  if (!delete_inode(removed)){
+    kprintf(KPRINTF_RED "unlink_dir: delete_inode() failed mid call, disk corruption occurred!\n" KPRINTF_RESET);
+    return false;
+  }
 
   return true;
 }

@@ -21,5 +21,8 @@ bool ls_dir(uint16_t *buf, struct dir_row *out, uint32_t *len, uint32_t size, ui
 bool lookup_path(const char *path, uint32_t *out);
 bool dir_insert(uint32_t parent_inode_n, const char *name, uint32_t child_inode_n);
 bool make_dir(uint32_t parent_inode_n, const char *name);
+bool dir_remove(uint32_t parent_inode_n, const char *name, uint32_t *removed_inode_n);
+bool unlink_inode(uint32_t parent_inode_n, const char *name);
+bool unlink_dir(uint32_t parent_inode_n, const char *name);
 
 #endif

@@ -188,6 +188,49 @@ static void zero_block_buf(uint32_t *buf)
   }
 }
 
+bool delete_inode(uint32_t inode_n)
+{
+  struct ext2_inode inode;
+  if (!get_inode(inode_n, &inode))
+    return false;
+
+  uint32_t (*unwind_buf)[BIT_32_PER_BLK] = kmalloc(INDIRECT_PTR_LAYERS * BLOCK_SIZE);
+  
+  for (int i = 0; i < INODE_BLK_PTR_AMT; i++) {
+    indir_free_block(inode.dir_block_ptr[i], 0, unwind_buf);
+  }
+
+  indir_free_block(inode.singly_indir_block_ptr, 1, unwind_buf);
+  indir_free_block(inode.doubly_indir_block_ptr, 2, unwind_buf);
+  indir_free_block(inode.triply_indir_block_ptr, 3, unwind_buf);
+  
+
+  inode.hard_link_cnt = 0;
+  inode.deletion_time = timer_get_tick() + superblk->inode_cnt;
+
+  if(!set_inode(inode_n, &inode)){
+    kfree(unwind_buf);
+    return false;
+  }
+  
+  if((inode.type_and_perms_lo & NO_PERMISSION_MASK) == INODE_DIR_TYPE){
+    uint32_t group_n = (inode_n - first_inode_n) / inodes_per_grp;
+    bgdt[group_n].dir_cnt--;
+    write_block(bgdt_blk_n, (uint16_t *) bgdt);
+    set_bitmap_controller_bgdt(bgdt);
+  }
+
+  if (!free_inode(inode_n)){
+    kfree(unwind_buf);
+    return false;
+  }
+  
+
+
+  kfree(unwind_buf);
+  return true;
+}
+
 // writes the inputted buf 
 // into an inode and returns
 // the inode number and inode struct
@@ -479,7 +522,9 @@ uint32_t put_inode(uint16_t *buf, uint32_t f_size, bool is_dir, struct ext2_inod
   // this comment envelops the rest of this function,
   // not just the next line.
   
-  set_inode(inode_n, out);
+  if (!set_inode(inode_n, out)){
+    return INODE_ERROR;
+  }
 
   if (is_dir){
     bgdt[group_n].dir_cnt++;

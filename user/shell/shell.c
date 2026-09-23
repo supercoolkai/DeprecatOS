@@ -155,9 +155,11 @@ static void cmd_help(char *args)
                "ls [path ...]: Lists the subdirectories/files of a directory.\n"
                "cd [path ...]: Changes the current directory into the entered path.\n"
                "stat [-t, -s, -l] [path ...]: Lists the properties of the given file/dir.\n"
-               "mkdir [path ...]: Makes a new directory with the given path. "
-               "Do note that it does not create the path, it only creates the "
-               "directory listed at the end of that path.\n");
+               "mkdir [-p] [path ...]: Makes a new directory with the given path. "
+               "Do note that in order to create the whole path, and not the leaf directory,"
+               "you must use the flag -p.\n"
+               "rm [-r] [path ...]: Removes the file at the given path. If the flag -r is passed,"
+               "it recursively removes a directory.\n");
 }
 
 static void cmd_echo(char *args)
@@ -509,16 +511,74 @@ static void cmd_cd(char *args)
   dir[to_write] = 0;
 }
 
+static bool mkdir_recursive(char *path)
+{
+  int last = -1;
+
+  for (int i = 0; path[i] != 0; i++) {
+    if (path[i] == '/') last = i;
+  }
+
+  char *leaf = path + last + 1;
+
+  char temp = path[last];
+
+  path[last] = 0;
+
+  char *parent = (last == 0) ? "/" : path;
+
+  uint32_t parent_n = resolve_dir((const char *) parent);
+
+  if (parent_n == SYSCALL_ERROR){
+    if (!mkdir_recursive(parent)) {
+      path[last] = temp;
+      return false;
+    }
+  }
+
+  parent_n = resolve_dir((const char *) parent);
+  path[last] = temp;
+  
+  if (parent_n == SYSCALL_ERROR)
+    return false;
+  
+
+  if (mkdir(parent_n, leaf) == SYSCALL_ERROR){
+    return false;
+  }
+
+  return true;
+}
+
 static void cmd_mkdir(char *args)
 {
-  char *path = (char *) return_path(args);
+  char *flag = "";
+  char *path_arg = (char *) args;
+
+  if (args[0] == '-') {
+    flag = args;
+
+    int i = 0;
+    while (args[i] != ' ' && args[i] != 0)
+      i++;
+
+    if (args[i] == ' ') {
+      args[i] = 0;
+      path_arg = args + i + 1;
+    }
+    else {
+      path_arg  = args + i;
+    }
+  }
+
+  char *path = (char *) return_path(path_arg);
 
   if (path == 0) {
     write_string("mkdir: current path is too long to fully parse\n");
     return;
   }
   
-  if (args[0] == 0) {
+  if (path[0] == 0) {
     write_string("mkdir: no path provided\n");
     return;
   }
@@ -527,6 +587,12 @@ static void cmd_mkdir(char *args)
     write_string("mkdir: cannot create directory, already exists\n");
     return;
   }
+
+  int len = 0;
+  while (path[len] != 0) len++;
+
+  while (len > 1 && path[len - 1] == '/')
+    path[--len] = 0;
 
   int last = -1;
 
@@ -542,14 +608,168 @@ static void cmd_mkdir(char *args)
 
   uint32_t parent_n = resolve_dir((const char *) parent);
 
-  if (parent_n == SYSCALL_ERROR) {
-    write_string("mkdir: given path does not exist\n");
-    return;
+  if (parent_n == SYSCALL_ERROR) 
+  {
+    if (!streq(flag, "-p")) {
+      write_string("mkdir: given parent directory does not exist\n");
+      return;
+    }
+    if (!mkdir_recursive(parent)) {
+      write_string("mkdir: failed (out of space or disk error)\n");
+      return;
+    }
+    parent_n = resolve_dir((const char *) parent);
   }
 
   if (mkdir(parent_n, leaf) == SYSCALL_ERROR) {
     write_string("mkdir: failed (out of space or disk error)\n");
     return;
+  }
+}
+
+
+static bool rm_tree(uint32_t parent_n, const char *name, uint32_t dir_n)
+{
+  char child_name[256];
+
+  for (;;) {
+    bool found = false;
+    uint32_t child_n = 0;
+    bool child_is_dir = false;
+
+
+    for (uint32_t chunk = 0; !found; chunk++) {
+      uint32_t r = read_chunk(dir_n, chunk, fs_buf);
+
+      if (r == 0) break;
+
+      if (r == SYSCALL_ERROR) {
+        write_string("rm: unknown read error\n");
+        return false;
+      }
+
+      char *blk_bytes = (char *) fs_buf;
+      uint32_t pos = 0;
+      while (pos < r) {
+        uint32_t inode = *(uint32_t *)(blk_bytes + pos);
+        uint16_t advance_amt = *(uint16_t *)(blk_bytes + pos + 4);
+        uint8_t name_len = blk_bytes[pos + 6];
+        uint8_t type = blk_bytes[pos + 7];
+
+        if (advance_amt < 8 || 8 + name_len > advance_amt || pos + advance_amt > r) {
+          return false;
+        }
+
+        bool is_dot=  (name_len == 1 && blk_bytes[pos+8] == '.');
+        bool is_dot2 = (name_len == 2 && blk_bytes[pos+8] == '.' && blk_bytes[pos+9] == '.');
+
+        if (inode != 0 && !is_dot && !is_dot2) {
+          for (int i = 0; i < name_len; i++){
+            child_name[i] = blk_bytes[pos + 8 + i];
+          }
+          child_name[name_len] = 0;
+          child_n = inode;
+          child_is_dir = (type == 2);
+
+          found = true;
+          break;
+        }
+      pos += advance_amt;
+      }
+     }
+    if (!found) break;
+    if (child_is_dir) {
+      if (!rm_tree(dir_n, child_name, child_n)) return false;
+    }
+    else{
+      if (rm_inode(dir_n, child_name) == SYSCALL_ERROR) return false;
+    }
+  }
+
+  return rm_dir(parent_n, name) != SYSCALL_ERROR;
+}
+
+
+static void cmd_rm(char *args)
+{
+  char *flag = "";
+  char *path_arg = (char *) args;
+  bool recursive = false;
+
+  if (args[0] == '-') {
+    flag = args;
+
+    int i = 0;
+    while (args[i] != ' ' && args[i] != 0)
+      i++;
+
+    if (args[i] == ' ') {
+      args[i] = 0;
+      path_arg = args + i + 1;
+    }
+    else {
+      path_arg  = args + i;
+    }
+  }
+
+  char *path = (char *) return_path(path_arg);
+
+  if (streq(path, "")){
+    write_string("rm: no file/dir provided.\n");
+    return;
+  }
+  
+  uint32_t to_remove_n = resolve_dir(path);
+  if (to_remove_n == SYSCALL_ERROR){
+    write_string("rm: given path to remove does not exist\n");
+    return;
+  }
+
+  if (flag[0] == '-' && flag[1] == 'r') {
+    recursive = true;
+  }
+
+  int last = -1;
+
+  for (int i = 0; path[i] != 0; i++) {
+    if (path[i] == '/') last = i;
+  }
+  
+  char *leaf = path + last + 1;
+
+  path[last] = 0;
+
+  char *parent = (last == 0) ? "/" : path;
+
+  uint32_t parent_n = resolve_dir((const char *) parent);
+
+  if (parent_n == SYSCALL_ERROR) {
+    write_string("rm: given parent directory does not exist\n");
+    return;
+  }
+
+  if (recursive) {
+    if (!is_dir(to_remove_n)){
+      write_string("rm: cannot recursively remove a file\n");
+      return;
+    }
+
+    if (!rm_tree(parent_n, (const char *) leaf, to_remove_n)){
+      write_string("rm: failed (disk error)\n");
+      return;
+    }
+  }
+
+  else{
+    if (is_dir(to_remove_n)){
+      write_string("rm: cannot remove, is a directory\n");
+      return;
+    }
+
+    if (rm_inode(parent_n, (const char *) leaf)){
+      write_string("rm: failed (disk error)\n");
+      return;
+    }
   }
 }
 
@@ -563,6 +783,7 @@ static Command commands[] =
   {"cd", cmd_cd},
   {"stat", cmd_stat},
   {"mkdir", cmd_mkdir},
+  {"rm", cmd_rm},
 };
 
 int main(void)

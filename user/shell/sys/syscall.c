@@ -14,6 +14,8 @@
 #define SYS_WRITE_STR_LEN 11
 #define SYS_GET_STAT 12
 #define SYS_MAKE_DIR 13
+#define SYS_REMOVE_INODE 14
+#define SYS_REMOVE_DIR 15
 
 uint32_t write_char(char c)
 {
@@ -156,6 +158,30 @@ uint32_t mkdir(uint32_t inode_n, const char *name)
     "int $0x80"
     : "=a" (result)
     : "a" (SYS_MAKE_DIR), "b" (inode_n), "c" ((uint32_t) name): "memory"
+  );
+
+  return result;
+}
+
+uint32_t rm_inode(uint32_t inode_n, const char *name)
+{
+  uint32_t result;
+  __asm__ volatile (
+    "int $0x80"
+    : "=a" (result)
+    : "a" (SYS_REMOVE_INODE), "b" (inode_n), "c" ((uint32_t) name): "memory"
+  );
+
+  return result;
+}
+
+uint32_t rm_dir(uint32_t inode_n, const char *name)
+{
+  uint32_t result;
+  __asm__ volatile (
+    "int $0x80"
+    : "=a" (result)
+    : "a" (SYS_REMOVE_DIR), "b" (inode_n), "c" ((uint32_t) name): "memory"
   );
 
   return result;
