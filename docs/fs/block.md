@@ -51,7 +51,7 @@ a variable used in `indir_read_block()` and set in `read_inode()` to know how ma
 
 
 ## overview
-controller of the blocks in the filesystem, currently only supports read functions. has `read_block()` which is non-recursive and `indir_read_block()` which is recursive. also gets/retrieves inodes through the `get/read_inode()` functions.
+controller of the blocks in the filesystem, currently only supports read functions. has `read_block()` which is non-recursive and `indir_read_block()` which is recursive. also gets/retrieves inodes through the `get/read_inode()` functions. now it supports `write_inode()` and `delete_inode()`, which use the `write_block()` and `indir_free_block()` functions.
 
 ## function analysis
 
@@ -73,8 +73,17 @@ sets up numerous global variables alongside the `superblk` and `bgdt` variables.
 ### `bool get_inode(uint32_t inode_n, struct ext2_inode *out)`
 gets the real `ext2_inode` struct from the unique `inode_n` representing it. returns a bool based off of success in this operation.
 
+### `bool set_inode(uint32_t inode_n, struct ext2_inode *in)`
+like `put_inode()`, but instead it redirects the given `inode_n` point to the given inode `in`
+
 ### `void read_inode(struct ext2_inode *inode, uint16_t *out)`
 calls the `indir_read_block()` function to read an inode typically returned from `get_inode()` into the buffer `out`. do note that it completely trusts in `indir_read_block()` to work properly and does not return/warn anything if something goes wrong, only panics if the block is out of range.
+
+### `static void zero_block_buf(uint32_t *buf)`
+zeroes the given array at `buf`. must be exactly `BIT_32_PER_BLK` in size, because it must be some form of a block buffer.
+
+### `bool delete_inode(uint32_t inode_n)`
+frees all the blocks at the inode at `inode_n` and saves it to disk. do note that this does not unlink it, it only deletes the data inside of it.
 
 ### `void write_inode(uint16_t *buf, uint32_t f_size, bool is_dir, struct ext2_inode *out)`
 a function similar to `indir_read_block()` but it writes an inode from scratch, with data `buf`. iterative because too complicated to do recursive (maybe i was too lazy idk. either way its fine). uses `f_size` as `size_lo`, so `f_size` MUST match `buf`'s size. returns the inode number of the created inode, and returns the actual inode as a pointer to `out`.
