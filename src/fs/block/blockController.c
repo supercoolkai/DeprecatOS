@@ -13,12 +13,17 @@
 #include "drivers/timer/timerController.h"
 #include "fs/ext2/directoryController.h"
 #include "util/min/min.h"
+#include "util/max/max.h"
 #include <stdint.h>
 #include <stdbool.h>
 
 #define LOOKUP_MODE 0
 #define ALLOC_MODE 1
 #define FREE_MODE 2
+
+#define SINGLY_ROOT 0
+#define DOUBLY_ROOT 1
+#define TRIPLY_ROOT 2
 
 static struct ext2_superblock *superblk;
 static uint16_t bgdt_buf[WORDS_PER_BLK];
@@ -34,6 +39,13 @@ static uint32_t inodes_per_grp;
 static uint32_t blks_per_grp;
 static uint32_t frags_per_grp;
 static uint32_t ngroups;
+
+
+struct pointer_table_record {
+  uint32_t table_blk;
+  uint32_t parent_blk;
+  uint32_t slot_idx;
+};
 
 
 // a quick connection point between
@@ -68,8 +80,22 @@ void write_block(uint32_t block_n, uint16_t *buf)
 
 static void indir_read_block(uint16_t **out_cursor, uint32_t *blocks_left, uint32_t block_n, int layer, uint16_t (*indirect_buf) [WORDS_PER_BLK])
 {
-  if (block_n == 0) 
-    panic("KERNEL PANIC: BLOCK OUT OF RANGE");
+  if (block_n == 0){
+    uint32_t span = 1;
+    for (int l = 0; l < layer; l++){
+      span *= BIT_32_PER_BLK;
+    }
+
+    span = min(span, *blocks_left);
+
+    for (uint32_t w = 0; w < span * WORDS_PER_BLK; w++) {
+      (*out_cursor)[w] = 0;
+    }
+
+    *out_cursor += span * WORDS_PER_BLK;
+    *blocks_left -= span;
+    return;
+  }
 
   // baseo caseo
   if (layer == 0) {
@@ -256,8 +282,9 @@ static uint32_t mint_inode(uint32_t f_size, bool is_dir, struct ext2_inode *out)
   inode.last_access_time = inode.creation_time;
   inode.last_mod_time = inode.creation_time;
 
-  inode.disk_sectors = ((inode.size_lo + BLOCK_SIZE - 1) / BLOCK_SIZE) * sectors_per_blk;
-  
+  //inode.disk_sectors = ((inode.size_lo + BLOCK_SIZE - 1) / BLOCK_SIZE) * sectors_per_blk;
+  inode.disk_sectors = 0;
+
   *out = inode;
   return inode_n;
 }
@@ -291,6 +318,7 @@ uint32_t write_inode(uint16_t *buf, struct ext2_inode *inode)
       kfree(unwind_buf);
       return BLOCK_ERROR;
     }
+    inode->disk_sectors+=sectors_per_blk;
 
     uint16_t *curr_blk = kmalloc(BLOCK_SIZE);
     zero_block_buf((uint32_t *) curr_blk);
@@ -365,7 +393,7 @@ uint32_t write_inode(uint16_t *buf, struct ext2_inode *inode)
       if (indir_blk_ptr == BLOCK_ERROR) {
         uint32_t (*unwind_buf)[BIT_32_PER_BLK] = kmalloc(INDIRECT_PTR_LAYERS * BLOCK_SIZE);
         for (int i = 0; i < INODE_BLK_PTR_AMT; i++) {
-            indir_free_block(inode->dir_block_ptr[i], 0, unwind_buf);
+        indir_free_block(inode->dir_block_ptr[i], 0, unwind_buf);
         }
         
         indir_free_block(inode->singly_indir_block_ptr, 1, unwind_buf);
@@ -386,6 +414,7 @@ uint32_t write_inode(uint16_t *buf, struct ext2_inode *inode)
         free_block(triple_ptr_temp);
         return BLOCK_ERROR;
       }
+      inode->disk_sectors+=sectors_per_blk;
 
       uint32_t *curr_indir_blk = kmalloc(BLOCK_SIZE);
       zero_block_buf(curr_indir_blk);
@@ -423,6 +452,8 @@ uint32_t write_inode(uint16_t *buf, struct ext2_inode *inode)
           return BLOCK_ERROR;
         }
 
+        inode->disk_sectors+=sectors_per_blk;
+
         uint16_t *curr_blk = kmalloc(BLOCK_SIZE);
         zero_block_buf((uint32_t *) curr_blk);
 
@@ -457,13 +488,11 @@ uint32_t write_inode(uint16_t *buf, struct ext2_inode *inode)
 
         if (doubly_indir_blk_ptr_idx == 0) {
           inode->singly_indir_block_ptr = indir_blk_ptr;
-          inode->disk_sectors+=sectors_per_blk;
           kfree(curr_indir_blk);
           continue;
         }
         kfree(curr_indir_blk);
         curr_doubly_indir_blk[doubly_indir_blk_ptr_idx-1] = indir_blk_ptr;
-        inode->disk_sectors+=sectors_per_blk;
         has_double = true;
       }
     }
@@ -503,8 +532,9 @@ uint32_t write_inode(uint16_t *buf, struct ext2_inode *inode)
   
   kfree(curr_triply_indir_blk);
 
-  if (!has_triple) 
+  if (!has_triple){
     free_block(triple_ptr_temp);
+  }
     
   return INODE_WRITE_SUCCESS;
 }
@@ -534,7 +564,7 @@ uint32_t replace_inode(uint32_t inode_n, uint16_t *buf, uint32_t f_size, struct 
   uint32_t old_last_mod_time = inode.last_mod_time;
 
   inode.size_lo = f_size;
-  inode.disk_sectors = ((inode.size_lo + BLOCK_SIZE - 1) / BLOCK_SIZE) * sectors_per_blk;
+  inode.disk_sectors = 0;
   inode.last_mod_time = timer_get_tick();
 
   if (write_inode(buf, &inode) != INODE_WRITE_SUCCESS){
@@ -571,15 +601,22 @@ uint32_t replace_inode(uint32_t inode_n, uint16_t *buf, uint32_t f_size, struct 
 // LOOKUP_MODE: looks up, self explanatory. Read only
 // ALLOC_MODE: looks up, but if not existent then allocates a block for it and points it to that
 // FREE_MODE: like LOOKUP_MODE, but disk_blk_out = the old value of inode->dir_block_ptr. it zeroes it tho
-static uint32_t map_file_block(struct ext2_inode *inode, uint32_t file_blk_idx, uint32_t mode, uint32_t *disk_blk_out)
+
+// YES this functoin can be written like 50 lines
+// NO im not going to rewrite it like that
+static uint32_t map_file_block(struct ext2_inode *inode, uint32_t file_blk_idx, uint32_t mode, uint32_t *disk_blk_out, uint32_t *alloc_cnt, struct pointer_table_record *pointer_table, uint32_t *table_cursor)
 {
   if (file_blk_idx < INODE_BLK_PTR_AMT) {
     if (inode->dir_block_ptr[file_blk_idx] == 0) {
-      if (mode != ALLOC_MODE)
+      if (mode != ALLOC_MODE){
+        if (mode == LOOKUP_MODE)
+          return EMPTY_BLOCK;
         return INODE_ERROR;
+      }
       inode->dir_block_ptr[file_blk_idx] = alloc_block();
       if (!inode->dir_block_ptr[file_blk_idx])
         return BLOCK_ERROR;
+      if (alloc_cnt) (*alloc_cnt)++;
     }
 
     *disk_blk_out = inode->dir_block_ptr[file_blk_idx];
@@ -591,8 +628,11 @@ static uint32_t map_file_block(struct ext2_inode *inode, uint32_t file_blk_idx, 
     
     if (indir_relative_idx < BIT_32_PER_BLK) {
       if (inode->singly_indir_block_ptr == 0) {
-        if (mode != ALLOC_MODE)
+        if (mode != ALLOC_MODE){
+          if (mode == LOOKUP_MODE)
+            return EMPTY_BLOCK;
           return INODE_ERROR;
+        }
         inode->singly_indir_block_ptr = alloc_block();
         if (!inode->singly_indir_block_ptr)
           return BLOCK_ERROR;
@@ -601,6 +641,16 @@ static uint32_t map_file_block(struct ext2_inode *inode, uint32_t file_blk_idx, 
         zero_block_buf((uint32_t *) temp_blk_buf);
         write_block(inode->singly_indir_block_ptr, temp_blk_buf);
         kfree(temp_blk_buf);
+
+        if (alloc_cnt) (*alloc_cnt)++;
+
+        if (pointer_table != NULL && table_cursor != NULL) {
+          pointer_table[*table_cursor].table_blk = inode->singly_indir_block_ptr;
+          pointer_table[*table_cursor].parent_blk = 0;
+          pointer_table[*table_cursor].slot_idx = SINGLY_ROOT;
+
+          (*table_cursor)++;
+        }
       }
 
       uint32_t *indir_blk = kmalloc(BLOCK_SIZE);
@@ -609,6 +659,8 @@ static uint32_t map_file_block(struct ext2_inode *inode, uint32_t file_blk_idx, 
       if (indir_blk[indir_relative_idx] == 0) {
         if (mode != ALLOC_MODE){
           kfree(indir_blk);
+          if (mode == LOOKUP_MODE)
+            return EMPTY_BLOCK;
           return INODE_ERROR;
         }
         indir_blk[indir_relative_idx] = alloc_block();
@@ -618,6 +670,7 @@ static uint32_t map_file_block(struct ext2_inode *inode, uint32_t file_blk_idx, 
         }
         
         write_block(inode->singly_indir_block_ptr, (uint16_t *) indir_blk);
+        if (alloc_cnt) (*alloc_cnt)++;
       }
 
       *disk_blk_out = indir_blk[indir_relative_idx];
@@ -636,8 +689,11 @@ static uint32_t map_file_block(struct ext2_inode *inode, uint32_t file_blk_idx, 
 
     if (indir_relative_idx < BIT_32_PER_BLK * BIT_32_PER_BLK){
       if (inode->doubly_indir_block_ptr == 0) {
-        if (mode != ALLOC_MODE)
+        if (mode != ALLOC_MODE){
+          if (mode == LOOKUP_MODE)
+            return EMPTY_BLOCK;
           return INODE_ERROR;
+        }
         inode->doubly_indir_block_ptr = alloc_block();
         if (!inode->doubly_indir_block_ptr)
           return BLOCK_ERROR;
@@ -646,6 +702,14 @@ static uint32_t map_file_block(struct ext2_inode *inode, uint32_t file_blk_idx, 
         zero_block_buf((uint32_t *) temp_blk_buf);
         write_block(inode->doubly_indir_block_ptr, temp_blk_buf);
         kfree(temp_blk_buf);
+        if (alloc_cnt) (*alloc_cnt)++;
+        if (pointer_table != NULL && table_cursor != NULL) {
+          pointer_table[*table_cursor].table_blk = inode->doubly_indir_block_ptr;
+          pointer_table[*table_cursor].parent_blk = 0;
+          pointer_table[*table_cursor].slot_idx = DOUBLY_ROOT;
+
+          (*table_cursor)++;
+        }
       }
 
       uint32_t *doubly_indir_blk = kmalloc(BLOCK_SIZE); 
@@ -653,6 +717,8 @@ static uint32_t map_file_block(struct ext2_inode *inode, uint32_t file_blk_idx, 
       if (doubly_indir_blk[indir_relative_idx / BIT_32_PER_BLK] == 0) { 
         if (mode != ALLOC_MODE){
           kfree(doubly_indir_blk);
+          if (mode == LOOKUP_MODE)
+            return EMPTY_BLOCK;
           return INODE_ERROR;
         }
         doubly_indir_blk[indir_relative_idx / BIT_32_PER_BLK] = alloc_block();
@@ -666,6 +732,14 @@ static uint32_t map_file_block(struct ext2_inode *inode, uint32_t file_blk_idx, 
         write_block(doubly_indir_blk[indir_relative_idx / BIT_32_PER_BLK], temp_blk_buf);
         kfree(temp_blk_buf);
         write_block(inode->doubly_indir_block_ptr, (uint16_t *) doubly_indir_blk);
+        if (alloc_cnt) (*alloc_cnt)++;
+        if (pointer_table != NULL && table_cursor != NULL) {
+          pointer_table[*table_cursor].table_blk = doubly_indir_blk[indir_relative_idx / BIT_32_PER_BLK];
+          pointer_table[*table_cursor].parent_blk = inode->doubly_indir_block_ptr;
+          pointer_table[*table_cursor].slot_idx = indir_relative_idx / BIT_32_PER_BLK;
+
+          (*table_cursor)++;
+        }
       } 
 
       uint32_t *indir_blk = kmalloc(BLOCK_SIZE);
@@ -674,6 +748,8 @@ static uint32_t map_file_block(struct ext2_inode *inode, uint32_t file_blk_idx, 
         if (mode != ALLOC_MODE){
           kfree(indir_blk);
           kfree(doubly_indir_blk);
+          if (mode == LOOKUP_MODE)
+            return EMPTY_BLOCK;
           return INODE_ERROR;
         }
         indir_blk[indir_relative_idx % BIT_32_PER_BLK] = alloc_block();
@@ -683,6 +759,7 @@ static uint32_t map_file_block(struct ext2_inode *inode, uint32_t file_blk_idx, 
           return BLOCK_ERROR;
         }
         write_block(doubly_indir_blk[indir_relative_idx / BIT_32_PER_BLK], (uint16_t *) indir_blk);
+        if (alloc_cnt) (*alloc_cnt)++;
       }
 
       *disk_blk_out = indir_blk[indir_relative_idx % BIT_32_PER_BLK];
@@ -702,8 +779,11 @@ static uint32_t map_file_block(struct ext2_inode *inode, uint32_t file_blk_idx, 
 
     if (true){
       if (inode->triply_indir_block_ptr == 0) {
-        if (mode != ALLOC_MODE)
+        if (mode != ALLOC_MODE){
+          if (mode == LOOKUP_MODE)
+            return EMPTY_BLOCK;
           return INODE_ERROR;
+        }
         inode->triply_indir_block_ptr = alloc_block();
         if (!inode->triply_indir_block_ptr)
           return BLOCK_ERROR;
@@ -712,6 +792,14 @@ static uint32_t map_file_block(struct ext2_inode *inode, uint32_t file_blk_idx, 
         zero_block_buf((uint32_t *) temp_blk_buf);
         write_block(inode->triply_indir_block_ptr, temp_blk_buf);
         kfree(temp_blk_buf);
+        if (alloc_cnt) (*alloc_cnt)++;
+        if (pointer_table != NULL && table_cursor != NULL) {
+          pointer_table[*table_cursor].table_blk = inode->triply_indir_block_ptr;
+          pointer_table[*table_cursor].parent_blk = 0;
+          pointer_table[*table_cursor].slot_idx = TRIPLY_ROOT;
+
+          (*table_cursor)++;
+        }
       }
 
       uint32_t *triply_indir_blk = kmalloc(BLOCK_SIZE);
@@ -719,6 +807,8 @@ static uint32_t map_file_block(struct ext2_inode *inode, uint32_t file_blk_idx, 
       if (triply_indir_blk[indir_relative_idx / (BIT_32_PER_BLK * BIT_32_PER_BLK)] == 0) { 
         if (mode != ALLOC_MODE){
           kfree(triply_indir_blk);
+          if (mode == LOOKUP_MODE)
+            return EMPTY_BLOCK;
           return INODE_ERROR;
         }
         triply_indir_blk[indir_relative_idx / (BIT_32_PER_BLK * BIT_32_PER_BLK)] = alloc_block();
@@ -732,6 +822,14 @@ static uint32_t map_file_block(struct ext2_inode *inode, uint32_t file_blk_idx, 
         write_block(triply_indir_blk[indir_relative_idx / (BIT_32_PER_BLK * BIT_32_PER_BLK)], temp_blk_buf);
         kfree(temp_blk_buf);
         write_block(inode->triply_indir_block_ptr, (uint16_t *) triply_indir_blk);
+        if (alloc_cnt) (*alloc_cnt)++;
+        if (pointer_table != NULL && table_cursor != NULL) {
+          pointer_table[*table_cursor].table_blk = triply_indir_blk[indir_relative_idx / (BIT_32_PER_BLK * BIT_32_PER_BLK)];
+          pointer_table[*table_cursor].parent_blk = inode->triply_indir_block_ptr;
+          pointer_table[*table_cursor].slot_idx = indir_relative_idx / (BIT_32_PER_BLK * BIT_32_PER_BLK);
+
+          (*table_cursor)++;
+        }
       } 
       
       uint32_t *doubly_indir_blk = kmalloc(BLOCK_SIZE);
@@ -741,6 +839,8 @@ static uint32_t map_file_block(struct ext2_inode *inode, uint32_t file_blk_idx, 
         if (mode != ALLOC_MODE){
           kfree(doubly_indir_blk);
           kfree(triply_indir_blk);
+          if (mode == LOOKUP_MODE)
+            return EMPTY_BLOCK;
           return INODE_ERROR;
         }
         doubly_indir_blk[(indir_relative_idx / BIT_32_PER_BLK) % BIT_32_PER_BLK] = alloc_block();
@@ -755,6 +855,14 @@ static uint32_t map_file_block(struct ext2_inode *inode, uint32_t file_blk_idx, 
         write_block(doubly_indir_blk[(indir_relative_idx / BIT_32_PER_BLK) % BIT_32_PER_BLK], temp_blk_buf);
         kfree(temp_blk_buf);
         write_block(triply_indir_blk[indir_relative_idx / (BIT_32_PER_BLK * BIT_32_PER_BLK)], (uint16_t *) doubly_indir_blk);
+        if (alloc_cnt) (*alloc_cnt)++;
+        if (pointer_table != NULL && table_cursor != NULL) {
+          pointer_table[*table_cursor].table_blk = doubly_indir_blk[(indir_relative_idx / BIT_32_PER_BLK) % BIT_32_PER_BLK];
+          pointer_table[*table_cursor].parent_blk = triply_indir_blk[indir_relative_idx / (BIT_32_PER_BLK * BIT_32_PER_BLK)];
+          pointer_table[*table_cursor].slot_idx = (indir_relative_idx / BIT_32_PER_BLK) % BIT_32_PER_BLK;
+
+          (*table_cursor)++;
+        }
       } 
 
       uint32_t *indir_blk = kmalloc(BLOCK_SIZE);
@@ -764,6 +872,8 @@ static uint32_t map_file_block(struct ext2_inode *inode, uint32_t file_blk_idx, 
           kfree(doubly_indir_blk);
           kfree(triply_indir_blk);
           kfree(indir_blk);
+          if (mode == LOOKUP_MODE)
+            return EMPTY_BLOCK;
           return INODE_ERROR;
         }
         indir_blk[indir_relative_idx % BIT_32_PER_BLK] = alloc_block();
@@ -774,6 +884,7 @@ static uint32_t map_file_block(struct ext2_inode *inode, uint32_t file_blk_idx, 
           return BLOCK_ERROR;
         }
         write_block(doubly_indir_blk[(indir_relative_idx / BIT_32_PER_BLK) % BIT_32_PER_BLK], (uint16_t *) indir_blk);
+        if (alloc_cnt) (*alloc_cnt)++;
       }
 
       *disk_blk_out = indir_blk[indir_relative_idx % BIT_32_PER_BLK];
@@ -807,14 +918,20 @@ uint32_t append_to_inode(uint32_t inode_n, uint16_t *buf, uint32_t f_size, struc
 
   uint32_t bytes_left = f_size;
 
+  uint32_t alloc_cnt = 0;
+
 
   if (size_needed < old_size) // out of inode space
     return INODE_ERROR;
 
   if (old_size % BLOCK_SIZE != 0){
     uint32_t tail_blk_n;
-    if (map_file_block(&inode, old_blk_cnt - 1, LOOKUP_MODE, &tail_blk_n) != INODE_WRITE_SUCCESS)
+    uint32_t map_result = map_file_block(&inode, old_blk_cnt - 1, LOOKUP_MODE, &tail_blk_n, NULL, NULL, NULL);
+    if (map_result != INODE_WRITE_SUCCESS){
+      if (map_result == EMPTY_BLOCK)
+        return EMPTY_BLOCK;
       return INODE_ERROR;
+    }
 
     uint16_t *slack_buf = kmalloc(BLOCK_SIZE);
 
@@ -842,10 +959,11 @@ uint32_t append_to_inode(uint32_t inode_n, uint16_t *buf, uint32_t f_size, struc
 
   while(bytes_left > 0) {
     uint32_t curr_blk_n;
-    if (map_file_block(&inode, old_blk_cnt + blk_idx, ALLOC_MODE, &curr_blk_n) != INODE_WRITE_SUCCESS){
+    if (map_file_block(&inode, old_blk_cnt + blk_idx, ALLOC_MODE, &curr_blk_n, &alloc_cnt, NULL, NULL) != INODE_WRITE_SUCCESS){
       uint32_t unwind_blk_n;
-      for (uint32_t i = old_blk_cnt; i < old_blk_cnt + blk_idx; i++) { 
-        if (map_file_block(&inode, i, FREE_MODE, &unwind_blk_n) != INODE_WRITE_SUCCESS) {
+      uint32_t island_start = old_blk_cnt;
+      for (uint32_t i = island_start; i < island_start + blk_idx; i++) { 
+        if (map_file_block(&inode, i, FREE_MODE, &unwind_blk_n, NULL, NULL, NULL) != INODE_WRITE_SUCCESS) {
           panic("KERNEL PANIC: Inode free block operation failed when attempting to free block after append failure, disk corruption occurred!!");
         }
         
@@ -935,7 +1053,7 @@ uint32_t append_to_inode(uint32_t inode_n, uint16_t *buf, uint32_t f_size, struc
   }
 
   inode.size_lo += f_size;
-  inode.disk_sectors = ((inode.size_lo + BLOCK_SIZE - 1) / BLOCK_SIZE) * sectors_per_blk;
+  inode.disk_sectors += alloc_cnt * sectors_per_blk;
   inode.last_mod_time = timer_get_tick();
 
   if (!set_inode(inode_n, &inode)) {
@@ -943,6 +1061,288 @@ uint32_t append_to_inode(uint32_t inode_n, uint16_t *buf, uint32_t f_size, struc
   }
 
   *out = inode;
+  return INODE_WRITE_SUCCESS;
+}
+
+static void unwind_insert(uint32_t inode_n, struct ext2_inode *inode, uint32_t *unwind_buf, uint32_t unwind_cursor, uint32_t free_cnt, struct pointer_table_record *pointer_table, uint32_t table_cursor)
+{
+  uint32_t free_blk_n;
+  for (uint32_t i = 0; i < unwind_cursor; i++) {
+    if (map_file_block(inode, unwind_buf[i], FREE_MODE, &free_blk_n, NULL, NULL, NULL) != INODE_WRITE_SUCCESS) {
+      panic("KERNEL PANIC: Attempted to recover data after a failed insert, but map_file_block() FREE_MODE failed!!");
+    }
+    free_block(free_blk_n);
+  }
+
+  for (uint32_t i = table_cursor; i > 0; i--) {
+    struct pointer_table_record record = pointer_table[i - 1];
+    if (record.parent_blk == 0) {
+      if (record.slot_idx == SINGLY_ROOT)
+        inode->singly_indir_block_ptr = 0;
+      else if (record.slot_idx == DOUBLY_ROOT)
+        inode->doubly_indir_block_ptr = 0;
+      else
+        inode->triply_indir_block_ptr = 0;
+    }
+    else{
+      uint32_t *parent = kmalloc(BLOCK_SIZE);
+      read_block(record.parent_blk, (uint16_t *) parent);
+      parent[record.slot_idx] = 0;
+      write_block(record.parent_blk, (uint16_t *) parent);
+      kfree(parent);
+    }
+    free_block(record.table_blk);
+  }
+  kfree(pointer_table);
+
+  kfree(unwind_buf);
+
+  inode->disk_sectors -= free_cnt * sectors_per_blk;
+
+  if (!set_inode(inode_n, inode))
+    panic("KERNEL PANIC: Attempted to recover data after a failed insert, but set_inode() failed!!");
+}
+
+uint32_t insert_in_inode(uint32_t inode_n, uint16_t *buf, uint32_t f_size, uint32_t offset, struct ext2_inode *out) {
+  if (f_size == 0) 
+    return INODE_WRITE_SUCCESS;
+  
+  struct ext2_inode inode;
+  if (!get_inode(inode_n, &inode))
+    return INODE_ERROR;
+
+  uint32_t old_size = inode.size_lo;
+
+  if (offset + f_size < offset || old_size + f_size < old_size)
+    return INODE_ERROR;
+  
+  uint32_t new_size = max(offset + f_size, old_size + f_size);
+
+  uint32_t alloc_cnt = 0;
+  uint32_t free_cnt = 0;
+
+
+  uint32_t top = (new_size + BLOCK_SIZE - 1) / BLOCK_SIZE - 1;
+  uint32_t bottom = (offset + f_size) / BLOCK_SIZE;
+
+  uint32_t dest_blk = top;
+
+  uint32_t *unwind_buf = kmalloc((top - offset/BLOCK_SIZE + 1) * sizeof(uint32_t));
+  uint32_t unwind_cursor = 0;
+
+  struct pointer_table_record *pointer_table = kmalloc(3 * (top - offset/BLOCK_SIZE + 1) * sizeof(struct pointer_table_record));
+  uint32_t table_cursor = 0;
+
+  uint32_t rem = f_size % BLOCK_SIZE;
+  uint32_t shift_blks = f_size / BLOCK_SIZE;
+
+  bool the_sky_is_blue = true;
+  while(the_sky_is_blue) {
+    if (dest_blk < bottom || (dest_blk == bottom && (offset + f_size) % BLOCK_SIZE != 0)) break;
+    
+    uint32_t src_blk = dest_blk - shift_blks;
+
+    uint32_t curr_upper_blk_n;
+    uint32_t map_result = map_file_block(&inode, src_blk, LOOKUP_MODE, &curr_upper_blk_n, NULL, NULL, NULL);
+
+    if (map_result != INODE_WRITE_SUCCESS && map_result != EMPTY_BLOCK){
+      unwind_insert(inode_n, &inode, unwind_buf, unwind_cursor, free_cnt, pointer_table, table_cursor);
+      return map_result;
+    }
+
+
+    uint32_t curr_lower_blk_n;
+    uint32_t map_result_lo;
+  
+    if (rem != 0){
+      map_result_lo = map_file_block(&inode, src_blk - 1, LOOKUP_MODE, &curr_lower_blk_n, NULL, NULL, NULL);
+      if (map_result_lo != INODE_WRITE_SUCCESS && map_result_lo != EMPTY_BLOCK){
+        unwind_insert(inode_n, &inode, unwind_buf, unwind_cursor, free_cnt, pointer_table, table_cursor);
+        return map_result_lo;
+      }
+    }
+
+    bool lo_is_hole = (rem == 0) ? true : (map_result_lo == EMPTY_BLOCK);
+    bool hi_is_hole = (map_result == EMPTY_BLOCK);
+
+
+    if (lo_is_hole && hi_is_hole) {
+      uint32_t old_blk;
+      if(map_file_block(&inode, dest_blk, FREE_MODE, &old_blk, NULL, NULL, NULL) == INODE_WRITE_SUCCESS){
+        free_block(old_blk);
+        free_cnt++;
+      }
+    }
+
+    else{
+      uint32_t new_blk_n;
+      uint32_t alloc_cnt_snapshot = alloc_cnt;
+      uint32_t upd_result = map_file_block(&inode, dest_blk, ALLOC_MODE, &new_blk_n, &alloc_cnt, pointer_table, &table_cursor);
+
+      if (upd_result != INODE_WRITE_SUCCESS){
+        unwind_insert(inode_n, &inode, unwind_buf, unwind_cursor, free_cnt, pointer_table, table_cursor);
+        return upd_result;
+      }
+
+      if (alloc_cnt_snapshot != alloc_cnt) {
+        unwind_buf[unwind_cursor++] = dest_blk;
+      }
+
+      uint8_t *new_blk = kmalloc(BLOCK_SIZE);
+      uint32_t blk_idx = 0;
+      
+      if (!lo_is_hole){
+        uint8_t *blk_lo = kmalloc(BLOCK_SIZE);
+        read_block(curr_lower_blk_n, (uint16_t *) blk_lo);
+        for (uint32_t lower_idx = BLOCK_SIZE - rem; lower_idx < BLOCK_SIZE; lower_idx++){
+          new_blk[blk_idx] = blk_lo[lower_idx];
+          blk_idx++;
+        }
+        kfree(blk_lo);
+      }
+      else{
+        for(uint32_t i = 0; i < rem; i++)
+          new_blk[blk_idx++] = 0;
+      }
+      
+      if (!hi_is_hole){
+        uint8_t *blk_hi = kmalloc(BLOCK_SIZE);
+        read_block(curr_upper_blk_n, (uint16_t *) blk_hi); 
+        for (uint32_t higher_idx = 0; higher_idx < BLOCK_SIZE - rem; higher_idx++){
+          new_blk[blk_idx] = blk_hi[higher_idx];
+          blk_idx++;
+        }
+        kfree(blk_hi);
+      }
+      else{
+        for (uint32_t i = 0; i < BLOCK_SIZE - rem; i++)
+          new_blk[blk_idx++] = 0;
+      }
+
+      write_block(new_blk_n, (uint16_t *) new_blk);
+      kfree(new_blk);
+    }
+
+    dest_blk--;
+  }
+
+  uint32_t split = (offset + f_size) % BLOCK_SIZE;
+
+  if (split != 0) {
+    uint32_t partial_dest_blk;
+    uint32_t alloc_cnt_snapshot = alloc_cnt;
+    uint32_t partial_map_status = map_file_block(&inode, bottom, ALLOC_MODE, &partial_dest_blk, &alloc_cnt, pointer_table, &table_cursor);
+    if (partial_map_status != INODE_WRITE_SUCCESS){
+      unwind_insert(inode_n, &inode, unwind_buf, unwind_cursor, free_cnt, pointer_table, table_cursor);
+      return INODE_ERROR;
+    }
+
+    if (alloc_cnt_snapshot != alloc_cnt) {
+      unwind_buf[unwind_cursor++] = bottom;
+    }
+    
+    uint8_t *blk = kmalloc(BLOCK_SIZE);
+    
+    read_block(partial_dest_blk, (uint16_t *) blk);
+
+    uint32_t needed = BLOCK_SIZE - split;
+    uint32_t src_byte = offset;
+    uint32_t buf_idx = split;
+
+    while (needed > 0) {
+      uint32_t src_blk = src_byte / BLOCK_SIZE;
+      uint32_t src_offset = src_byte % BLOCK_SIZE;
+      uint32_t chunk = min(needed, BLOCK_SIZE - src_offset);
+
+      uint32_t src_blk_n;
+      uint32_t map_status = map_file_block(&inode, src_blk, LOOKUP_MODE, &src_blk_n, NULL, NULL, NULL);
+      if (map_status == EMPTY_BLOCK) {
+        for (uint32_t i = 0; i < chunk; i ++)
+          blk[buf_idx++] = 0;
+      }
+      else if (map_status == INODE_WRITE_SUCCESS){
+        uint8_t *src = kmalloc(BLOCK_SIZE);
+        read_block(src_blk_n, (uint16_t *) src);
+        for (uint32_t i = 0; i < chunk; i++)
+          blk[buf_idx++] = src[src_offset + i];
+        kfree(src);
+      }
+      else{
+        kfree(blk);
+        unwind_insert(inode_n, &inode, unwind_buf, unwind_cursor, free_cnt, pointer_table, table_cursor);
+        return map_status;
+      }
+
+      src_byte += chunk;
+      needed -= chunk;
+    }
+
+    write_block(partial_dest_blk, (uint16_t *) blk);
+    kfree(blk);
+  }
+  
+  uint8_t *buf_bytes = (uint8_t *) buf;
+  uint32_t buf_idx = 0;
+  uint32_t remaining = f_size;
+  uint32_t dest_byte = offset;
+
+  while (remaining > 0) {
+    uint32_t blk_idx = dest_byte / BLOCK_SIZE;
+    uint32_t blk_offset = dest_byte % BLOCK_SIZE;
+    uint32_t chunk = min(remaining, BLOCK_SIZE - blk_offset);
+
+    uint32_t blk_n;
+    uint32_t alloc_cnt_snapshot = alloc_cnt;
+    uint32_t map_status = map_file_block(&inode, blk_idx, ALLOC_MODE, &blk_n, &alloc_cnt, pointer_table, &table_cursor);
+    if (map_status != INODE_WRITE_SUCCESS){
+      unwind_insert(inode_n, &inode, unwind_buf, unwind_cursor, free_cnt, pointer_table, table_cursor);
+      return map_status;
+    }
+
+    if (alloc_cnt_snapshot != alloc_cnt) {
+      unwind_buf[unwind_cursor++] = blk_idx;
+    }
+
+    uint8_t *blk = kmalloc(BLOCK_SIZE);
+    if (blk_offset != 0 || chunk != BLOCK_SIZE)
+      read_block(blk_n, (uint16_t *) blk);
+
+    if (dest_byte == offset && (dest_byte - blk_offset) >= old_size) {
+      uint32_t block_start = dest_byte - blk_offset;
+      uint32_t zero_from = (old_size > block_start) ? (old_size - block_start) : 0;
+      for (uint32_t i = zero_from; i < blk_offset; i++)
+        blk[i] = 0;
+    }
+
+    for (uint32_t i = 0; i < chunk; i++) {
+      blk[blk_offset + i] = buf_bytes[buf_idx + i];
+    }
+
+    write_block(blk_n, (uint16_t *) blk);
+    kfree(blk);
+
+    dest_byte += chunk;
+    buf_idx += chunk;
+    remaining -= chunk;
+  }
+  
+  inode.size_lo = new_size;
+  if (alloc_cnt >= free_cnt) 
+    inode.disk_sectors += (alloc_cnt - free_cnt) * sectors_per_blk;
+  else 
+    inode.disk_sectors -= (free_cnt - alloc_cnt) * sectors_per_blk;
+  inode.last_mod_time = timer_get_tick();
+  inode.last_access_time = timer_get_tick();
+  if (!set_inode(inode_n, &inode)){
+    kfree(unwind_buf);
+    kfree(pointer_table);
+    return INODE_ERROR;
+  }
+  
+  *out = inode;
+  
+  kfree(pointer_table);
+  kfree(unwind_buf);
   return INODE_WRITE_SUCCESS;
 }
 

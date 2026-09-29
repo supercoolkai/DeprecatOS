@@ -88,5 +88,11 @@ frees all the blocks at the inode at `inode_n` and saves it to disk. do note tha
 ### `void write_inode(uint16_t *buf, uint32_t f_size, bool is_dir, struct ext2_inode *out)`
 a function similar to `indir_read_block()` but it writes an inode from scratch, with data `buf`. iterative because too complicated to do recursive (maybe i was too lazy idk. either way its fine). uses `f_size` as `size_lo`, so `f_size` MUST match `buf`'s size. returns the inode number of the created inode, and returns the actual inode as a pointer to `out`.
 
+### `uint32_t replace_inode(uint32_t inode_n, uint16_t *buf, uint32_t f_size, struct ext2_inode *out)`
+replaces the given `inode_n`'s contents with the contents inside `buf`
+
+### `static uint32_t map_file_block(struct ext2_inode *inode, uint32_t file_blk_idx, uint32_t mode, uint32_t *disk_blk_out, uint32_t *alloc_cnt)`
+a really really naive function (which probably should be iterative), which looks up the given `file_blk_idx` in the inode `inode`. it essentially searches the inode's block pointers for it, and if it doesnt exist, two things can happen: if `mode` is `LOOKUP_MODE` or `FREE_MODE`, then it returns an error. if `mode` is `ALLOC_MODE`, it allocates a new block and points the block pointer to it, increments `alloc_cnt` then continues on with the function. if `mode` is `FREE_MODE` then it unlinks the block pointer.
+
 ### `void put_inode(uint16_t *buf, uint32_t f_size, bool is_dir, struct ext2_inode *out)`
 a wrapper of `write_inode()` which wires it into the `bgdt`.

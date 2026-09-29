@@ -39,7 +39,7 @@ i try to make this project what i call an "ultra-monolithic kernel". an ultra-mo
 - IDT management 
 
 ### shell
-- standalone shell with crt0 and syscall stubs (for full command list see docs/userland/shell.md)
+- standalone shell with crt0 and syscall stubs (for full command list see docs/userland/syscall.md)
 
 ### util
 - ring buffer

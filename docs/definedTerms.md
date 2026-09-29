@@ -58,9 +58,13 @@
 
 #### **DIRECTORYENTRY_H** *(src/fs/ext2/directoryEntry.h)*
 
+#### **DOUBLY_ROOT** *(src/fs/block/blockController.c)*
+
 #### **DRIVE_SELECT_IO_PORT** *(src/drivers/disk/ata.h)*
 
 #### **DRQ_BIT** *(src/drivers/disk/ata.h)*
+
+#### **EMPTY_BLOCK** *(src/errors.h)*
 
 #### **ERRORS_H** *(src/errors.h)*
 
@@ -288,6 +292,8 @@
 
 #### **SERIAL_CONTROLLER_H** *(src/drivers/serial/serialController.h)*
 
+#### **SINGLY_ROOT** *(src/fs/block/blockController.c)*
+
 #### **STACK_ADDR** *(src/userland/userland.h)*
 
 #### **STACK_SIZE** *(src/process/scheduler/scheduler.h)*
@@ -337,6 +343,8 @@
 #### **TARGET_HZ** *(src/drivers/timer/timerController.c)*
 
 #### **TIMER_CONTROLLER_H** *(src/drivers/timer/timerController.h)*
+
+#### **TRIPLY_ROOT** *(src/fs/block/blockController.c)*
 
 #### **TSSCONTROLLER_H** *(src/gdt/tssController.h)*
 

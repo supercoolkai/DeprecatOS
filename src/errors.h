@@ -9,5 +9,6 @@
 // i know this says errors.h but idk where else 
 // to put this lol
 #define INODE_WRITE_SUCCESS 0x11111111
+#define EMPTY_BLOCK 0x22222222
 
 #endif
