@@ -2,6 +2,8 @@
 
 #### **ALIGN4** *(src/fs/ext2/directoryEntry.h)*
 
+#### **ALLOC_MODE** *(src/fs/block/blockController.c)*
+
 #### **ALT_STATUS_PORT** *(src/drivers/disk/ata.h)*
 
 #### **ATA_H** *(src/drivers/disk/ata.h)*
@@ -107,6 +109,8 @@
 #### **FRAME_USER_ESP_INDEX** *(src/process/scheduler/scheduler.h)*
 
 #### **FRAME_VECTOR_INDEX_EXCEPTION** *(src/exceptions/exceptions.h)*
+
+#### **FREE_MODE** *(src/fs/block/blockController.c)*
 
 #### **GENERAL_ERROR** *(src/errors.h)*
 
@@ -215,6 +219,8 @@
 #### **LIGHT_MAGENTA** *(src/drivers/fb/fbController.h)*
 
 #### **LIGHT_RED** *(src/drivers/fb/fbController.h)*
+
+#### **LOOKUP_MODE** *(src/fs/block/blockController.c)*
 
 #### **MAGENTA** *(src/drivers/fb/fbController.h)*
 
