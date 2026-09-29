@@ -91,8 +91,17 @@ a function similar to `indir_read_block()` but it writes an inode from scratch, 
 ### `uint32_t replace_inode(uint32_t inode_n, uint16_t *buf, uint32_t f_size, struct ext2_inode *out)`
 replaces the given `inode_n`'s contents with the contents inside `buf`
 
-### `static uint32_t map_file_block(struct ext2_inode *inode, uint32_t file_blk_idx, uint32_t mode, uint32_t *disk_blk_out, uint32_t *alloc_cnt)`
-a really really naive function (which probably should be iterative), which looks up the given `file_blk_idx` in the inode `inode`. it essentially searches the inode's block pointers for it, and if it doesnt exist, two things can happen: if `mode` is `LOOKUP_MODE` or `FREE_MODE`, then it returns an error. if `mode` is `ALLOC_MODE`, it allocates a new block and points the block pointer to it, increments `alloc_cnt` then continues on with the function. if `mode` is `FREE_MODE` then it unlinks the block pointer.
+### `static uint32_t map_file_block(struct ext2_inode *inode, uint32_t file_blk_idx, uint32_t mode, uint32_t *disk_blk_out, uint32_t *alloc_cnt, struct pointer_table_record *pointer_table, uint32_t *table_cursor)`
+a really really naive function (which probably should be iterative), which looks up the given `file_blk_idx` in the inode `inode`. it essentially searches the inode's block pointers for it, and if it doesnt exist, two things can happen: if `mode` is `LOOKUP_MODE` or `FREE_MODE`, then it returns an error. if `mode` is `ALLOC_MODE`, it allocates a new block and points the block pointer to it, increments `alloc_cnt` if it exists, (and also adds the current entry to `pointer_table` if it's a block pointer,) then continues on with the function. if `mode` is `FREE_MODE` then it unlinks the block pointer.
+
+### `uint32_t append_to_inode(uint32_t inode_n, uint16_t *buf, uint32_t f_size, struct ext2_inode *out)`
+appends the given `buf` to the end of the inode at `inode_n`, and updates relevant inode fields (`last_mod_time`, `last_access_time`, `disk_sectors`, `size_lo`). afterwards it returns the inode at `inode_n`
+
+### `static void unwind_insert(uint32_t inode_n, struct ext2_inode *inode, uint32_t *unwind_buf, uint32_t unwind_cursor, uint32_t free_cnt, struct pointer_table_record *pointer_table, uint32_t table_cursor)`
+a free function for `insert_in_inode()`, first frees all data blocks then frees all pointer blocks which were created in the insert.
+
+### `uint32_t insert_in_inode(uint32_t inode_n, uint16_t *buf, uint32_t f_size, uint32_t offset, struct ext2_inode *out)`
+like `append_to_inode()`, but it allows you to insert data in an arbitrary location. calls `unwind_insert()` upon failure and returns the inode at `inode_n`, also updates relevant inode fields (`last_mod_time`, `last_access_time`, `disk_sectors`, `size_lo`)
 
 ### `void put_inode(uint16_t *buf, uint32_t f_size, bool is_dir, struct ext2_inode *out)`
 a wrapper of `write_inode()` which wires it into the `bgdt`.
