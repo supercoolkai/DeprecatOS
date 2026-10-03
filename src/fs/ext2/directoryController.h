@@ -24,5 +24,6 @@ bool make_dir(uint32_t parent_inode_n, const char *name);
 bool dir_remove(uint32_t parent_inode_n, const char *name, uint32_t *removed_inode_n);
 bool unlink_inode(uint32_t parent_inode_n, const char *name);
 bool unlink_dir(uint32_t parent_inode_n, const char *name);
+bool make_file(uint32_t parent_inode_n, const char *name);
 
 #endif

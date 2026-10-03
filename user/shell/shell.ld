@@ -13,7 +13,7 @@ SECTIONS
   *(COMMON)
 }
 
-ASSERT(. <= 0x40004000, "shell.bin exceeds the 16 KiB user code region (4 pages before STACK_ADDR)")
+ASSERT(. <= 0x40010000, "shell.bin exceeds the 64 KiB user code region (16 pages before STACK_ADDR)")
 
 /DISCARD/ : {
   *(.eh_frame)

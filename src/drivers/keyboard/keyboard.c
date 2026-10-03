@@ -230,6 +230,9 @@ char keycode_to_char(KeyCode key)
         case KEY_BACKSPACE:
             return '\b';
 
+        case KEY_ESC:
+            return '\x1b';
+
         default:
             return '\0';
     }

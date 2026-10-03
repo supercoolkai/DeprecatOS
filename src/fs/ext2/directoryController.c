@@ -6,6 +6,7 @@
 #include "fs/block/blockController.h"
 #include "util/kprintf/kprintf.h"
 #include "drivers/timer/timerController.h"
+#include "fs/ext2/bitmapController.h"
 #include "errors.h"
 #include "util/streq/streq.h"
 #include <stdint.h>
@@ -590,6 +591,45 @@ bool unlink_dir(uint32_t parent_inode_n, const char *name)
 
   if (!delete_inode(removed)){
     kprintf(KPRINTF_RED "unlink_dir: delete_inode() failed mid call, disk corruption occurred!\n" KPRINTF_RESET);
+    return false;
+  }
+
+  return true;
+}
+
+bool make_file(uint32_t parent_inode_n, const char *name)
+{
+  uint32_t len = 0;
+  while (len < NAME_LEN && name[len] != 0)
+    len++;
+
+  if (len == 0 || len >= NAME_LEN)
+    return false;
+
+  struct ext2_inode parent_inode;
+  if (!get_inode(parent_inode_n, &parent_inode)) 
+    return false;
+
+
+  if ((parent_inode.type_and_perms_lo & NO_PERMISSION_MASK) != INODE_DIR_TYPE) {
+    kprintf(KPRINTF_RED "make_file: given parent directory is not a directory\n" KPRINTF_RESET);
+    return false;
+  }
+
+  uint32_t temp;
+  if (name_in(parent_inode, name, &temp)){
+    kprintf(KPRINTF_RED "make_file: file already exists in given path\n" KPRINTF_RESET);
+    return false;
+  }
+  
+  struct ext2_inode inode;
+  uint32_t child_inode_n = put_inode(NULL, 0, false, &inode);
+  if (child_inode_n == INODE_ERROR)
+    return false;
+
+  if (!dir_insert(parent_inode_n, name, child_inode_n)){
+    kprintf(KPRINTF_RED "make_file: dir_insert() failed mid call!\n" KPRINTF_RESET);
+    free_inode(child_inode_n);
     return false;
   }
 

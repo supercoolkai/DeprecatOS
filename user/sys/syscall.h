@@ -18,5 +18,14 @@ uint32_t get_stat(uint32_t inode_n, uint32_t *buf);
 uint32_t mkdir(uint32_t inode_n, const char *name);
 uint32_t rm_inode(uint32_t inode_n, const char *name);
 uint32_t rm_dir(uint32_t inode_n, const char *name);
+uint32_t clear_screen(void);
+uint32_t set_cursor(uint32_t row, uint32_t col);
+uint32_t get_screen_dims(uint32_t *row_out, uint32_t *col_out);
+uint32_t fsave(uint32_t inode_n, uint16_t *buf, uint32_t f_size);
+uint32_t touch(uint32_t inode_n, const char *name);
+uint32_t set_cursor_no_upd(uint32_t row, uint32_t col);
+uint32_t write_char_no_upd(char c);
+uint32_t write_string_no_upd(char *c);
+uint32_t write_string_len_no_upd(const char *buf, uint32_t len);
 
 #endif

@@ -349,6 +349,154 @@ static uint32_t sys_remove_dir(uint32_t *frame)
   return (uint32_t) frame;
 }
 
+static uint32_t sys_get_screen_dims(uint32_t *frame)
+{
+  uint32_t *row_out = (uint32_t *) frame[4];
+  uint32_t *col_out = (uint32_t *) frame[6];
+  
+  if ((uint32_t) row_out < KERNEL_CEILING || (uint32_t) row_out > USER_SPACE_END - sizeof(uint32_t)) {
+    frame[7] = SYSCALL_ERROR;
+    return (uint32_t) frame;
+  }
+  
+  if ((uint32_t) col_out < KERNEL_CEILING || (uint32_t) col_out > USER_SPACE_END - sizeof(uint32_t)) {
+    frame[7] = SYSCALL_ERROR;
+    return (uint32_t) frame;
+  }
+
+  fb_get_screen_dims(row_out, col_out);
+
+  frame[7] = 0;
+  return (uint32_t) frame;
+}
+
+static uint32_t sys_set_cursor(uint32_t *frame)
+{
+  uint32_t row_in = frame[4];
+  uint32_t col_in = frame[6];
+
+  if (!fb_set_cursor(row_in, col_in)){
+    frame[7] = SYSCALL_ERROR;
+  }
+  else{
+    frame[7] = 0;
+  }
+  return (uint32_t) frame;
+}
+
+static uint32_t sys_clear_screen(uint32_t *frame)
+{
+  fb_clear_screen();
+  frame[7] = 0;
+  return (uint32_t) frame;
+}
+
+static uint32_t sys_replace_inode(uint32_t *frame)
+{
+  uint32_t inode_n = frame[4];
+  uint16_t *buf = (uint16_t *) frame[6];
+  uint32_t f_size = frame[5];
+  
+  if (f_size > USER_SPACE_END - KERNEL_CEILING || (uint32_t) buf < KERNEL_CEILING || (uint32_t) buf > USER_SPACE_END - f_size) {
+    frame[7] = SYSCALL_ERROR;
+    return (uint32_t) frame;
+  }
+
+  struct ext2_inode throwaway;
+
+  if (replace_inode(inode_n, buf, f_size, &throwaway) != INODE_WRITE_SUCCESS)
+    frame[7] = SYSCALL_ERROR;
+  else{
+    frame[7] = 0;
+  }
+  return (uint32_t) frame;
+}
+
+static uint32_t sys_make_inode(uint32_t *frame)
+{
+  uint32_t parent_n = frame[4];
+  uint32_t base = frame[6];
+
+  if (base < KERNEL_CEILING || base > USER_SPACE_END - NAME_LEN) {
+    frame[7] = SYSCALL_ERROR;
+    return (uint32_t) frame;
+  }
+
+  frame[7] = make_file(parent_n, (const char *) base) ? 0 : SYSCALL_ERROR;
+  return (uint32_t) frame;
+}
+
+static uint32_t sys_set_cursor_no_upd(uint32_t *frame)
+{
+  uint32_t row_in = frame[4];
+  uint32_t col_in = frame[6];
+
+  if (!fb_set_cursor_no_upd(row_in, col_in)){
+    frame[7] = SYSCALL_ERROR;
+  }
+  else{
+    frame[7] = 0;
+  }
+  return (uint32_t) frame;
+}
+
+static uint32_t sys_write_char_no_upd(uint32_t *frame)
+{
+  serial_write_char((char)frame[4]);
+  fb_draw_char_no_upd((char)frame[4], WHITE);
+
+  frame[7] = 0;
+  return (uint32_t) frame;
+}
+
+static uint32_t sys_write_string_no_upd(uint32_t *frame)
+{
+  char *s = (char *) frame[4];
+
+  uint32_t i = 0;
+
+  for (;;){
+
+    if((uint32_t) s + i < KERNEL_CEILING || (uint32_t) s + i >= USER_SPACE_END){
+      frame[7] = SYSCALL_ERROR;
+      return (uint32_t) frame;
+    }
+    char c = s[i];
+
+    if (c == 0)
+      break;
+
+    serial_write_char(c);
+    fb_draw_char_no_upd(c, WHITE);
+
+    i++;
+  }
+  frame[7] = 0;
+  return (uint32_t) frame;
+}
+
+static uint32_t sys_write_string_len_no_upd(uint32_t *frame)
+{
+  uint32_t base = frame[4];
+  const char *s = (const char *) base;
+  uint32_t len = frame[6];
+
+  if (len > USER_SPACE_END - KERNEL_CEILING || base < KERNEL_CEILING || base > USER_SPACE_END - len) {
+    frame[7] = SYSCALL_ERROR;
+    return (uint32_t) frame;
+  }
+
+  for (uint32_t i = 0; i < len; i++){
+    const char c = s[i];
+
+    serial_write_char(c);
+    fb_draw_char_no_upd(c, WHITE);
+  }
+
+  frame[7] = 0;
+  return (uint32_t) frame;
+}
+
 static uint32_t (*syscall_table[])(uint32_t *) = {
   sys_write_char,
   sys_write_string,
@@ -365,6 +513,15 @@ static uint32_t (*syscall_table[])(uint32_t *) = {
   sys_make_dir,
   sys_remove_inode,
   sys_remove_dir,
+  sys_get_screen_dims,
+  sys_set_cursor,
+  sys_clear_screen,
+  sys_replace_inode,
+  sys_make_inode,
+  sys_set_cursor_no_upd,
+  sys_write_char_no_upd,
+  sys_write_string_no_upd,
+  sys_write_string_len_no_upd,
 };
 
 void syscall_init(void)

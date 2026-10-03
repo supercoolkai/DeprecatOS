@@ -240,6 +240,26 @@ void fb_draw_char_upd(unsigned char c, unsigned char color)
   draw_cursor();
 }
 
+void fb_draw_char_no_upd(unsigned char c, unsigned char color)
+{
+  if (c != '\b' && c != '\n'){
+    draw_char(c, color);
+    upd_col();
+  }
+
+  else if (c != '\n') {
+    if (col > 0){ 
+      col --;
+      draw_char(' ', 0);
+    }
+  }
+
+  else{
+    upd_row();
+    col = 0;
+  }
+}
+
 void fb_draw_string(const char *str, unsigned char color)
 {
   for(int i = 0; i >= 0; i++) {
@@ -251,4 +271,68 @@ void fb_draw_string(const char *str, unsigned char color)
 
     fb_draw_char_upd(c, color);
   }
+}
+
+void fb_draw_string_no_upd(const char *str, unsigned char color)
+{
+  for(int i = 0; i >= 0; i++) {
+    unsigned char c = str[i];
+
+    if(c == '\0') {
+      return;
+    }
+
+    fb_draw_char_no_upd(c, color);
+  }
+}
+
+void fb_get_screen_dims(uint32_t *rows_out, uint32_t *cols_out)
+{
+  *cols_out = cols;
+  *rows_out = rows;
+}
+
+bool fb_set_cursor(uint32_t in_row, uint32_t in_col)
+{
+  if (in_row >= rows || in_col >= cols) 
+    return false;
+
+  row = in_row;
+  col = in_col;
+  del_cursor();
+  draw_cursor();
+
+  return true;
+}
+
+bool fb_set_cursor_no_upd(uint32_t in_row, uint32_t in_col)
+{
+  if (in_row >= rows || in_col >= cols) 
+    return false;
+
+  row = in_row;
+  col = in_col;
+
+  return true;
+}
+
+void fb_clear_screen(void)
+{
+  FBChar blank;
+  blank.c = ' ';
+  blank.color = 0;
+  for (int r = 0; r < rows; r++){
+    for (int c = 0; c < cols; c++) {   
+      row = r;
+      col = c;
+
+      draw_char(blank.c, blank.color);
+    }
+  }
+
+  row = 0;
+  col = 0;
+
+  del_cursor();
+  draw_cursor();
 }
