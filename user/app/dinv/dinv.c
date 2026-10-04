@@ -9,8 +9,13 @@
 #include <stdbool.h>
 
 #define KEY_ESC '\x1b'
-#define TEXT_CAP 16384
-#define GROW_AMT 32
+#define TEXT_CAP 262144
+#define COL_OFFSET 6
+
+// D INV
+// I S
+// N OT
+// V I
 
 enum {
   MODE_NORMAL,
@@ -40,9 +45,6 @@ static uint32_t screen_rows;
 static uint32_t screen_cols;
 static uint32_t text_rows;
 
-static uint32_t curr_col;
-static uint32_t curr_row;
-
 static uint32_t mode;
 static bool running;
 
@@ -54,7 +56,6 @@ static char cmd_buf[64];
 static uint32_t cmd_len;
 
 static char path[256];
-static const char *parent_path;
 
 static uint32_t replacement_status;
 
@@ -62,23 +63,23 @@ static char *args_save;
 
 static char linebuf[256];
 
+static char complaint[64];
+static bool complaining;
+static uint32_t complaint_expiry;
+
 static void handle_normal(unsigned char c);
 static void handle_insert(unsigned char c);
 static void handle_command(unsigned char c);
 
-static void strcat(char *dst, const char *src)
+static uint32_t buf_rows(void)
 {
-  uint32_t i = 0;
-  while (dst[i] != '\0')
-    i++;
+  uint32_t r = 1;
+  for (uint32_t i = 0; i < gap_start; i++) 
+    if (text[i] == '\n') r++;
+  for (uint32_t i = gap_end; i < TEXT_CAP; i++)
+    if (text[i] == '\n') r++;
 
-  uint32_t j = 0;
-  while (src[j] != '\0') {
-    dst[i] = src[j];
-    i++;
-    j++;
-  }
-  dst[i] = '\0';
+  return r;
 }
 
 static void cursor_right(void)
@@ -117,8 +118,10 @@ static void save(void)
 
   uint32_t ino = resolve_dir(path);
   if (ino == SYSCALL_ERROR){
-    running = false;
-    write_string("dinv: failed to save path!! crashing without progress saved..\n");
+    char *complaint_temp = "Failed to save";
+    for (uint32_t i = 0; i < 15; i++) {
+      complaint[i] = complaint_temp[i];
+    }
     return;
   }
 
@@ -135,6 +138,9 @@ static DinvCommand cmds[] = {
   {"q", quit},
   {"w", save},
   {"wq", save_quit},
+  {"qa", quit},
+  {"wa", save},
+  {"wqa", save_quit},
 };
 static uint32_t cmd_cnt = sizeof(cmds) / sizeof(cmds[0]);
 
@@ -156,6 +162,26 @@ static void cursor_rowcol(uint32_t *row, uint32_t *col)
   *row = r;
 }
 
+static void write_line_header(uint32_t row)
+{
+  char line_header[COL_OFFSET];
+  int h_off = COL_OFFSET-3;
+  uint32_t row_temp = row;
+  do {
+    line_header[h_off--] = (char)('0' + row_temp % 10);
+    row_temp /= 10;
+  } while (row_temp > 0 && h_off >= 0);
+
+  while (h_off >= 0) {
+    line_header[h_off--] = ' ';
+  }
+
+  line_header[COL_OFFSET - 2] = '>';
+  line_header[COL_OFFSET - 1] = ' ';
+
+  write_string_len_no_upd(line_header, COL_OFFSET);
+}
+
 static void gap_render(void)
 {
   uint32_t cursor_row;
@@ -163,13 +189,13 @@ static void gap_render(void)
   
   cursor_rowcol(&cursor_row, &cursor_col);
 
+  uint32_t num_rows = buf_rows();
+
   cursor_col = 0;
 
-  uint32_t width;
-  if (screen_cols > sizeof(linebuf))
+  uint32_t width = screen_cols - COL_OFFSET;
+  if (width > sizeof(linebuf))
     width = sizeof(linebuf);
-  else
-    width = screen_cols;
 
   switch(replacement_status){
     case(DMG_NONE):
@@ -178,8 +204,13 @@ static void gap_render(void)
       {
         if (cursor_row >= text_rows)
           break;
-        set_cursor_no_upd(cursor_row, cursor_col);
         
+        set_cursor_no_upd(cursor_row, cursor_col);
+
+        if (cursor_row < num_rows)
+          write_line_header(cursor_row);
+        
+
         uint32_t begin = gap_start;
         while(begin > 0 && text[begin - 1] != '\n')
           begin--;
@@ -227,6 +258,10 @@ static void gap_render(void)
             linebuf[n++] = ' ';
 
           set_cursor_no_upd(start, cursor_col);
+
+          if (start < num_rows)
+            write_line_header(start);
+
           write_string_len_no_upd(linebuf, width);
         }
         
@@ -239,6 +274,9 @@ static void gap_render(void)
           linebuf[n++] = ' ';
         
         set_cursor_no_upd(cursor_row, cursor_col);
+
+        if (cursor_row < num_rows)
+          write_line_header(cursor_row);
 
         write_string_len_no_upd(linebuf, width);
 
@@ -258,6 +296,9 @@ static void gap_render(void)
 
           set_cursor_no_upd(r, cursor_col);
           
+          if (r < num_rows)
+            write_line_header(r);
+
           write_string_len_no_upd(linebuf, width);
           
 
@@ -294,20 +335,28 @@ static void gap_render(void)
             linebuf[n++] = ' ';
 
           set_cursor_no_upd(r, 0);
+
+          if (r < num_rows)
+            write_line_header(r);
+
           write_string_len_no_upd(linebuf, width);
         }
       }
       break;
     case (DMG_CMD):
       {
+        uint32_t width_to_use = width + COL_OFFSET;
+        if (width_to_use> sizeof(linebuf)) {
+          width_to_use = sizeof(linebuf);
+        }
         uint32_t cmd_col = 1;
         set_cursor_no_upd(screen_rows-1, cmd_col);
         
         uint32_t n = 0;
-        while(n < width-2)
+        while(n < width_to_use-2)
           linebuf[n++] = ' ';
 
-        write_string_len_no_upd(linebuf, width-2);
+        write_string_len_no_upd(linebuf, width_to_use-2);
 
         set_cursor_no_upd(screen_rows-1, cmd_col);
         write_string_len_no_upd(cmd_buf, cmd_len);
@@ -316,28 +365,34 @@ static void gap_render(void)
   }
   
   set_cursor_no_upd(screen_rows - 1, 0);
-  
-  switch(mode) {
-    case(MODE_NORMAL):
-      write_string("NORMAL");
-      break;
-    case(MODE_INSERT):
-      write_string("INSERT");
-      break;
+  if (!complaining){
+    switch(mode) {
+      case(MODE_NORMAL):
+        write_string_no_upd("NORMAL");
+        break;
+      case(MODE_INSERT):
+        write_string_no_upd("INSERT");
+        break;
 
-    case (MODE_COMMAND):
-      write_char(':');
-      break;
+      case (MODE_COMMAND):
+        write_char_no_upd(':');
+        break;
+    }
+  }
+  else{
+    write_string_no_upd(complaint);
   }
 
   
-  uint32_t row;
-  uint32_t col;
-  cursor_rowcol(&row, &col);
-  set_cursor(row, col);
-
   if (mode == MODE_COMMAND)
     set_cursor(screen_rows-1, cmd_len + 1);
+  else{
+    uint32_t row;
+    uint32_t col;
+    cursor_rowcol(&row, &col);
+    set_cursor(row, COL_OFFSET + col);
+  }
+
 }
 
 static void handle_command(unsigned char c)
@@ -349,15 +404,13 @@ static void handle_command(unsigned char c)
 
   if (c == KEY_ESC){
     mode = MODE_NORMAL;
+    replacement_status = DMG_CMD;
+    cmd_len = 0;
     return;
   }
 
   if (c == '\b'){
     if (cmd_len > 0){
-      uint32_t row;
-      uint32_t col;
-      cursor_rowcol(&row, &col);
-
       cmd_len --;
       replacement_status = DMG_CMD;
     }
@@ -366,20 +419,31 @@ static void handle_command(unsigned char c)
 
   if (c == '\n') {
     cmd_buf[cmd_len] = '\0';
+    complaining = true;
     for (uint32_t i = 0; i < cmd_cnt; i++) {
       if (streq(cmds[i].name, cmd_buf)) {
+        complaining = false;
         cmds[i].fn();
       }
     }
+
+    if (complaining) {
+      complaint_expiry = get_ticks() + 5000;
+
+      char *complaint_temp = "Command not found";
+      for (uint32_t i = 0; i < 18; i++) {
+        complaint[i] = complaint_temp[i];
+      }
+    }
+
     mode = MODE_NORMAL;
+    replacement_status = DMG_CMD;
+    cmd_len = 0;
     return;
   }
 
   if (cmd_len < sizeof(cmd_buf) - 1){
     cmd_buf[cmd_len++] = c;
-    uint32_t row;
-    uint32_t col;
-    cursor_rowcol(&row, &col);
     replacement_status = DMG_CMD;
   }
 }
@@ -398,9 +462,6 @@ static void handle_insert(unsigned char c)
   if (c == '\b'){
     if (gap_start > 0){
       replacement_status = (text[gap_start - 1] == '\n') ? DMG_BELOW : DMG_TAIL;
-      uint32_t row;
-      uint32_t col;
-      cursor_rowcol(&row, &col);
       gap_start --;
     }
     return;
@@ -408,9 +469,6 @@ static void handle_insert(unsigned char c)
   if (gap_start == gap_end) return;
 
   replacement_status = (c == '\n') ? DMG_BELOW : DMG_TAIL;
-  uint32_t row;
-  uint32_t col;
-  cursor_rowcol(&row, &col);
 
   text[gap_start] = c;
   gap_start++;
@@ -426,6 +484,7 @@ static void handle_normal(unsigned char c)
     cmd_len = 0;
     mode = MODE_COMMAND;
     replacement_status = DMG_CMD;
+    complaining = false;
     return;
   }
 
@@ -491,13 +550,6 @@ static void handle_normal(unsigned char c)
     while(gap_start != p - 1)
       cursor_left();
 
-    for (uint32_t k = 0; k < col; k++) {
-      if (gap_start == 0 || text[gap_start] == '\n'){
-        break;
-      }
-
-      cursor_left();
-    }
     uint32_t col_temp;
     cursor_rowcol(&row, &col_temp);
     while(col_temp > col){
@@ -525,6 +577,11 @@ void app_dinv(char *args)
   clear_screen();
   get_screen_dims(&screen_rows, &screen_cols);
 
+  if (screen_cols <= COL_OFFSET) {
+    write_string("dinv: resolution is too small to run\n");
+    return;
+  }
+
   // bottom row reserved for cmd line
   text_rows = screen_rows - 1;
 
@@ -533,10 +590,8 @@ void app_dinv(char *args)
   gap_start = 0;
   gap_end = TEXT_CAP;
   cmd_len = 0;
-
-  parent_path = return_path(".");
-  if (!parent_path)
-    return;
+  complaining = false;
+  replacement_status = DMG_FULL;
 
   const char *full = return_path(args);
   if (!full){
@@ -553,12 +608,57 @@ void app_dinv(char *args)
 
   args_save = args;
 
+  uint32_t path_n = resolve_dir(path);
+  if (path_n != SYSCALL_ERROR){
+    if (is_dir(path_n)){
+      write_string("dinv: dir provided, must give a file\n");
+      return;
+    }
+    
+    get_stat(path_n, (uint32_t *)stat_buf);
+    if (*(uint32_t*)(stat_buf + 4) >= TEXT_CAP){
+      write_string("dinv: file is too large to render properly\n");
+      return;
+    }
 
+    uint32_t n = 0;
+    uint32_t r;
+    for (;;) {
+      r = read_chunk(path_n, n, fs_buf);
+      if (r == 0){
+        break;
+      }
+
+      if (r == SYSCALL_ERROR) {
+        write_string("dinv: an unknown error occurred while reading file ");
+        write_string(args);
+        write_string("\n");
+
+        return;
+      }
+
+      else {
+        char *blk_bytes = (char *) fs_buf;
+
+        for (uint32_t i = 0; i < r; i++) {
+          text[gap_start++] = blk_bytes[i];
+        }
+        
+
+        n++;
+      }
+    }
+  }
 
   gap_render();
   while (running){ 
     uint32_t comp = read_char();
     if (comp == SENTINEL){
+      if (complaining && get_ticks() >= complaint_expiry) {
+        complaining = false;
+        replacement_status = DMG_CMD;
+        gap_render();
+      }
       yield();
       continue;
     }
