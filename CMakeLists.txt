@@ -17,9 +17,11 @@ set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
 
 include_directories(
 include
-src
+kernel
+etc/lib
+etc/kernel
 )
 
-file(GLOB_RECURSE SOURCES "src/*.c" "src/*.s" "src/*.S")
+file(GLOB_RECURSE SOURCES "kernel/*.c" "kernel/*.s" "kernel/*.S" "etc/*.c" "etc/*.s" "etc/*.S")
 
 add_executable(${PROJECT_NAME}.elf ${SOURCES})
