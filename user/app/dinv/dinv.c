@@ -45,6 +45,9 @@ static uint32_t screen_rows;
 static uint32_t screen_cols;
 static uint32_t text_rows;
 
+static uint32_t top_row;
+static uint32_t left_col;
+
 static uint32_t mode;
 static bool running;
 
@@ -80,6 +83,23 @@ static uint32_t buf_rows(void)
     if (text[i] == '\n') r++;
 
   return r;
+}
+
+static char sanitize(char c)
+{
+  unsigned char u = (unsigned char) c;
+  if (u < 0x20 || u == 0x7F)
+    return '.';
+
+  return c;
+}
+
+static uint32_t text_cols(void)
+{
+  uint32_t w = sizeof(linebuf);
+  if (w > screen_cols - COL_OFFSET)
+    w = screen_cols - COL_OFFSET;
+  return w;
 }
 
 static void cursor_right(void)
@@ -122,16 +142,27 @@ static void save(void)
     for (uint32_t i = 0; i < 15; i++) {
       complaint[i] = complaint_temp[i];
     }
+    complaining = true;
+    complaint_expiry = get_ticks() + 5000;
     return;
   }
 
-  fsave(ino, (uint16_t *) text, gap_start);
+  if (fsave(ino, (uint16_t *) text, gap_start) == SYSCALL_ERROR){
+    char *complaint_temp = "Failed to save";
+    for (uint32_t i = 0; i < 15; i++) {
+      complaint[i] = complaint_temp[i];
+    }
+    complaining = true;
+    complaint_expiry = get_ticks() + 5000;
+    return;
+  }
 }
 
 static void save_quit(void)
 {
   save();
-  quit();
+  if (!complaining)
+    quit();
 }
 
 static DinvCommand cmds[] = {
@@ -160,6 +191,32 @@ static void cursor_rowcol(uint32_t *row, uint32_t *col)
 
   *col = c;
   *row = r;
+}
+
+static void check_scroll(void)
+{
+  uint32_t cursor_row;
+  uint32_t cursor_col;
+  cursor_rowcol(&cursor_row, &cursor_col);
+
+  uint32_t width = text_cols();
+  if (cursor_row < top_row){
+    top_row = cursor_row;
+    replacement_status = DMG_FULL;
+  }
+  else if (cursor_row >= top_row + text_rows){
+    top_row = cursor_row - text_rows + 1;
+    replacement_status = DMG_FULL;
+  }
+
+  if (cursor_col < left_col){
+    left_col = cursor_col;
+    replacement_status = DMG_FULL;
+  }
+  else if (cursor_col >= left_col + width) {
+    left_col = cursor_col - width + 1;
+    replacement_status = DMG_FULL;
+  }
 }
 
 static void write_line_header(uint32_t row)
@@ -191,21 +248,16 @@ static void gap_render(void)
 
   uint32_t num_rows = buf_rows();
 
-  cursor_col = 0;
-
-  uint32_t width = screen_cols - COL_OFFSET;
-  if (width > sizeof(linebuf))
-    width = sizeof(linebuf);
-
+  uint32_t width = text_cols();
   switch(replacement_status){
     case(DMG_NONE):
       break;
     case(DMG_TAIL):
       {
-        if (cursor_row >= text_rows)
+        if (cursor_row - top_row >= text_rows)
           break;
         
-        set_cursor_no_upd(cursor_row, cursor_col);
+        set_cursor_no_upd(cursor_row - top_row, 0);
 
         if (cursor_row < num_rows)
           write_line_header(cursor_row);
@@ -219,11 +271,14 @@ static void gap_render(void)
         while(end < TEXT_CAP && text[end] != '\n')
           end++;
         
+        uint32_t c = 0;
         uint32_t n = 0;
         for (uint32_t i = begin; i < gap_start && n < width; i++)
-          linebuf[n++] = text[i];
+          if (c++ >= left_col) 
+            linebuf[n++] = sanitize(text[i]);
         for (uint32_t i = gap_end; i < end && n < width; i++)
-          linebuf[n++] = text[i];
+          if (c++ >= left_col)
+            linebuf[n++] = sanitize(text[i]);
         while (n < width)
           linebuf[n++] = ' ';
 
@@ -233,7 +288,7 @@ static void gap_render(void)
 
     case(DMG_BELOW):
       {
-        if (cursor_row >= text_rows)
+        if (cursor_row - top_row >= text_rows)
           break;
 
         uint32_t begin = gap_start;
@@ -244,20 +299,21 @@ static void gap_render(void)
         while(end < TEXT_CAP && text[end] != '\n')
           end++;
 
-        uint32_t start = (cursor_row > 0) ? cursor_row - 1 : 0;
-
-        if (cursor_row > 0) {
+        if (cursor_row - top_row > 0) {
+          uint32_t start = cursor_row - 1;
           uint32_t prev_begin = begin - 1;
           while (prev_begin > 0 && text[prev_begin - 1] != '\n')
             prev_begin--;
 
           uint32_t n = 0;
+          uint32_t c = 0;
           for (uint32_t i = prev_begin; i < begin - 1 && n < width; i++)
-            linebuf[n++] = text[i];
+            if (c++ >= left_col)
+              linebuf[n++] = sanitize(text[i]);
           while (n < width)
             linebuf[n++] = ' ';
 
-          set_cursor_no_upd(start, cursor_col);
+          set_cursor_no_upd(start - top_row, 0);
 
           if (start < num_rows)
             write_line_header(start);
@@ -265,15 +321,18 @@ static void gap_render(void)
           write_string_len_no_upd(linebuf, width);
         }
         
+        uint32_t c = 0;
         uint32_t n = 0;
         for (uint32_t i = begin; i < gap_start && n < width; i++)
-          linebuf[n++] = text[i];
+          if (c++ >= left_col) 
+            linebuf[n++] = sanitize(text[i]);
         for (uint32_t i = gap_end; i < end && n < width; i++)
-          linebuf[n++] = text[i];
+          if (c++ >= left_col)
+            linebuf[n++] = sanitize(text[i]);
         while (n < width)
           linebuf[n++] = ' ';
         
-        set_cursor_no_upd(cursor_row, cursor_col);
+        set_cursor_no_upd(cursor_row - top_row, 0);
 
         if (cursor_row < num_rows)
           write_line_header(cursor_row);
@@ -282,22 +341,25 @@ static void gap_render(void)
 
         uint32_t next_begin = (end < TEXT_CAP) ? end + 1 : TEXT_CAP;
         uint32_t next_end;
-        for (uint32_t r = cursor_row + 1; r < text_rows; r++) {
+        for (uint32_t r = cursor_row + 1; r - top_row < text_rows; r++) {
           next_end = next_begin;
           while(next_end < TEXT_CAP && text[next_end] != '\n')
             next_end++;
           
           n = 0;
-          for (uint32_t i = next_begin; i < next_end && n < width; i++) {
-            linebuf[n++] = text[i];
-          }
+          c = 0;
+          for (uint32_t i = next_begin; i < next_end && n < width; i++)
+            if (c++ >= left_col)
+              linebuf[n++] = sanitize(text[i]);
           while (n < width)
             linebuf[n++] = ' ';
 
-          set_cursor_no_upd(r, cursor_col);
+          set_cursor_no_upd(r - top_row, 0);
           
           if (r < num_rows)
             write_line_header(r);
+          else
+            write_string_len_no_upd("      ", COL_OFFSET);
 
           write_string_len_no_upd(linebuf, width);
           
@@ -309,16 +371,30 @@ static void gap_render(void)
 
     case (DMG_FULL):
       {
-        clear_screen();
         uint32_t pos = 0;
         if (pos == gap_start)
           pos = gap_end;
 
+        for (uint32_t skip = 0; skip < top_row; skip++) {
+          while (pos < TEXT_CAP && text[pos] != '\n'){
+            pos++;
+            if (pos == gap_start)
+              pos = gap_end;
+          }
+          if (pos < TEXT_CAP) {
+            pos++;
+            if (pos == gap_start){
+              pos = gap_end;
+            }
+          }
+        }
+
         for (uint32_t r = 0; r < text_rows; r++){
           uint32_t n = 0;
+          uint32_t c = 0;
           while (pos < TEXT_CAP && text[pos] != '\n') {
-            if (n < width)
-              linebuf[n++] = text[pos];
+            if (c++ >= left_col && n < width)
+              linebuf[n++] = sanitize(text[pos]);
             pos++;
 
             if (pos == gap_start)
@@ -336,8 +412,10 @@ static void gap_render(void)
 
           set_cursor_no_upd(r, 0);
 
-          if (r < num_rows)
-            write_line_header(r);
+          if (r + top_row < num_rows)
+            write_line_header(r + top_row);
+          else
+            write_string_len_no_upd("      ", COL_OFFSET);
 
           write_string_len_no_upd(linebuf, width);
         }
@@ -384,13 +462,18 @@ static void gap_render(void)
   }
 
   
-  if (mode == MODE_COMMAND)
-    set_cursor(screen_rows-1, cmd_len + 1);
+  if (mode == MODE_COMMAND){
+    if (cmd_len >= screen_cols - 1)
+      set_cursor(screen_rows-1, screen_cols - 1);
+    else{
+      set_cursor(screen_rows-1, cmd_len + 1);
+    }
+  }
   else{
     uint32_t row;
     uint32_t col;
     cursor_rowcol(&row, &col);
-    set_cursor(row, COL_OFFSET + col);
+    set_cursor(row - top_row, COL_OFFSET + col - left_col);
   }
 
 }
@@ -419,21 +502,23 @@ static void handle_command(unsigned char c)
 
   if (c == '\n') {
     cmd_buf[cmd_len] = '\0';
-    complaining = true;
+    bool found= false;
     for (uint32_t i = 0; i < cmd_cnt; i++) {
       if (streq(cmds[i].name, cmd_buf)) {
-        complaining = false;
+        found = true;;
         cmds[i].fn();
       }
     }
 
-    if (complaining) {
+    if (!found) {
       complaint_expiry = get_ticks() + 5000;
 
       char *complaint_temp = "Command not found";
       for (uint32_t i = 0; i < 18; i++) {
         complaint[i] = complaint_temp[i];
       }
+
+      complaining = true;
     }
 
     mode = MODE_NORMAL;
@@ -592,6 +677,8 @@ void app_dinv(char *args)
   cmd_len = 0;
   complaining = false;
   replacement_status = DMG_FULL;
+  top_row = 0;
+  left_col = 0;
 
   const char *full = return_path(args);
   if (!full){
@@ -643,13 +730,12 @@ void app_dinv(char *args)
         for (uint32_t i = 0; i < r; i++) {
           text[gap_start++] = blk_bytes[i];
         }
-        
 
         n++;
       }
     }
   }
-
+  check_scroll();
   gap_render();
   while (running){ 
     uint32_t comp = read_char();
@@ -681,6 +767,7 @@ void app_dinv(char *args)
         handle_command(c);
         break;
     }
+    check_scroll();
     gap_render();
   }
 

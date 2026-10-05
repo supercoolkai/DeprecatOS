@@ -2,6 +2,7 @@
 #define DEPSH_COMMON_H
 
 #include "fs/block/blockController.h"
+#include "streq/streq.h"
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -14,7 +15,6 @@ extern uint8_t stat_buf[128];
 extern char dir[256];
 
 // Utilities owned by shell.c.
-int streq(const char *a, const char *b);
 void print_uint32(uint32_t n);
 
 // Helpers defined in depshCommon.c.

@@ -2,6 +2,7 @@
 #include "drivers/fb/fbController.h"
 #include "userland/syscall/syscallController.h"
 #include "app/appCtl.h"
+#include "streq/streq.h"
 #include <stdint.h>
 #define BUF_CAP 512
 
@@ -10,21 +11,6 @@ static char buf[BUF_CAP];
 char *user = "UNKNOWN";
 char *host = "localhost";
 char dir[256] = "/";
-
-int streq(const char *a, const char *b)
-{
-  int i = 0;
-
-  while (a[i] == b[i])
-  {
-    if (a[i] == 0)
-      return 1;
-
-    i++;
-  }
-
-  return 0;
-}
 
 void print_uint32(uint32_t n)
 {
