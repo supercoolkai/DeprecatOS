@@ -5,6 +5,8 @@
 #include "memory/heap/kernelHeap.h"
 #include "mem/mem.h"
 
+#define HISTORY_LINES 256
+
 extern uint8_t font8x16[];
 
 static const uint32_t palette[PALETTE_SIZE] = 
@@ -40,6 +42,12 @@ static uint32_t width;
 static uint32_t height;
 
 static FBChar *shadow;
+static FBChar *history;
+static int head;
+static int count;
+static int view_offset;
+
+static bool scrollback_on;
 
 void fb_init(MBIInfo *info)
 {
@@ -92,6 +100,11 @@ void fb_init(MBIInfo *info)
   cursor_row = 0;
 
   shadow = kmalloc(rows * cols * sizeof(FBChar));
+  history = kmalloc(HISTORY_LINES * cols * sizeof(FBChar));
+  head = 0;
+  count = 0;
+  view_offset = 0;
+  scrollback_on = true;
 
   FBChar blank;
   blank.c = ' ';
@@ -192,6 +205,11 @@ static void scroll(void)
 {
   del_cursor();
 
+  memcpy(&history[head*cols], &shadow[0 * cols], cols * sizeof(FBChar));
+  head = (head + 1) % HISTORY_LINES;
+  if (count < HISTORY_LINES)
+    count++;
+
   for (int r = 1; r < rows; r++) {
     for (int c = 0; c < cols; c++){
       FBChar curr = shadow[r * cols + c];
@@ -216,10 +234,78 @@ static void scroll(void)
          (rows - 1) * GLYPH_HEIGHT * pitch);
 
   memset((uint8_t *) base + (rows - 1) * GLYPH_HEIGHT * pitch, 
-         palette[BLACK], 
+         0, 
          GLYPH_HEIGHT * pitch);
 
   draw_cursor();
+}
+
+static void blit_glyph(int r, int c, unsigned char ch, unsigned char color)
+{
+  if (color >= PALETTE_SIZE) 
+    return;
+
+  uint32_t color_val = palette[color];
+
+  const uint8_t *glyph = &font8x16[ch * GLYPH_HEIGHT];
+
+  for (int i = 0; i < GLYPH_HEIGHT; i ++) {
+    uint32_t *line = (uint32_t *)(base + (r * GLYPH_HEIGHT + i) * pitch);
+    for (int b = 0; b < GLYPH_WIDTH; b++) {
+      int val = (glyph[i] >> (7 - b)) & 1;
+
+      if (!val) {
+        line[c * GLYPH_WIDTH + b] = palette[BLACK];
+        continue;
+      }
+      
+      line[c * GLYPH_WIDTH + b] = color_val;
+    }
+  }
+}
+
+static void view_repaint(void)
+{
+  for (int r = 0; r < rows; r++){
+    int logical = count + r - view_offset;
+
+    FBChar *src;
+    if (logical < count)
+      src = &history[((head - count + logical + HISTORY_LINES) % HISTORY_LINES) * cols];
+    else
+      src = &shadow[(logical - count) * cols];
+
+    for (int c = 0; c < cols; c++)
+      blit_glyph(r, c, src[c].c, src[c].color);
+  }
+}
+
+static void snap_to_live(void)
+{
+  for (int r = 0; r < rows; r++){
+    for (int c = 0; c < cols; c++) {
+      FBChar cell = shadow[r * cols + c];
+      blit_glyph(r, c, cell.c, cell.color);
+    }
+  }
+  draw_cursor();
+}
+
+void fb_scrollback(int delta)
+{
+  if (!scrollback_on)
+    return;
+  int off = view_offset + delta;
+
+  if (off > count) off = count;
+  if (off < 0) off = 0;
+  if (off == view_offset) return;
+  view_offset = off;
+  if (view_offset == 0) {
+    snap_to_live();
+    return;
+  }
+  view_repaint();
 }
 
 static void upd_row(void)
@@ -246,6 +332,10 @@ static void upd_col(void)
 
 void fb_draw_char_upd(unsigned char c, unsigned char color)
 {
+  if (view_offset) {
+    view_offset = 0;
+    snap_to_live();
+  }
   if (c != '\b' && c != '\n'){
     draw_char(c, color);
     upd_col();
@@ -269,6 +359,10 @@ void fb_draw_char_upd(unsigned char c, unsigned char color)
 
 void fb_draw_char_no_upd(unsigned char c, unsigned char color)
 {
+  if (view_offset) {
+    view_offset = 0;
+    snap_to_live();
+  }
   if (c != '\b' && c != '\n'){
     draw_char(c, color);
     upd_col();
@@ -321,6 +415,10 @@ void fb_get_screen_dims(uint32_t *rows_out, uint32_t *cols_out)
 
 bool fb_set_cursor(uint32_t in_row, uint32_t in_col)
 {
+  if (view_offset) {
+    view_offset = 0;
+    snap_to_live();
+  }
   if (in_row >= rows || in_col >= cols) 
     return false;
 
@@ -334,6 +432,10 @@ bool fb_set_cursor(uint32_t in_row, uint32_t in_col)
 
 bool fb_set_cursor_no_upd(uint32_t in_row, uint32_t in_col)
 {
+  if (view_offset) {
+    view_offset = 0;
+    snap_to_live();
+  }
   if (in_row >= rows || in_col >= cols) 
     return false;
 
@@ -345,6 +447,10 @@ bool fb_set_cursor_no_upd(uint32_t in_row, uint32_t in_col)
 
 void fb_clear_screen(void)
 {
+  if (view_offset) {
+    view_offset = 0;
+    snap_to_live();
+  }
   FBChar blank;
   blank.c = ' ';
   blank.color = 0;
@@ -362,4 +468,9 @@ void fb_clear_screen(void)
 
   del_cursor();
   draw_cursor();
+}
+
+void fb_set_scrollback(bool b)
+{
+  scrollback_on = b;
 }

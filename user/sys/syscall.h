@@ -27,5 +27,6 @@ uint32_t set_cursor_no_upd(uint32_t row, uint32_t col);
 uint32_t write_char_no_upd(char c);
 uint32_t write_string_no_upd(char *c);
 uint32_t write_string_len_no_upd(const char *buf, uint32_t len);
+uint32_t set_scrollback(bool v);
 
 #endif

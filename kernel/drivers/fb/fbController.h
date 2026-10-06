@@ -37,5 +37,7 @@ bool fb_set_cursor_no_upd(uint32_t in_row, uint32_t in_col);
 void fb_draw_char_no_upd(unsigned char c, unsigned char color);
 void fb_draw_string_no_upd(const char *str, unsigned char color);
 void fb_clear_screen(void);
+void fb_scrollback(int delta);
+void fb_set_scrollback(bool b);
 
 #endif

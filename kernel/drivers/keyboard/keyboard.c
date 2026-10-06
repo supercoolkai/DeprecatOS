@@ -370,6 +370,16 @@ void keyboard_handler()
   }
 
   keys_down[key] = !released;
+  if (!released && (key == KEY_UP || key == KEY_DOWN) && (keys_down[KEY_LSHIFT] || keys_down[KEY_RSHIFT])){
+    fb_scrollback(key == KEY_UP ? 1 : -1);
+  }
+  if (!released && (key == KEY_PGUP || key == KEY_PGDN)){
+    uint32_t r;
+    uint32_t c;
+
+    fb_get_screen_dims(&r, &c);
+    fb_scrollback(key == KEY_PGUP ? (int) r - 1 : -((int) r - 1));
+  }
   char c = keycode_to_char(key);
   if (!released && c != '\0') {
     rb_push(&g_rb, c);

@@ -497,6 +497,16 @@ static uint32_t sys_write_string_len_no_upd(uint32_t *frame)
   return (uint32_t) frame;
 }
 
+static uint32_t sys_set_scrollback(uint32_t *frame)
+{
+  bool v = frame[4];
+
+  fb_set_scrollback(v);
+
+  frame[7] = 0;
+  return (uint32_t) frame;
+}
+
 static uint32_t (*syscall_table[])(uint32_t *) = {
   sys_write_char,
   sys_write_string,
@@ -522,6 +532,7 @@ static uint32_t (*syscall_table[])(uint32_t *) = {
   sys_write_char_no_upd,
   sys_write_string_no_upd,
   sys_write_string_len_no_upd,
+  sys_set_scrollback,
 };
 
 void syscall_init(void)

@@ -125,6 +125,7 @@ static void cursor_left(void)
 static void quit(void)
 {
   running = false;
+  set_scrollback(true);
 }
 
 static void save(void)
@@ -737,6 +738,8 @@ void app_dinv(char *args)
   }
   check_scroll();
   gap_render();
+
+  set_scrollback(false);
   while (running){ 
     uint32_t comp = read_char();
     if (comp == SENTINEL){
