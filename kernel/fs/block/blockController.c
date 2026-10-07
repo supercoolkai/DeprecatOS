@@ -237,7 +237,7 @@ bool delete_inode(uint32_t inode_n)
   
 
   inode.hard_link_cnt = 0;
-  inode.deletion_time = timer_get_tick() + superblk->inode_cnt;
+  inode.deletion_time = timer_get_tick();
 
   if(!set_inode(inode_n, &inode)){
     kfree(unwind_buf);
