@@ -232,7 +232,7 @@ int main(void)
     if(buf[0] == 0)
       continue;
     
-    if (history_count > 0 && !streq(history[(history_head + HISTORY_CAP - 1) % HISTORY_CAP], buf)){
+    if (!streq(history[(history_head + HISTORY_CAP - 1) % HISTORY_CAP], buf)){
       uint32_t i = 0;
       while(buf[i] != '\0'){
         history[history_head][i] = buf[i];
