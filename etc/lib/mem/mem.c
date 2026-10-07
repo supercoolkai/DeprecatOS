@@ -51,9 +51,9 @@ int memcmp(const void *a, const void *b, size_t n)
   const unsigned char *lhs = (const unsigned char *) a;
   const unsigned char *rhs = (const unsigned char *) b;
 
-  for (size_t b = 0; b < n; b++) {
-    if (lhs[b] != rhs[b])
-      return lhs[b] - rhs[b];
+  for (size_t w = 0; w < n; w++) {
+    if (lhs[w] != rhs[w])
+      return lhs[w] - rhs[w];
   }
 
   return 0;

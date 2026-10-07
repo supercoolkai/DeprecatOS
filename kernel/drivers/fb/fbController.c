@@ -148,28 +148,36 @@ static void draw_cursor(void)
 }
 
 
-static void draw_char_forced(unsigned char c, unsigned char color)
+static void blit_glyph(int r, int c, unsigned char ch, unsigned char color)
 {
   if (color >= PALETTE_SIZE) 
     return;
 
   uint32_t color_val = palette[color];
 
-  const uint8_t *glyph = &font8x16[c * GLYPH_HEIGHT];
+  const uint8_t *glyph = &font8x16[ch * GLYPH_HEIGHT];
 
-  for (int r = 0; r < GLYPH_HEIGHT; r ++) {
-    uint32_t *line = (uint32_t *)(base + (row * GLYPH_HEIGHT + r) * pitch);
+  for (int i = 0; i < GLYPH_HEIGHT; i ++) {
+    uint32_t *line = (uint32_t *)(base + (r * GLYPH_HEIGHT + i) * pitch);
     for (int b = 0; b < GLYPH_WIDTH; b++) {
-      int val = (glyph[r] >> (7 - b)) & 1;
+      int val = (glyph[i] >> (7 - b)) & 1;
 
       if (!val) {
-        line[col * GLYPH_WIDTH + b] = palette[BLACK];
+        line[c * GLYPH_WIDTH + b] = palette[BLACK];
         continue;
       }
       
-      line[col * GLYPH_WIDTH + b] = color_val;
+      line[c * GLYPH_WIDTH + b] = color_val;
     }
   }
+}
+
+static void draw_char_forced(unsigned char c, unsigned char color)
+{
+  if (color >= PALETTE_SIZE) 
+    return;
+
+  blit_glyph(row, col, c, color);
 
   shadow[row * cols + col].c = c;
   shadow[row * cols + col].color = color;
@@ -238,30 +246,6 @@ static void scroll(void)
          GLYPH_HEIGHT * pitch);
 
   draw_cursor();
-}
-
-static void blit_glyph(int r, int c, unsigned char ch, unsigned char color)
-{
-  if (color >= PALETTE_SIZE) 
-    return;
-
-  uint32_t color_val = palette[color];
-
-  const uint8_t *glyph = &font8x16[ch * GLYPH_HEIGHT];
-
-  for (int i = 0; i < GLYPH_HEIGHT; i ++) {
-    uint32_t *line = (uint32_t *)(base + (r * GLYPH_HEIGHT + i) * pitch);
-    for (int b = 0; b < GLYPH_WIDTH; b++) {
-      int val = (glyph[i] >> (7 - b)) & 1;
-
-      if (!val) {
-        line[c * GLYPH_WIDTH + b] = palette[BLACK];
-        continue;
-      }
-      
-      line[c * GLYPH_WIDTH + b] = color_val;
-    }
-  }
 }
 
 static void view_repaint(void)

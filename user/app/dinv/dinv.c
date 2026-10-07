@@ -11,6 +11,7 @@
 #define KEY_ESC '\x1b'
 #define TEXT_CAP 262144
 #define COL_OFFSET 6
+static char blank_header[COL_OFFSET+1] = "      \0";
 
 // D INV
 // I S
@@ -360,7 +361,7 @@ static void gap_render(void)
           if (r < num_rows)
             write_line_header(r);
           else
-            write_string_len_no_upd("      ", COL_OFFSET);
+            write_string_no_upd(blank_header);
 
           write_string_len_no_upd(linebuf, width);
           
@@ -416,7 +417,7 @@ static void gap_render(void)
           if (r + top_row < num_rows)
             write_line_header(r + top_row);
           else
-            write_string_len_no_upd("      ", COL_OFFSET);
+            write_string_no_upd(blank_header);
 
           write_string_len_no_upd(linebuf, width);
         }
@@ -505,10 +506,10 @@ static void handle_command(unsigned char c)
 
   if (c == '\n') {
     cmd_buf[cmd_len] = '\0';
-    bool found= false;
+    bool found = false;
     for (uint32_t i = 0; i < cmd_cnt; i++) {
       if (streq(cmds[i].name, cmd_buf)) {
-        found = true;;
+        found = true;
         cmds[i].fn();
       }
     }
