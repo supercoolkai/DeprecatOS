@@ -238,6 +238,11 @@ char keycode_to_char(KeyCode key)
         case KEY_RIGHT:
             return CTRL_KEY_RIGHT;
 
+        case KEY_UP:
+            return CTRL_KEY_UP;
+        case KEY_DOWN:
+            return CTRL_KEY_DOWN;
+
         default:
             return '\0';
     }
@@ -377,6 +382,7 @@ void keyboard_handler()
   keys_down[key] = !released;
   if (!released && (key == KEY_UP || key == KEY_DOWN) && (keys_down[KEY_LSHIFT] || keys_down[KEY_RSHIFT])){
     fb_scrollback(key == KEY_UP ? 1 : -1);
+    return;
   }
   if (!released && (key == KEY_PGUP || key == KEY_PGDN)){
     uint32_t r;
