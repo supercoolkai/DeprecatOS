@@ -4,6 +4,7 @@
 #include "drivers/fb/fbController.h"
 #include "rb/ringBuffer.h"
 #include "idt/idtController.h"
+#include "keys/ctrlkeys.h"
 #include <stdbool.h>
 
 bool keys_down[KEY_COUNT] = {false};
@@ -232,6 +233,10 @@ char keycode_to_char(KeyCode key)
 
         case KEY_ESC:
             return '\x1b';
+        case KEY_LEFT:
+            return CTRL_KEY_LEFT;
+        case KEY_RIGHT:
+            return CTRL_KEY_RIGHT;
 
         default:
             return '\0';

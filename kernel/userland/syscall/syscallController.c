@@ -507,6 +507,27 @@ static uint32_t sys_set_scrollback(uint32_t *frame)
   return (uint32_t) frame;
 }
 
+static uint32_t sys_get_cursor(uint32_t *frame)
+{
+  uint32_t *row_out = (uint32_t *) frame[4];
+  uint32_t *col_out = (uint32_t *) frame[6];
+  
+  if ((uint32_t) row_out < KERNEL_CEILING || (uint32_t) row_out > USER_SPACE_END - sizeof(uint32_t)) {
+    frame[7] = SYSCALL_ERROR;
+    return (uint32_t) frame;
+  }
+  
+  if ((uint32_t) col_out < KERNEL_CEILING || (uint32_t) col_out > USER_SPACE_END - sizeof(uint32_t)) {
+    frame[7] = SYSCALL_ERROR;
+    return (uint32_t) frame;
+  }
+  
+  fb_get_cursor(row_out, col_out);
+
+  frame[7] = 0;
+  return (uint32_t) frame;
+}
+
 static uint32_t (*syscall_table[])(uint32_t *) = {
   sys_write_char,
   sys_write_string,
@@ -533,6 +554,7 @@ static uint32_t (*syscall_table[])(uint32_t *) = {
   sys_write_string_no_upd,
   sys_write_string_len_no_upd,
   sys_set_scrollback,
+  sys_get_cursor,
 };
 
 void syscall_init(void)

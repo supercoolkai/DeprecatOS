@@ -26,6 +26,7 @@
 #define SYS_WRITE_STR_NO_UPD 23
 #define SYS_WRITE_STR_LEN_NO_UPD 24
 #define SYS_SET_SCROLLBACK 25
+#define SYS_GET_CURSOR 26
 
 uint32_t write_char(char c)
 {
@@ -311,6 +312,18 @@ uint32_t set_scrollback(bool v)
     "int $0x80"
     : "=a" (result)
     : "a" (SYS_SET_SCROLLBACK), "b" ((uint32_t) v) : "memory"
+  );
+
+  return result;
+}
+
+uint32_t get_cursor(uint32_t *row, uint32_t *col)
+{
+  uint32_t result;
+  __asm__ volatile (
+    "int $0x80"
+    : "=a" (result)
+    : "a" (SYS_GET_CURSOR), "b" (row), "c" (col): "memory"
   );
 
   return result;

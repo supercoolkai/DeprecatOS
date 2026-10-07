@@ -485,6 +485,8 @@ static void handle_command(unsigned char c)
 
   if (c == SENTINEL)
     return;
+  
+  if (c >= 0x80) return;
 
   if (c == KEY_ESC){
     mode = MODE_NORMAL;
@@ -540,6 +542,8 @@ static void handle_insert(unsigned char c)
   if (c == SENTINEL){
     return;
   }
+
+  if (c >= 0x80) return;
 
   if (c == KEY_ESC) {
     mode = MODE_NORMAL;

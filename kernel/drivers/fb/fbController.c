@@ -445,6 +445,12 @@ bool fb_set_cursor_no_upd(uint32_t in_row, uint32_t in_col)
   return true;
 }
 
+void fb_get_cursor(uint32_t *row_out, uint32_t *col_out)
+{
+  *row_out = row;
+  *col_out = col;
+}
+
 void fb_clear_screen(void)
 {
   if (view_offset) {
