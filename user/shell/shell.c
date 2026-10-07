@@ -1,10 +1,11 @@
 #include "sys/syscall.h"
-#include "drivers/fb/fbController.h"
+#include "colors/colors.h"
 #include "userland/syscall/syscallController.h"
 #include "app/appCtl.h"
 #include "streq/streq.h"
 #include "keys/ctrlkeys.h"
 #include <stdint.h>
+
 #define BUF_CAP 512
 #define HISTORY_CAP 32
 

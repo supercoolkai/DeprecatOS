@@ -7,7 +7,7 @@ cmake -B build -G "Unix Makefiles"
 
 user_cc() {
   gcc -m32 -ffreestanding -fno-pie \
-    -fno-stack-protector -c "$1" -o "$2" -I user -I kernel -I etc/lib
+    -fno-stack-protector -c "$1" -o "$2" -I user -I kernel -I etc/lib -Wall
 }
 
 user_cc user/shell/crt0.S build/crt0.o

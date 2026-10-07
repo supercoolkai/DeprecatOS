@@ -2,6 +2,7 @@
 #include "drivers/fb/fbController.h"
 #include "drivers/serial/serialController.h"
 #include "streq/streq.h"
+#include "colors/colors.h"
 #include <stdint.h>
 #include <stdbool.h>
 

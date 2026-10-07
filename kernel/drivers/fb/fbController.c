@@ -3,6 +3,7 @@
 #include "memory/mmap/memoryMap.h"
 #include "memory/paging/paging.h"
 #include "memory/heap/kernelHeap.h"
+#include "colors/colors.h"
 #include "mem/mem.h"
 
 #define HISTORY_LINES 256

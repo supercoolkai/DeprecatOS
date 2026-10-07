@@ -1,5 +1,6 @@
 #include "drivers/disk/ata.h"
 #include "kprintf/kprintf.h"
+#include "colors/colors.h"
 #include "drivers/fb/fbController.h"
 #include "exceptions/exceptions.h"
 #include <stdint.h>

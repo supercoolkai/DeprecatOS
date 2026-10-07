@@ -4,7 +4,7 @@
 #include "memory/mmap/memoryMap.h"
 #include "kprintf/kprintf.h"
 #include "hex/hexPrinter.h"
-#include "drivers/fb/fbController.h"
+#include "colors/colors.h"
 #include "memory/heap/kernelHeap.h"
 
 static uint32_t *kernel_dir;

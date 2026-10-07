@@ -6,6 +6,7 @@
 #include "idt/idtController.h"
 #include "drivers/serial/serialController.h"
 #include "drivers/fb/fbController.h"
+#include "colors/colors.h"
 #include "memory/paging/paging.h"
 #include "process/scheduler/scheduler.h"
 #include "rb/ringBuffer.h"

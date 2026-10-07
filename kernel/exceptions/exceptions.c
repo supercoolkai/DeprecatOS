@@ -1,8 +1,9 @@
 #include "exceptions/exceptions.h"
 #include "kprintf/kprintf.h"
 #include <stdint.h>
-#include "drivers/serial/serialController.h"
+#include "colors/colors.h"
 #include "drivers/fb/fbController.h"
+#include "drivers/serial/serialController.h"
 #include "idt/idtController.h"
 #include "hex/hexPrinter.h"
 #include "memory/paging/paging.h"

@@ -1,6 +1,6 @@
 #include "memory/mmap/memoryMap.h"
 #include "kprintf/kprintf.h"
-#include "drivers/fb/fbController.h"
+#include "colors/colors.h"
 #include "drivers/serial/serialController.h"
 #include "hex/hexPrinter.h"
 #include <stdint.h>

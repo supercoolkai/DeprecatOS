@@ -1,7 +1,7 @@
 #include "app/depsh/cmds/cat.h"
 #include "app/depsh/depshCommon.h"
 #include "sys/syscall.h"
-#include "drivers/fb/fbController.h"
+#include "colors/colors.h"
 #include "errors.h"
 #include <stdint.h>
 
