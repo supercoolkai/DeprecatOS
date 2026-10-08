@@ -28,5 +28,6 @@ void cmd_help(char *args)
                "rm [-r] [path ...]: Removes the file at the given path. If the flag -r is passed,"
                "it recursively removes a directory.\n"
                "clear: Clears the screen\n"
-               "touch [path ...]: Makes a new file at the given path (does not have the -p properties of mkdir)\n");
+               "touch [path ...]: Makes a new file at the given path (does not have the -p properties of mkdir)\n"
+               "date: Prints the current date, in format [m/d/y h:m:s.ms]\n");
 }
