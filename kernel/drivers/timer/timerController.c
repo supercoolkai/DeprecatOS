@@ -10,6 +10,8 @@
 #define PIT_CH0  0x40
 #define PIT_CMD  0x43
 
+#define RTC_STATUS_REGISTER_A 0x0A
+#define RTC_STATUS_REGISTER_B 0x0B
 #define RTC_CENTURY_REGISTER 0x32
 #define RTC_YEAR_REGISTER 0x09
 #define RTC_MONTH_REGISTER 0x08
@@ -21,6 +23,12 @@
 #define RTC_SECOND_REGISTER 0x00
 #define RTC_COMMAND_PORT 0x70
 #define RTC_READ_PORT 0x71
+
+#define RTC_PM_BIT (1 << 7)
+#define RTC_CLOCK_FORMAT_BIT (1 << 1)
+#define RTC_UPDATE_IN_PROGRESS_BIT (1 << 7)
+
+#define RTC_WAIT_TIME 1000000
 
 #define RELEASE_YEAR 26
 
@@ -57,10 +65,25 @@ static uint32_t get_year_startup(void)
 
 static void get_seconds_startup(void)
 {
+  // TODO: when boot log is added, make sure to mark it down if the loop fails
+  uint32_t i = 0;
+  while ((cmos_read(RTC_STATUS_REGISTER_A) & RTC_UPDATE_IN_PROGRESS_BIT) && i < RTC_WAIT_TIME)
+    i++;
+
+  uint8_t is_24h = cmos_read(RTC_STATUS_REGISTER_B) & RTC_CLOCK_FORMAT_BIT;
+
   uint32_t year = get_year_startup();
   uint32_t month = bin_to_dec(cmos_read(RTC_MONTH_REGISTER));
   uint32_t day = bin_to_dec(cmos_read(RTC_DAY_REGISTER));
-  uint32_t hour = bin_to_dec(cmos_read(RTC_HOUR_REGISTER));
+  uint8_t raw_hour = cmos_read(RTC_HOUR_REGISTER);
+  uint32_t hour = bin_to_dec(raw_hour & ~RTC_PM_BIT);
+  if (raw_hour & RTC_PM_BIT) {
+    hour = hour % 12 + 12;
+  }
+  else if (hour == 12 && !is_24h) {
+    hour = 0;
+  }
+
   uint32_t minute = bin_to_dec(cmos_read(RTC_MINUTE_REGISTER));
   uint32_t second = bin_to_dec(cmos_read(RTC_SECOND_REGISTER));
   
