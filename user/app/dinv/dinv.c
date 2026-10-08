@@ -69,7 +69,7 @@ static char linebuf[256];
 
 static char complaint[64];
 static bool complaining;
-static uint32_t complaint_expiry;
+static uint64_t complaint_expiry;
 
 static void handle_normal(unsigned char c);
 static void handle_insert(unsigned char c);
@@ -145,7 +145,8 @@ static void save(void)
       complaint[i] = complaint_temp[i];
     }
     complaining = true;
-    complaint_expiry = get_ticks() + 5000;
+    get_ticks(&complaint_expiry);
+    complaint_expiry += 5000;
     return;
   }
 
@@ -155,7 +156,8 @@ static void save(void)
       complaint[i] = complaint_temp[i];
     }
     complaining = true;
-    complaint_expiry = get_ticks() + 5000;
+    get_ticks(&complaint_expiry);
+    complaint_expiry += 5000;
     return;
   }
 }
@@ -515,7 +517,8 @@ static void handle_command(unsigned char c)
     }
 
     if (!found) {
-      complaint_expiry = get_ticks() + 5000;
+      get_ticks(&complaint_expiry);
+      complaint_expiry += 5000;
 
       char *complaint_temp = "Command not found";
       for (uint32_t i = 0; i < 18; i++) {
@@ -748,7 +751,9 @@ void app_dinv(char *args)
   while (running){ 
     uint32_t comp = read_char();
     if (comp == SENTINEL){
-      if (complaining && get_ticks() >= complaint_expiry) {
+      uint64_t n;
+      get_ticks(&n);
+      if (complaining && n >= complaint_expiry) {
         complaining = false;
         replacement_status = DMG_CMD;
         gap_render();

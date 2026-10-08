@@ -5,7 +5,7 @@
 
 uint32_t write_char(char c);
 uint32_t write_string(char *c);
-uint32_t get_ticks(void);
+uint32_t get_ticks(uint64_t *tick_out);
 uint32_t exit_curr(void);
 uint32_t read_char(void);
 uint32_t yield(void);
@@ -29,5 +29,6 @@ uint32_t write_string_no_upd(char *c);
 uint32_t write_string_len_no_upd(const char *buf, uint32_t len);
 uint32_t set_scrollback(bool v);
 uint32_t get_cursor(uint32_t *row, uint32_t *col);
+uint32_t get_epoch(uint64_t *epoch_out);
 
 #endif

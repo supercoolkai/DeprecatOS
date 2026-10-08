@@ -278,13 +278,13 @@ bool dir_insert(uint32_t parent_inode_n, const char *name, uint32_t child_inode_
 
         child_inode.hard_link_cnt++;
         if(parent_inode_n == child_inode_n) {
-          child_inode.last_mod_time = timer_get_tick();
+          child_inode.last_mod_time = timer_get_epoch_sec();
 
           if (!set_inode(child_inode_n, &child_inode)) return false;
         }
         else{
           if (!set_inode(child_inode_n, &child_inode)) return false;
-          parent_inode.last_mod_time = timer_get_tick();
+          parent_inode.last_mod_time = timer_get_epoch_sec();
           if (!set_inode(parent_inode_n, &parent_inode)) return false;
         }
 
@@ -312,13 +312,13 @@ bool dir_insert(uint32_t parent_inode_n, const char *name, uint32_t child_inode_
 
         child_inode.hard_link_cnt++;
         if(parent_inode_n == child_inode_n) {
-          child_inode.last_mod_time = timer_get_tick();
+          child_inode.last_mod_time = timer_get_epoch_sec();
 
           if (!set_inode(child_inode_n, &child_inode)) return false;
         }
         else{
           if (!set_inode(child_inode_n, &child_inode)) return false;
-          parent_inode.last_mod_time = timer_get_tick();
+          parent_inode.last_mod_time = timer_get_epoch_sec();
           if (!set_inode(parent_inode_n, &parent_inode)) return false;
         }
 
@@ -389,7 +389,7 @@ bool dir_remove(uint32_t parent_inode_n, const char *name, uint32_t *removed_ino
 
         inode.hard_link_cnt--;
         if(parent_inode_n == inode_n) {
-          inode.last_mod_time = timer_get_tick();
+          inode.last_mod_time = timer_get_epoch_sec();
 
           if (!set_inode(inode_n, &inode)) {
             return false;
@@ -399,7 +399,7 @@ bool dir_remove(uint32_t parent_inode_n, const char *name, uint32_t *removed_ino
           if (!set_inode(inode_n, &inode)) {
             return false;
           }
-          parent_inode.last_mod_time = timer_get_tick();
+          parent_inode.last_mod_time = timer_get_epoch_sec();
           if (!set_inode(parent_inode_n, &parent_inode)) {
             return false;
           }

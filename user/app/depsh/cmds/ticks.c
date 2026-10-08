@@ -11,7 +11,9 @@ void cmd_ticks(char *args)
     write_string(" does not exist\n");
     return;
   }
-
-  print_uint32(get_ticks());
+  
+  uint64_t n;
+  get_ticks(&n);
+  print_uint64(n);
   write_string("\n");
 }

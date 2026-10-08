@@ -18,6 +18,7 @@ App apps[] = {
   {"rm", cmd_rm},
   {"clear", cmd_clear},
   {"touch", cmd_touch},
+  {"date", cmd_date},
 };
 
 uint32_t app_cnt = sizeof(apps) / sizeof(apps[0]);

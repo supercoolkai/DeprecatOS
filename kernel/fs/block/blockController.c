@@ -237,7 +237,7 @@ bool delete_inode(uint32_t inode_n)
   
 
   inode.hard_link_cnt = 0;
-  inode.deletion_time = timer_get_tick();
+  inode.deletion_time = timer_get_epoch_sec();
 
   if(!set_inode(inode_n, &inode)){
     kfree(unwind_buf);
@@ -278,7 +278,7 @@ static uint32_t mint_inode(uint32_t f_size, bool is_dir, struct ext2_inode *out)
 
   inode.size_lo = f_size;
 
-  inode.creation_time = timer_get_tick();
+  inode.creation_time = timer_get_epoch_sec();
   inode.last_access_time = inode.creation_time;
   inode.last_mod_time = inode.creation_time;
 
@@ -565,7 +565,7 @@ uint32_t replace_inode(uint32_t inode_n, uint16_t *buf, uint32_t f_size, struct 
 
   inode.size_lo = f_size;
   inode.disk_sectors = 0;
-  inode.last_mod_time = timer_get_tick();
+  inode.last_mod_time = timer_get_epoch_sec();
 
   if (write_inode(buf, &inode) != INODE_WRITE_SUCCESS){
 
@@ -1054,7 +1054,7 @@ uint32_t append_to_inode(uint32_t inode_n, uint16_t *buf, uint32_t f_size, struc
 
   inode.size_lo += f_size;
   inode.disk_sectors += alloc_cnt * sectors_per_blk;
-  inode.last_mod_time = timer_get_tick();
+  inode.last_mod_time = timer_get_epoch_sec();
 
   if (!set_inode(inode_n, &inode)) {
     return INODE_ERROR;
@@ -1331,8 +1331,8 @@ uint32_t insert_in_inode(uint32_t inode_n, uint16_t *buf, uint32_t f_size, uint3
     inode.disk_sectors += (alloc_cnt - free_cnt) * sectors_per_blk;
   else 
     inode.disk_sectors -= (free_cnt - alloc_cnt) * sectors_per_blk;
-  inode.last_mod_time = timer_get_tick();
-  inode.last_access_time = timer_get_tick();
+  inode.last_mod_time = timer_get_epoch_sec();
+  inode.last_access_time = timer_get_epoch_sec();
   if (!set_inode(inode_n, &inode)){
     kfree(unwind_buf);
     kfree(pointer_table);

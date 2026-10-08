@@ -27,6 +27,7 @@
 #define SYS_WRITE_STR_LEN_NO_UPD 24
 #define SYS_SET_SCROLLBACK 25
 #define SYS_GET_CURSOR 26
+#define SYS_GET_EPOCH 27
 
 uint32_t write_char(char c)
 {
@@ -49,13 +50,13 @@ uint32_t write_string(char *c)
 
   return result;
 }
-uint32_t get_ticks(void)
+uint32_t get_ticks(uint64_t *tick_out)
 {
   uint32_t result;
   __asm__ volatile (
     "int $0x80"
     : "=a" (result)
-    : "a" (SYS_GET_TICKS)
+    : "a" (SYS_GET_TICKS), "b" ((uint32_t) tick_out) : "memory"
   );
 
   return result;
@@ -324,6 +325,17 @@ uint32_t get_cursor(uint32_t *row, uint32_t *col)
     "int $0x80"
     : "=a" (result)
     : "a" (SYS_GET_CURSOR), "b" (row), "c" (col): "memory"
+  );
+
+  return result;
+}
+uint32_t get_epoch(uint64_t *epoch_out)
+{
+  uint32_t result;
+  __asm__ volatile (
+    "int $0x80"
+    : "=a" (result)
+    : "a" (SYS_GET_EPOCH), "b" ((uint32_t) epoch_out) : "memory"
   );
 
   return result;

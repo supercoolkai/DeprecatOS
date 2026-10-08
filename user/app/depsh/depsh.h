@@ -12,5 +12,6 @@
 #include "app/depsh/cmds/rm.h"
 #include "app/depsh/cmds/clear.h"
 #include "app/depsh/cmds/touch.h"
+#include "app/depsh/cmds/date.h"
 
 #endif

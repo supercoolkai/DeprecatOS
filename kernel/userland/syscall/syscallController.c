@@ -56,7 +56,13 @@ static uint32_t sys_write_string(uint32_t *frame)
 
 static uint32_t sys_get_ticks(uint32_t *frame)
 {
-  frame[7] = timer_get_tick();
+  uint64_t *tick_out = (uint64_t *) frame[4];
+  if ((uint32_t) tick_out < KERNEL_CEILING || (uint32_t) tick_out > USER_SPACE_END - sizeof(uint64_t)) {
+    frame[7] = SYSCALL_ERROR;
+    return (uint32_t) frame;
+  }
+  *tick_out = timer_get_tick();
+  frame[7] = 0;
   return (uint32_t) frame;
 }
 
@@ -529,6 +535,20 @@ static uint32_t sys_get_cursor(uint32_t *frame)
   return (uint32_t) frame;
 }
 
+static uint32_t sys_get_epoch(uint32_t *frame)
+{
+  uint64_t *epoch_out = (uint64_t *) frame[4];
+  if ((uint32_t) epoch_out < KERNEL_CEILING || (uint32_t) epoch_out > USER_SPACE_END - sizeof(uint64_t)) {
+    frame[7] = SYSCALL_ERROR;
+    return (uint32_t) frame;
+  }
+
+  *epoch_out = timer_get_epoch();
+
+  frame[7] = 0;
+  return (uint32_t) frame;
+}
+
 static uint32_t (*syscall_table[])(uint32_t *) = {
   sys_write_char,
   sys_write_string,
@@ -556,6 +576,7 @@ static uint32_t (*syscall_table[])(uint32_t *) = {
   sys_write_string_len_no_upd,
   sys_set_scrollback,
   sys_get_cursor,
+  sys_get_epoch,
 };
 
 void syscall_init(void)

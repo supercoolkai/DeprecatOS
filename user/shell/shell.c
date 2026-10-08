@@ -1,9 +1,9 @@
 #include "sys/syscall.h"
 #include "colors/colors.h"
-#include "userland/syscall/syscallController.h"
 #include "app/appCtl.h"
 #include "streq/streq.h"
 #include "keys/ctrlkeys.h"
+#include "longops/longops.h"
 #include <stdint.h>
 
 #define BUF_CAP 512
@@ -78,23 +78,44 @@ void print_uint32(uint32_t n)
   int cnt = 0;
   char out[11];
 
-  if (!n)
-  {
-    write_char('0');
-    return;
-  }
-
-  while (curr > 0)
-  {
+  do {
     out[cnt] = '0' + curr % 10;
     curr /= 10;
     cnt++;
+  } while (curr > 0);
+
+  for(int i = cnt - 1; i >= 0; i--)
+  {
+    write_char(out[i]);
+  }
+}
+
+void print_uint64_pad(uint64_t n, uint64_t width)
+{
+  uint64_t curr = n;
+  int cnt = 0;
+  char out[21];
+
+
+  do {
+    out[cnt] = '0' + curr % 10;
+    curr /= 10;
+    cnt++;
+  } while (curr > 0);
+
+  for (int i = width - cnt; i > 0; i--) {
+    write_char('0');
   }
 
   for(int i = cnt - 1; i >= 0; i--)
   {
     write_char(out[i]);
   }
+}
+
+void print_uint64(uint64_t n)
+{
+  print_uint64_pad(n, 0);
 }
 
 void read_line(char *buf)
