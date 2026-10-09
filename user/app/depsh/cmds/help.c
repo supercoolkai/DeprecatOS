@@ -31,5 +31,8 @@ void cmd_help(char *args)
                "touch [path ...]: Makes a new file at the given path (does not have the -p properties of mkdir)\n"
                "date: Prints the current date, in format [m/d/y h:m:s.ms]\n"
                "mv [old_path ...] [new_path ...]: Moves the given old_path to a given new path. Also serves"
-               "as a rename function.\n");
+               "as a rename function.\n"
+               "cp [-r] [old_path ...] [new_path ...]: It's like mv, but it copies instead of moves."
+               "Must provide the flag -r in order to copy directories, no matter whether or not"
+               "it contains subdirectories.\n");
 }

@@ -14,5 +14,6 @@
 #include "app/depsh/cmds/touch.h"
 #include "app/depsh/cmds/date.h"
 #include "app/depsh/cmds/mv.h"
+#include "app/depsh/cmds/cp.h"
 
 #endif

@@ -59,7 +59,7 @@ static bool rm_tree(uint32_t parent_n, const char *name, uint32_t dir_n)
       if (!rm_tree(dir_n, child_name, child_n)) return false;
     }
     else{
-      if (rm_inode(dir_n, child_name) == SYSCALL_ERROR) return false;
+      if (rm_inode(dir_n, child_name) == SYSCALL_ERROR) return false; 
     }
   }
 

@@ -31,5 +31,6 @@ uint32_t set_scrollback(bool v);
 uint32_t get_cursor(uint32_t *row, uint32_t *col);
 uint32_t get_epoch(uint64_t *epoch_out);
 uint32_t fmove(uint32_t old_parent_n, uint32_t new_parent_n, const char *old_name, const char *new_name);
+uint32_t fappend(uint32_t inode_n, uint16_t *buf, uint32_t f_size);
 
 #endif

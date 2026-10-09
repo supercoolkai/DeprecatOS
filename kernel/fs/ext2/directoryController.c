@@ -421,29 +421,29 @@ bool dir_remove(uint32_t parent_inode_n, const char *name, uint32_t *removed_ino
   return false;
 }
 
-bool make_dir(uint32_t parent_inode_n, const char *name)
+uint32_t make_dir(uint32_t parent_inode_n, const char *name)
 {
   uint32_t len = 0;
   while (len < NAME_LEN && name[len] != 0)
     len++;
 
   if (len == 0 || len >= NAME_LEN)
-    return false;
+    return INODE_ERROR;
 
   struct ext2_inode parent_inode;
-  if (!get_inode(parent_inode_n, &parent_inode)) 
-    return false;
+  if (!get_inode(parent_inode_n, &parent_inode))
+    return INODE_ERROR;
 
 
   if ((parent_inode.type_and_perms_lo & NO_PERMISSION_MASK) != INODE_DIR_TYPE) {
     kprintf(KPRINTF_RED "make_dir: given parent directory is not a directory\n" KPRINTF_RESET);
-    return false;
+    return INODE_ERROR;
   }
 
   uint32_t temp;
   if (name_in(parent_inode, name, &temp)){
     kprintf(KPRINTF_RED "make_dir: directory already exists in given path\n" KPRINTF_RESET);
-    return false;
+    return INODE_ERROR;
   }
 
   uint16_t *buf = kmalloc(BLOCK_SIZE);
@@ -459,28 +459,28 @@ bool make_dir(uint32_t parent_inode_n, const char *name)
 
   if (child_n == INODE_ERROR) {
     kfree(buf);
-    return false;
+    return INODE_ERROR;
   }
-  
+
   if(!dir_insert(child_n, ".", child_n)){
     kprintf(KPRINTF_RED "make_dir: dir_insert() failed mid call, disk corruption occurred!\n" KPRINTF_RESET);
     kfree(buf);
-    return false;
+    return INODE_ERROR;
   }
   if (!dir_insert(child_n, "..", parent_inode_n)){
     kprintf(KPRINTF_RED "make_dir: dir_insert() failed mid call, disk corruption occurred!\n" KPRINTF_RESET);
     kfree(buf);
-    return false;
+    return INODE_ERROR;
   }
   if (!dir_insert(parent_inode_n, name, child_n)){
     kprintf(KPRINTF_RED "make_dir: dir_insert() failed mid call, disk corruption occurred!\n" KPRINTF_RESET);
     kfree(buf);
-    return false;
+    return INODE_ERROR;
   }
 
   kfree(buf);
 
-  return true;
+  return child_n;
 }
 
 bool unlink_inode(uint32_t parent_inode_n, const char *name)
@@ -599,43 +599,43 @@ bool unlink_dir(uint32_t parent_inode_n, const char *name)
   return true;
 }
 
-bool make_file(uint32_t parent_inode_n, const char *name)
+uint32_t make_file(uint32_t parent_inode_n, const char *name)
 {
   uint32_t len = 0;
   while (len < NAME_LEN && name[len] != 0)
     len++;
 
   if (len == 0 || len >= NAME_LEN)
-    return false;
+    return INODE_ERROR;
 
   struct ext2_inode parent_inode;
-  if (!get_inode(parent_inode_n, &parent_inode)) 
-    return false;
+  if (!get_inode(parent_inode_n, &parent_inode))
+    return INODE_ERROR;
 
 
   if ((parent_inode.type_and_perms_lo & NO_PERMISSION_MASK) != INODE_DIR_TYPE) {
     kprintf(KPRINTF_RED "make_file: given parent directory is not a directory\n" KPRINTF_RESET);
-    return false;
+    return INODE_ERROR;
   }
 
   uint32_t temp;
   if (name_in(parent_inode, name, &temp)){
     kprintf(KPRINTF_RED "make_file: file already exists in given path\n" KPRINTF_RESET);
-    return false;
+    return INODE_ERROR;
   }
-  
+
   struct ext2_inode inode;
   uint32_t child_inode_n = put_inode(NULL, 0, false, &inode);
   if (child_inode_n == INODE_ERROR)
-    return false;
+    return INODE_ERROR;
 
   if (!dir_insert(parent_inode_n, name, child_inode_n)){
     kprintf(KPRINTF_RED "make_file: dir_insert() failed mid call!\n" KPRINTF_RESET);
     free_inode(child_inode_n);
-    return false;
+    return INODE_ERROR;
   }
 
-  return true;
+  return child_inode_n;
 }
 
 static bool dir_set_parent_entry(uint32_t child_n, uint32_t new_parent_n)

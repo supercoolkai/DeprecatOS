@@ -29,6 +29,7 @@
 #define SYS_GET_CURSOR 26
 #define SYS_GET_EPOCH 27
 #define SYS_RENAME_INODE 28
+#define SYS_APPEND_TO_INODE 29
 
 uint32_t write_char(char c)
 {
@@ -349,6 +350,18 @@ uint32_t fmove(uint32_t old_parent_n, uint32_t new_parent_n, const char *old_nam
     "int $0x80"
     : "=a" (result)
     : "a" (SYS_RENAME_INODE), "b" (old_parent_n), "d" (new_parent_n), "c" ((uint32_t) old_name), "S" ((uint32_t) new_name) : "memory"
+  );
+
+  return result;
+}
+
+uint32_t fappend(uint32_t inode_n, uint16_t *buf, uint32_t f_size)
+{
+  uint32_t result;
+  __asm__ volatile (
+    "int $0x80"
+    : "=a" (result)
+    : "a" (SYS_APPEND_TO_INODE), "b" (inode_n), "d" (f_size), "c" ((uint32_t) buf): "memory"
   );
 
   return result;

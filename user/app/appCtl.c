@@ -20,6 +20,7 @@ App apps[] = {
   {"touch", cmd_touch},
   {"date", cmd_date},
   {"mv", cmd_mv},
+  {"cp", cmd_cp},
 };
 
 uint32_t app_cnt = sizeof(apps) / sizeof(apps[0]);

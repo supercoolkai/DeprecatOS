@@ -317,8 +317,8 @@ static uint32_t sys_make_dir(uint32_t *frame)
     return (uint32_t) frame;
   }
 
-  const char *name = (const char *) base;
-  frame[7] = make_dir(parent_inode_n, name) ? 0 : SYSCALL_ERROR;
+  uint32_t inode_n = make_dir(parent_inode_n, (const char *) base);
+  frame[7] =  (inode_n == INODE_ERROR) ? SYSCALL_ERROR : inode_n; 
   return (uint32_t) frame;
 }
 
@@ -429,7 +429,8 @@ static uint32_t sys_make_inode(uint32_t *frame)
     return (uint32_t) frame;
   }
 
-  frame[7] = make_file(parent_n, (const char *) base) ? 0 : SYSCALL_ERROR;
+  uint32_t inode_n = make_file(parent_n, (const char *) base);
+  frame[7] =  (inode_n == INODE_ERROR) ? SYSCALL_ERROR : inode_n; 
   return (uint32_t) frame;
 }
 
@@ -589,6 +590,32 @@ static uint32_t sys_rename_inode(uint32_t *frame)
   return (uint32_t) frame;
 }
 
+static uint32_t sys_append_to_inode(uint32_t *frame)
+{
+  uint32_t inode_n = frame[4];
+  uint16_t *buf = (uint16_t *) frame[6];
+  uint32_t f_size = frame[5];
+  
+  if (f_size > USER_SPACE_END - KERNEL_CEILING || (uint32_t) buf < KERNEL_CEILING || (uint32_t) buf > USER_SPACE_END - f_size) {
+    frame[7] = SYSCALL_ERROR;
+    return (uint32_t) frame;
+  }
+  
+  if (f_size == 0){
+    frame[7] = 0;
+    return (uint32_t) frame;
+  }
+
+  struct ext2_inode throwaway;
+
+  if (append_to_inode(inode_n, buf, f_size, &throwaway) != INODE_WRITE_SUCCESS)
+    frame[7] = SYSCALL_ERROR;
+  else{
+    frame[7] = 0;
+  }
+  return (uint32_t) frame;
+}
+
 static uint32_t (*syscall_table[])(uint32_t *) = {
   sys_write_char,
   sys_write_string,
@@ -618,6 +645,7 @@ static uint32_t (*syscall_table[])(uint32_t *) = {
   sys_get_cursor,
   sys_get_epoch,
   sys_rename_inode,
+  sys_append_to_inode,
 };
 
 void syscall_init(void)
