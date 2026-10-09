@@ -210,27 +210,10 @@ void cmd_cp(char *args)
     return;
   }
 
-  uint32_t len = 0;
-  while (absolute_new_path[len] != 0) len++;
+  char *new_leaf;
+  uint32_t new_parent_n;
 
-  while (len > 1 && absolute_new_path[len - 1] == '/')
-    absolute_new_path[--len] = 0;
-
-  uint32_t last = -1;
-
-  for (int i = 0; absolute_new_path[i] != 0; i++) {
-    if (absolute_new_path[i] == '/') last = i;
-  }
-
-  char *new_leaf = absolute_new_path + last + 1;
-
-  absolute_new_path[last] = 0;
-
-  char *new_parent = (last == 0) ? "/" : absolute_new_path;
-
-  uint32_t new_parent_n = resolve_dir((const char *) new_parent);
-
-  if (new_parent_n == SYSCALL_ERROR) {
+  if (!split_parent_leaf(absolute_new_path, &new_parent_n, &new_leaf)) {
     write_string("cp: given new parent directory does not exist\n");
     return;
   }

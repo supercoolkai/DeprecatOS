@@ -1,6 +1,7 @@
 #include "app/depsh/depshCommon.h"
 #include "sys/syscall.h"
 #include "fs/ext2/directoryController.h"
+#include "errors.h"
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -72,4 +73,32 @@ bool is_dir(uint32_t inode_n)
   get_stat(inode_n, (uint32_t *)stat_buf);
 
   return ((*(uint16_t *) stat_buf & NO_PERMISSION_MASK) == INODE_DIR_TYPE);
+}
+
+bool split_parent_leaf(char *abs_path, uint32_t *parent_n_out, char **leaf_out)
+{
+  int len = 0;
+  while (abs_path[len] != 0) len++;
+
+  while (len > 1 && abs_path[len - 1] == '/')
+    abs_path[--len] = 0;
+
+  int last = -1;
+
+  for (int i = 0; abs_path[i] != 0; i++) {
+    if (abs_path[i] == '/') last = i;
+  }
+
+  if (last < 0)
+    return false;
+
+  *leaf_out = abs_path + last + 1;
+
+  abs_path[last] = 0;
+
+  const char *parent = (last == 0) ? "/" : abs_path;
+
+  *parent_n_out = resolve_dir(parent);
+
+  return *parent_n_out != SYSCALL_ERROR;
 }

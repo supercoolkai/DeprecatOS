@@ -59,52 +59,18 @@ void cmd_mv(char *args)
     return;
   }
   
-  int len = 0;
-  while (absolute_old_path[len] != 0) len++;
+  char *old_leaf;
+  uint32_t old_parent_n;
 
-  while (len > 1 && absolute_old_path[len - 1] == '/')
-    absolute_old_path[--len] = 0;
-
-  int last = -1;
-
-  for (int i = 0; absolute_old_path[i] != 0; i++) {
-    if (absolute_old_path[i] == '/') last = i;
-  }
-
-  char *old_leaf = absolute_old_path + last + 1;
-
-  absolute_old_path[last] = 0;
-
-  char *old_parent = (last == 0) ? "/" : absolute_old_path;
-
-  uint32_t old_parent_n = resolve_dir((const char *) old_parent);
-
-  if (old_parent_n == SYSCALL_ERROR) {
+  if (!split_parent_leaf(absolute_old_path, &old_parent_n, &old_leaf)) {
     write_string("mv: given old parent directory does not exist\n");
     return;
   }
-  
-  len = 0;
-  while (absolute_new_path[len] != 0) len++;
 
-  while (len > 1 && absolute_new_path[len - 1] == '/')
-    absolute_new_path[--len] = 0;
+  char *new_leaf;
+  uint32_t new_parent_n;
 
-  last = -1;
-
-  for (int i = 0; absolute_new_path[i] != 0; i++) {
-    if (absolute_new_path[i] == '/') last = i;
-  }
-
-  char *new_leaf = absolute_new_path + last + 1;
-
-  absolute_new_path[last] = 0;
-
-  char *new_parent = (last == 0) ? "/" : absolute_new_path;
-
-  uint32_t new_parent_n = resolve_dir((const char *) new_parent);
-
-  if (new_parent_n == SYSCALL_ERROR) {
+  if (!split_parent_leaf(absolute_new_path, &new_parent_n, &new_leaf)) {
     write_string("mv: given new parent directory does not exist\n");
     return;
   }

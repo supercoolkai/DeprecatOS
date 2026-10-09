@@ -30,27 +30,10 @@ void cmd_touch(char *args)
     return;
   }
 
-  int len = 0;
-  while (path[len] != 0) len++;
+  char *leaf;
+  uint32_t parent_n;
 
-  while (len > 1 && path[len - 1] == '/')
-    path[--len] = 0;
-
-  int last = -1;
-
-  for (int i = 0; path[i] != 0; i++) {
-    if (path[i] == '/') last = i;
-  }
-
-  char *leaf = path + last + 1;
-
-  path[last] = 0;
-
-  char *parent = (last == 0) ? "/" : path;
-
-  uint32_t parent_n = resolve_dir((const char *) parent);
-
-  if (parent_n == SYSCALL_ERROR) {
+  if (!split_parent_leaf(path, &parent_n, &leaf)) {
     write_string("touch: given parent directory does not exist\n");
     return;
   }
