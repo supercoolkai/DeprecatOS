@@ -12,6 +12,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#define MAX_DIR_DEPTH 1024
+
 static struct ext2_directory_entry *return_next_dir_entry(uint16_t *buf, uint32_t *pos)
 {
   struct ext2_directory_entry *entry = (struct ext2_directory_entry *)(((uint8_t *)buf) + *pos);
@@ -632,6 +634,191 @@ bool make_file(uint32_t parent_inode_n, const char *name)
     free_inode(child_inode_n);
     return false;
   }
+
+  return true;
+}
+
+static bool dir_set_parent_entry(uint32_t child_n, uint32_t new_parent_n)
+{
+  struct ext2_inode child_inode;
+  if (!get_inode(child_n, &child_inode))
+    return false;
+  
+  if ((child_inode.type_and_perms_lo & NO_PERMISSION_MASK) != INODE_DIR_TYPE) {
+    return false;
+  }
+  
+
+  // NOTE: function does not require parent_inode, but it helps ensure that the inode exists and is a directory
+  struct ext2_inode new_parent_inode;
+  if (!get_inode(new_parent_n, &new_parent_inode))
+    return false;
+
+  if ((new_parent_inode.type_and_perms_lo & NO_PERMISSION_MASK) != INODE_DIR_TYPE) {
+    return false;
+  }
+   
+  uint16_t *scratch = kmalloc(BLOCK_SIZE);
+  bool found = false;
+  for (uint32_t i = 0; i < child_inode.size_lo / BLOCK_SIZE && i < INODE_BLK_PTR_AMT; i++) {
+    read_block(child_inode.dir_block_ptr[i], scratch);
+
+    uint32_t cursor = 0;
+    while (cursor < BLOCK_SIZE) {
+      struct ext2_directory_entry *entry = (struct ext2_directory_entry *)((uint8_t *)scratch + cursor); 
+      uint32_t true_size = ALIGN4(8 + entry->name_len_lo);
+
+      if (entry->curr_entry_size < 8 || true_size > entry->curr_entry_size || cursor + entry->curr_entry_size > BLOCK_SIZE){
+        kfree(scratch);
+        return false;
+      }
+      if (entry->inode != 0 && comp_name(entry->name, entry->name_len_lo, "..")) {
+        entry->inode = new_parent_n;
+        write_block(child_inode.dir_block_ptr[i], scratch);
+        found = true;
+        break;
+      }
+      cursor += entry->curr_entry_size;
+    }
+
+    if (found)
+      break;
+  }
+  
+  kfree(scratch);
+
+  if (!found) {
+    return false;
+  }
+
+
+  return true;
+}
+
+
+static bool is_ancestor(uint32_t maybe_ancestor, uint32_t maybe_descendant)
+{
+  uint32_t cur = maybe_descendant;
+  for (uint32_t depth = 0; depth < MAX_DIR_DEPTH; depth++){
+    if (cur == maybe_ancestor)
+      return true;
+    if (cur == ROOT_INODE_N)
+      return false;
+
+    struct ext2_inode ino;
+    if (!get_inode(cur, &ino))
+      return true;
+    if (!name_in(ino, "..", &cur))
+      return true;
+  }
+
+  return true;
+}
+
+
+bool rename_inode(uint32_t old_parent_n, const char *old_name, uint32_t new_parent_n, const char *new_name)
+{
+  if (streq(old_name, ".") || streq(old_name, "..") || streq(new_name, ".") || streq(new_name, "..")){
+    kprintf(KPRINTF_RED "rename_inode: Cannot rename to and from \".\" or \"..\"\n" KPRINTF_RESET);
+    return false;
+  }
+  
+  struct ext2_inode old_parent;
+  if (!get_inode(old_parent_n, &old_parent)){
+    kprintf(KPRINTF_RED "rename_inode: given old parent dir does not exist\n" KPRINTF_RESET);
+    return false;
+  }
+  
+  if ((old_parent.type_and_perms_lo & NO_PERMISSION_MASK) != INODE_DIR_TYPE) {
+    kprintf(KPRINTF_RED "rename_inode: given old parent directory is not a directory\n" KPRINTF_RESET);
+    return false;
+  }
+
+  struct ext2_inode new_parent;
+  if (!get_inode(new_parent_n, &new_parent)){
+    kprintf(KPRINTF_RED "rename_inode: given new parent dir does not exist\n" KPRINTF_RESET);
+    return false;
+  }
+  
+  if ((new_parent.type_and_perms_lo & NO_PERMISSION_MASK) != INODE_DIR_TYPE) {
+    kprintf(KPRINTF_RED "rename_inode: given new parent directory is not a directory\n" KPRINTF_RESET);
+    return false;
+  }
+
+  uint32_t child_n;
+  if (!name_in(old_parent, old_name, &child_n)){
+    kprintf(KPRINTF_RED "rename_inode: given child inode is not in the given old parent\n" KPRINTF_RESET);
+    return false;
+  }
+  
+  uint32_t throwaway;
+  if (name_in(new_parent, new_name, &throwaway)) {
+    kprintf(KPRINTF_RED "rename_inode: given new name is already taken in the given new parent\n" KPRINTF_RESET);
+    return false;
+  }
+
+  if (child_n == ROOT_INODE_N){
+    kprintf(KPRINTF_RED "rename_inode: cannot rename the root directory\n" KPRINTF_RESET);
+    return false;
+  }
+
+  struct ext2_inode child;
+  if (!get_inode(child_n, &child)) {
+    kprintf(KPRINTF_RED "rename_inode: given child inode does not exist somehow?? no idea how u got this error\n" KPRINTF_RESET);
+    return false;
+  }
+
+  if ((child.type_and_perms_lo & NO_PERMISSION_MASK) == INODE_DIR_TYPE){
+    if (is_ancestor(child_n, new_parent_n)) {
+      kprintf(KPRINTF_RED "rename_inode: cannot move a directory into its own child\n" KPRINTF_RESET);
+      return false;
+    }
+  }
+
+  if (!dir_insert(new_parent_n, new_name, child_n)) {
+    kprintf(KPRINTF_RED "rename_inode: dir_insert failed in an unexpected way! dont worry this didn't corrupt your disk, but there's a high chance it was corrupted to begin with\n" KPRINTF_RESET);
+    return false;
+  }
+  
+  if (!dir_remove(old_parent_n, old_name, &throwaway)){
+    kprintf(KPRINTF_RED "rename_inode: dir_remove failed mid call in an unexpected way! your disk has been corrupted!\n" KPRINTF_RESET);
+    return false;
+  }
+
+  if (old_parent_n != new_parent_n) {
+    if ((child.type_and_perms_lo & NO_PERMISSION_MASK) == INODE_DIR_TYPE){
+      if (!dir_set_parent_entry(child_n, new_parent_n)){
+        kprintf(KPRINTF_RED "rename_inode: dir_set_parent_entry failed mid call in an unexpected way! your disk has been corrupted!\n" KPRINTF_RESET);
+        return false;
+      } 
+
+      if (!get_inode(old_parent_n, &old_parent)) {
+        kprintf(KPRINTF_RED "rename_inode: get_inode failed mid call in an unexpected way! your disk has been corrupted!\n" KPRINTF_RESET);
+        return false;
+      }
+
+      old_parent.hard_link_cnt--;
+
+      if (!set_inode(old_parent_n, &old_parent)) {
+        kprintf(KPRINTF_RED "rename_inode: set_inode failed mid call in an unexpected way! your disk has been corrupted!\n" KPRINTF_RESET);
+        return false;
+      }
+
+
+      if (!get_inode(new_parent_n, &new_parent)) {
+        kprintf(KPRINTF_RED "rename_inode: get_inode failed mid call in an unexpected way! your disk has been corrupted!\n" KPRINTF_RESET);
+        return false;
+      }
+
+      new_parent.hard_link_cnt++;
+
+      if (!set_inode(new_parent_n, &new_parent)) {
+        kprintf(KPRINTF_RED "rename_inode: set_inode failed mid call in an unexpected way! your disk has been corrupted!\n" KPRINTF_RESET);
+        return false;
+      }
+    }
+  }
+
 
   return true;
 }

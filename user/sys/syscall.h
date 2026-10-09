@@ -30,5 +30,6 @@ uint32_t write_string_len_no_upd(const char *buf, uint32_t len);
 uint32_t set_scrollback(bool v);
 uint32_t get_cursor(uint32_t *row, uint32_t *col);
 uint32_t get_epoch(uint64_t *epoch_out);
+uint32_t fmove(uint32_t old_parent_n, uint32_t new_parent_n, const char *old_name, const char *new_name);
 
 #endif

@@ -549,6 +549,46 @@ static uint32_t sys_get_epoch(uint32_t *frame)
   return (uint32_t) frame;
 }
 
+static uint32_t sys_rename_inode(uint32_t *frame)
+{
+  uint32_t old_parent_n = frame[4];
+  uint32_t new_parent_n = frame[5];
+  
+  const char *old_name = (const char *) frame[6];
+  const char *new_name = (const char *) frame[1];
+
+  uint32_t i = 0;
+
+  bool old_finished = false;
+  bool new_finished = false;
+
+  for (;;) {
+    if((uint32_t) old_name + i < KERNEL_CEILING || (uint32_t) old_name + i >= USER_SPACE_END || (uint32_t) new_name + i < KERNEL_CEILING || (uint32_t) new_name + i >= USER_SPACE_END){
+      frame[7] = SYSCALL_ERROR;
+      return (uint32_t) frame;
+    }
+
+    if (!old_name[i])
+      old_finished = true;
+
+    if (!new_name[i])
+      new_finished = true;
+
+    if (new_finished && old_finished)
+      break;
+
+    i++;
+  }
+
+  if (!rename_inode(old_parent_n, old_name, new_parent_n, new_name)){
+    frame[7] = SYSCALL_ERROR;
+    return (uint32_t) frame;
+  }
+
+  frame[7] = 0;
+  return (uint32_t) frame;
+}
+
 static uint32_t (*syscall_table[])(uint32_t *) = {
   sys_write_char,
   sys_write_string,
@@ -577,6 +617,7 @@ static uint32_t (*syscall_table[])(uint32_t *) = {
   sys_set_scrollback,
   sys_get_cursor,
   sys_get_epoch,
+  sys_rename_inode,
 };
 
 void syscall_init(void)

@@ -28,6 +28,7 @@
 #define SYS_SET_SCROLLBACK 25
 #define SYS_GET_CURSOR 26
 #define SYS_GET_EPOCH 27
+#define SYS_RENAME_INODE 28
 
 uint32_t write_char(char c)
 {
@@ -336,6 +337,18 @@ uint32_t get_epoch(uint64_t *epoch_out)
     "int $0x80"
     : "=a" (result)
     : "a" (SYS_GET_EPOCH), "b" ((uint32_t) epoch_out) : "memory"
+  );
+
+  return result;
+}
+
+uint32_t fmove(uint32_t old_parent_n, uint32_t new_parent_n, const char *old_name, const char *new_name)
+{
+  uint32_t result;
+  __asm__ volatile (
+    "int $0x80"
+    : "=a" (result)
+    : "a" (SYS_RENAME_INODE), "b" (old_parent_n), "d" (new_parent_n), "c" ((uint32_t) old_name), "S" ((uint32_t) new_name) : "memory"
   );
 
   return result;
