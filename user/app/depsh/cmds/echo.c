@@ -31,16 +31,7 @@ void cmd_echo(char *args)
   }
   
   if (dir_path_start < len){
-    char path[len - dir_path_start + 1];
-    uint32_t path_idx = 0;
-
-    for (uint32_t i = dir_path_start; i < len; i++) {
-      path[path_idx++] = args[i];
-    }
-
-    path[len - dir_path_start] = '\0';
-
-    const char *absolute_path = return_path(path);
+    const char *absolute_path = return_path(args + dir_path_start);
 
     if (absolute_path == 0){
       write_string("echo: invalid path\n");
