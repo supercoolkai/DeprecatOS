@@ -21,6 +21,7 @@ App apps[] = {
   {"date", cmd_date},
   {"mv", cmd_mv},
   {"cp", cmd_cp},
+  {"ln", cmd_ln},
 };
 
 uint32_t app_cnt = sizeof(apps) / sizeof(apps[0]);

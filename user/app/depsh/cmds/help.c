@@ -35,5 +35,7 @@ void cmd_help(char *args)
                "as a rename function.\n"
                "cp [-r] [old_path ...] [new_path ...]: It's like mv, but it copies instead of moves."
                "Must provide the flag -r in order to copy directories, no matter whether or not"
-               "it contains subdirectories.\n");
+               "it contains subdirectories.\n"
+               "ln [original_file ...] [new_link_path ...]: Creates a hard link to a file."
+               "No symbolic links yet.\n");
 }

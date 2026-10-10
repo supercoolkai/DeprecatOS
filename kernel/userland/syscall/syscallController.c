@@ -1,4 +1,5 @@
 #include "userland/syscall/syscallController.h"
+#include "fs/ext2/bitmapController.h" 
 #include "errors.h"
 #include "kprintf/kprintf.h"
 #include <stdint.h>
@@ -616,6 +617,62 @@ static uint32_t sys_append_to_inode(uint32_t *frame)
   return (uint32_t) frame;
 }
 
+static uint32_t sys_link_inode(uint32_t *frame)
+{
+  uint32_t inode_n = frame[4];
+  uint32_t parent_n = frame[5];
+  char *s = (char *) frame[6];
+
+  uint32_t i = 0;
+
+  if (!inode_exists(inode_n) || !inode_exists(parent_n)) {
+    frame[7] = SYSCALL_ERROR;
+    return (uint32_t) frame;
+  }
+  
+  struct ext2_inode ino;
+  if (!get_inode(inode_n, &ino)){
+    frame[7] = SYSCALL_ERROR;
+    return (uint32_t) frame;
+  }
+
+  if ((ino.type_and_perms_lo & NO_PERMISSION_MASK) == INODE_DIR_TYPE) {
+    frame[7] = SYSCALL_ERROR;
+    return (uint32_t) frame;
+  }
+
+  for (;;){
+    if((uint32_t) s + i < KERNEL_CEILING || (uint32_t) s + i >= USER_SPACE_END){
+      frame[7] = SYSCALL_ERROR;
+      return (uint32_t) frame;
+    }
+
+    if (s[i] == 0)
+      break;
+
+    i++;
+  }
+
+  if (i == 0 || i >= NAME_LEN) {
+    frame[7] = SYSCALL_ERROR;
+    return (uint32_t) frame;
+  }
+  
+  uint32_t temp;
+  if (dir_contains(parent_n, (const char *) s, &temp)) {
+    frame[7] = SYSCALL_ERROR;
+    return (uint32_t) frame;
+  }
+
+  if (!dir_insert(parent_n, (const char *) s, inode_n)) {
+    frame[7] = SYSCALL_ERROR;
+    return (uint32_t) frame;
+  }
+
+  frame[7] = 0;
+  return (uint32_t) frame;
+}
+
 static uint32_t (*syscall_table[])(uint32_t *) = {
   sys_write_char,
   sys_write_string,
@@ -646,6 +703,7 @@ static uint32_t (*syscall_table[])(uint32_t *) = {
   sys_get_epoch,
   sys_rename_inode,
   sys_append_to_inode,
+  sys_link_inode,
 };
 
 void syscall_init(void)

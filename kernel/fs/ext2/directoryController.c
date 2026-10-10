@@ -201,6 +201,18 @@ static bool name_in(struct ext2_inode inode, const char *name, uint32_t *out)
   return false;
 }
 
+bool dir_contains(uint32_t parent_inode_n, const char *name, uint32_t *out)
+{
+  struct ext2_inode parent_inode;
+  if (!get_inode(parent_inode_n, &parent_inode))
+    return false;
+
+  if ((parent_inode.type_and_perms_lo & NO_PERMISSION_MASK) != INODE_DIR_TYPE)
+    return false;
+
+  return name_in(parent_inode, name, out);
+}
+
 
 static bool dir_is_empty(struct ext2_inode inode)
 {

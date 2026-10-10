@@ -30,6 +30,7 @@
 #define SYS_GET_EPOCH 27
 #define SYS_RENAME_INODE 28
 #define SYS_APPEND_TO_INODE 29
+#define SYS_MAKE_LINK 30
 
 uint32_t write_char(char c)
 {
@@ -362,6 +363,18 @@ uint32_t fappend(uint32_t inode_n, uint16_t *buf, uint32_t f_size)
     "int $0x80"
     : "=a" (result)
     : "a" (SYS_APPEND_TO_INODE), "b" (inode_n), "d" (f_size), "c" ((uint32_t) buf): "memory"
+  );
+
+  return result;
+}
+
+uint32_t lmake_hard(uint32_t inode_n, uint32_t parent_n, const char *name)
+{
+  uint32_t result;
+  __asm__ volatile (
+    "int $0x80"
+    : "=a" (result)
+    : "a" (SYS_MAKE_LINK), "b" (inode_n), "d" (parent_n), "c" ((uint32_t) name): "memory"
   );
 
   return result;

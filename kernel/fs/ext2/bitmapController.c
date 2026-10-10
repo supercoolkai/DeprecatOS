@@ -252,3 +252,28 @@ bool free_block(uint32_t block_n)
   return true;
 }
 
+bool inode_exists(uint32_t inode_n)
+{
+  uint32_t group_n = (inode_n - first_inode_n) / inodes_per_grp;
+  
+  if (group_n >= ngroups || inode_n > superblk->inode_cnt) {
+    kprintf(KPRINTF_RED "Invalid inode number");
+    return false;
+  }
+
+  uint32_t bitmap_idx = (inode_n - first_inode_n) % inodes_per_grp;
+
+  uint16_t *bitmap_buf = (uint16_t *) kmalloc(BLOCK_SIZE);
+  read_block(bgdt[group_n].inode_bitmap_addr, bitmap_buf);
+
+  uint8_t *bitmap = (uint8_t *)bitmap_buf;
+
+  uint32_t byte_idx = bitmap_idx / 8;
+  uint8_t mask = 1 << (bitmap_idx % 8);
+
+  bool value = bitmap[byte_idx] & mask;
+  
+  kfree(bitmap_buf);
+
+  return value;
+}
