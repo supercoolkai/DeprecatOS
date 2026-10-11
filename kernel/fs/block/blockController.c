@@ -17,10 +17,6 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#define LOOKUP_MODE 0
-#define ALLOC_MODE 1
-#define FREE_MODE 2
-
 #define SINGLY_ROOT 0
 #define DOUBLY_ROOT 1
 #define TRIPLY_ROOT 2
@@ -39,13 +35,6 @@ static uint32_t inodes_per_grp;
 static uint32_t blks_per_grp;
 static uint32_t frags_per_grp;
 static uint32_t ngroups;
-
-
-struct pointer_table_record {
-  uint32_t table_blk;
-  uint32_t parent_blk;
-  uint32_t slot_idx;
-};
 
 
 // a quick connection point between
@@ -600,7 +589,7 @@ uint32_t replace_inode(uint32_t inode_n, uint16_t *buf, uint32_t f_size, struct 
 
 // YES this functoin can be written like 50 lines
 // NO im not going to rewrite it like that
-static uint32_t map_file_block(struct ext2_inode *inode, uint32_t file_blk_idx, uint32_t mode, uint32_t *disk_blk_out, uint32_t *alloc_cnt, struct pointer_table_record *pointer_table, uint32_t *table_cursor)
+uint32_t map_file_block(struct ext2_inode *inode, uint32_t file_blk_idx, uint32_t mode, uint32_t *disk_blk_out, uint32_t *alloc_cnt, struct pointer_table_record *pointer_table, uint32_t *table_cursor)
 {
   if (file_blk_idx < INODE_BLK_PTR_AMT) {
     if (inode->dir_block_ptr[file_blk_idx] == 0) {
@@ -1060,7 +1049,7 @@ uint32_t append_to_inode(uint32_t inode_n, uint16_t *buf, uint32_t f_size, struc
   return INODE_WRITE_SUCCESS;
 }
 
-static void unwind_insert(uint32_t inode_n, struct ext2_inode *inode, uint32_t *unwind_buf, uint32_t unwind_cursor, uint32_t free_cnt, struct pointer_table_record *pointer_table, uint32_t table_cursor)
+void unwind_insert(uint32_t inode_n, struct ext2_inode *inode, uint32_t *unwind_buf, uint32_t unwind_cursor, uint32_t free_cnt, struct pointer_table_record *pointer_table, uint32_t table_cursor)
 {
   uint32_t free_blk_n;
   for (uint32_t i = 0; i < unwind_cursor; i++) {

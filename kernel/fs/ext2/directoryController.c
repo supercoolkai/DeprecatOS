@@ -17,6 +17,8 @@
 #define MAX_SYMLINK_LEN 59
 #define SYMLINK_MAX_DEPTH 8
 
+static uint16_t sectors_per_blk = BLOCK_SIZE / BYTES_PER_SECTOR;
+
 static struct ext2_directory_entry *return_next_dir_entry(uint16_t *buf, uint32_t *pos)
 {
   struct ext2_directory_entry *entry = (struct ext2_directory_entry *)(((uint8_t *)buf) + *pos);
@@ -93,7 +95,7 @@ static bool lookup(uint16_t *buf, const char *name, uint32_t *out, uint32_t size
 
 bool lookup_path(const char *path, uint32_t *out, bool follow_leaf_link)
 {
-  uint16_t *blk_buf = kmalloc(BLOCK_SIZE / 2 * INODE_BLK_PTR_AMT * sizeof(uint16_t));
+  uint16_t *blk_buf = kmalloc(BLOCK_SIZE);
   uint16_t *splice_buf_a = kmalloc(NAME_LEN);
   uint16_t *splice_buf_b = kmalloc(NAME_LEN);
   const char *p = path;
@@ -179,8 +181,28 @@ bool lookup_path(const char *path, uint32_t *out, bool follow_leaf_link)
         return false;
       }
 
-      read_inode(&ino, blk_buf);
-      if (!lookup(blk_buf, name, &curr_inode_num, ino.size_lo)){
+      uint32_t blk_cnt = (ino.size_lo + BLOCK_SIZE - 1) / BLOCK_SIZE;
+      bool found = false;
+
+      for (uint32_t relative_blk = 0; relative_blk < blk_cnt; relative_blk++) {
+        uint32_t dest_blk;
+        uint32_t lookup_map_status = map_file_block(&ino, relative_blk, LOOKUP_MODE, &dest_blk, NULL, NULL, NULL);
+        if (lookup_map_status != INODE_WRITE_SUCCESS) {
+          kfree(blk_buf);
+          kfree(splice_buf_a);
+          kfree(splice_buf_b);
+          return false;
+        }
+
+        read_block(dest_blk, blk_buf);
+
+        if (lookup(blk_buf, name, &curr_inode_num, BLOCK_SIZE)) {
+          found = true;
+          break;
+        }
+      }
+
+      if (!found) {
         kfree(blk_buf);
         kfree(splice_buf_a);
         kfree(splice_buf_b);
@@ -267,8 +289,16 @@ bool lookup_path(const char *path, uint32_t *out, bool follow_leaf_link)
 static bool name_in(struct ext2_inode inode, const char *name, uint32_t *out)
 {
   uint16_t *scan = kmalloc(BLOCK_SIZE);
-  for (uint32_t i = 0; i < inode.size_lo / BLOCK_SIZE && i < INODE_BLK_PTR_AMT; i++) {
-    read_block(inode.dir_block_ptr[i], scan);
+  for (uint32_t i = 0; i < inode.size_lo / BLOCK_SIZE; i++) {
+    uint32_t dest_blk;
+  
+    uint32_t lookup_map_status = map_file_block(&inode, i, LOOKUP_MODE, &dest_blk, NULL, NULL, NULL);
+    if (lookup_map_status != INODE_WRITE_SUCCESS){
+      kfree(scan);
+      return false;
+    }
+
+    read_block(dest_blk, scan);
 
     uint32_t cursor = 0;
     while (cursor < BLOCK_SIZE) {
@@ -305,8 +335,16 @@ bool dir_contains(uint32_t parent_inode_n, const char *name, uint32_t *out)
 static bool dir_is_empty(struct ext2_inode inode)
 {
   uint16_t *scan = kmalloc(BLOCK_SIZE);
-  for (uint32_t i = 0; i < inode.size_lo / BLOCK_SIZE && i < INODE_BLK_PTR_AMT; i++) {
-    read_block(inode.dir_block_ptr[i], scan);
+  for (uint32_t i = 0; i < inode.size_lo / BLOCK_SIZE; i++) {
+    uint32_t dest_blk;
+  
+    uint32_t lookup_map_status = map_file_block(&inode, i, LOOKUP_MODE, &dest_blk, NULL, NULL, NULL);
+    if (lookup_map_status != INODE_WRITE_SUCCESS){
+      kfree(scan);
+      return false;
+    }
+
+    read_block(dest_blk, scan);
 
     uint32_t cursor = 0;
     while (cursor < BLOCK_SIZE) {
@@ -354,8 +392,16 @@ bool dir_insert(uint32_t parent_inode_n, const char *name, uint32_t child_inode_
   uint32_t needed = ALIGN4(8 + len);
   uint16_t *scratch = kmalloc(BLOCK_SIZE);
 
-  for (uint32_t i = 0; i < parent_inode.size_lo / BLOCK_SIZE && i < INODE_BLK_PTR_AMT; i++) {
-    read_block(parent_inode.dir_block_ptr[i], scratch);
+  for (uint32_t i = 0; i < parent_inode.size_lo / BLOCK_SIZE; i++) {
+    uint32_t dest_blk;
+  
+    uint32_t lookup_map_status = map_file_block(&parent_inode, i, LOOKUP_MODE, &dest_blk, NULL, NULL, NULL);
+    if (lookup_map_status != INODE_WRITE_SUCCESS){
+      kfree(scratch);
+      return false;
+    }
+
+    read_block(dest_blk, scratch);
 
     uint32_t cursor = 0;
     while (cursor < BLOCK_SIZE) {
@@ -382,7 +428,7 @@ bool dir_insert(uint32_t parent_inode_n, const char *name, uint32_t child_inode_
         else{
           entry->type = 1;
         }
-        write_block(parent_inode.dir_block_ptr[i], scratch);
+        write_block(dest_blk, scratch);
 
         kfree(scratch);
 
@@ -423,7 +469,7 @@ bool dir_insert(uint32_t parent_inode_n, const char *name, uint32_t child_inode_
         else{
           new->type = 1;
         }
-        write_block(parent_inode.dir_block_ptr[i], scratch);
+        write_block(dest_blk, scratch);
 
 
         kfree(scratch);
@@ -445,10 +491,81 @@ bool dir_insert(uint32_t parent_inode_n, const char *name, uint32_t child_inode_
       cursor += entry->curr_entry_size;
     }
   }
+
+  if (((uint64_t) parent_inode.size_lo) + needed > MAX_FILE_SIZE){
+    kfree(scratch);
+    return false;
+  }
+
+  uint32_t alloc_cnt = 0;
+
+  uint32_t dest_blk;
+  uint32_t relative_blk = (parent_inode.size_lo + BLOCK_SIZE - 1) / BLOCK_SIZE;
+
+  uint32_t alloc_map_status = map_file_block(&parent_inode, relative_blk, ALLOC_MODE, &dest_blk, &alloc_cnt, NULL, NULL);
+  if (alloc_map_status != INODE_WRITE_SUCCESS){
+    kfree(scratch);
+    return false;
+  }
+  parent_inode.disk_sectors += alloc_cnt * sectors_per_blk;
   
+  uint16_t *buf = kmalloc(BLOCK_SIZE);
+  for (uint32_t i = 0; i < WORDS_PER_BLK; i++) {
+    buf[i] = 0;
+  }
+ 
+  struct ext2_directory_entry *seed = (struct ext2_directory_entry *)buf;
+  seed->curr_entry_size = BLOCK_SIZE;
+  seed->inode = child_inode_n;
+
+  seed->name_len_lo = len;
+  for (uint32_t j = 0; j < len; j++) {
+    seed->name[j] = name[j];
+  }
+  if ((child_inode.type_and_perms_lo & NO_PERMISSION_MASK) == INODE_SYMLINK_TYPE) {
+    seed->type = 7;
+  }
+  else if ((child_inode.type_and_perms_lo & NO_PERMISSION_MASK) == INODE_DIR_TYPE) {
+    seed->type = 2;
+  }
+  else{
+    seed->type = 1;
+  }
+
+  write_block(dest_blk, buf);
+
+  parent_inode.size_lo += BLOCK_SIZE;
+  if (parent_inode_n == child_inode_n) {
+    parent_inode.last_mod_time = timer_get_epoch_sec();
+    parent_inode.hard_link_cnt++;
+    if (!set_inode(parent_inode_n, &parent_inode)) {
+      kfree(buf);
+      kfree(scratch);
+      return false;
+    }
+  }
+  else{
+    child_inode.hard_link_cnt++;
+    if (!set_inode(child_inode_n, &child_inode)){
+      kfree(buf);
+      kfree(scratch);
+      return false;
+    }
+    parent_inode.last_mod_time = timer_get_epoch_sec();
+    if (!set_inode(parent_inode_n, &parent_inode)){
+      kfree(buf);
+      kfree(scratch);
+      return false;
+    }
+  }
+  
+
+  kfree(buf);
   kfree(scratch);
-  return false;
+
+  return true;
 }
+
 
 bool dir_remove(uint32_t parent_inode_n, const char *name, uint32_t *removed_inode_n)
 {
@@ -468,8 +585,15 @@ bool dir_remove(uint32_t parent_inode_n, const char *name, uint32_t *removed_ino
     return false;
 
   uint16_t *scratch = kmalloc(BLOCK_SIZE);
-  for (uint32_t i = 0; i < parent_inode.size_lo / BLOCK_SIZE && i < INODE_BLK_PTR_AMT; i++) {
-    read_block(parent_inode.dir_block_ptr[i], scratch);
+  for (uint32_t i = 0; i < parent_inode.size_lo / BLOCK_SIZE; i++) {
+    uint32_t dest_blk;
+  
+    uint32_t lookup_map_status = map_file_block(&parent_inode, i, LOOKUP_MODE, &dest_blk, NULL, NULL, NULL);
+    if (lookup_map_status != INODE_WRITE_SUCCESS){
+      kfree(scratch);
+      return false;
+    }
+    read_block(dest_blk, scratch);
 
     uint32_t cursor = 0;
     struct ext2_directory_entry *prev = (struct ext2_directory_entry *)((uint8_t *)scratch);
@@ -486,7 +610,7 @@ bool dir_remove(uint32_t parent_inode_n, const char *name, uint32_t *removed_ino
         uint32_t inode_n = entry->inode;
         if (cursor == 0) {
           entry->inode = 0;
-          write_block(parent_inode.dir_block_ptr[i], scratch);
+          write_block(dest_blk, scratch);
           kfree(scratch);
           
           *removed_inode_n = inode_n;
@@ -494,7 +618,7 @@ bool dir_remove(uint32_t parent_inode_n, const char *name, uint32_t *removed_ino
         else {
           prev->curr_entry_size += entry->curr_entry_size;
 
-          write_block(parent_inode.dir_block_ptr[i], scratch);
+          write_block(dest_blk, scratch);
           kfree(scratch);
         
           *removed_inode_n = inode_n;
@@ -532,8 +656,6 @@ bool dir_remove(uint32_t parent_inode_n, const char *name, uint32_t *removed_ino
   }
 
   kfree(scratch);
-
-
   return false;
 }
 
@@ -776,8 +898,15 @@ static bool dir_set_parent_entry(uint32_t child_n, uint32_t new_parent_n)
    
   uint16_t *scratch = kmalloc(BLOCK_SIZE);
   bool found = false;
-  for (uint32_t i = 0; i < child_inode.size_lo / BLOCK_SIZE && i < INODE_BLK_PTR_AMT; i++) {
-    read_block(child_inode.dir_block_ptr[i], scratch);
+  for (uint32_t i = 0; i < child_inode.size_lo / BLOCK_SIZE; i++) {
+    uint32_t dest_blk;
+  
+    uint32_t lookup_map_status = map_file_block(&child_inode, i, LOOKUP_MODE, &dest_blk, NULL, NULL, NULL);
+    if (lookup_map_status != INODE_WRITE_SUCCESS){
+      kfree(scratch);
+      return false;
+    }
+    read_block(dest_blk, scratch);
 
     uint32_t cursor = 0;
     while (cursor < BLOCK_SIZE) {
@@ -790,7 +919,7 @@ static bool dir_set_parent_entry(uint32_t child_n, uint32_t new_parent_n)
       }
       if (entry->inode != 0 && comp_name(entry->name, entry->name_len_lo, "..")) {
         entry->inode = new_parent_n;
-        write_block(child_inode.dir_block_ptr[i], scratch);
+        write_block(dest_blk, scratch);
         found = true;
         break;
       }

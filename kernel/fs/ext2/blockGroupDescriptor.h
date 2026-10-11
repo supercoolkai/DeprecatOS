@@ -6,6 +6,12 @@
 
 #define BLOCK_SIZE 4096
 
+#define MAX_FILE_SIZE \
+    (((uint64_t) BLOCK_SIZE * INODE_BLK_PTR_AMT) + \
+     ((uint64_t) BLOCK_SIZE * (uint64_t) BIT_32_PER_BLK) + \
+     ((uint64_t) BLOCK_SIZE * (uint64_t) BIT_32_PER_BLK * (uint64_t) BIT_32_PER_BLK) + \
+     ((uint64_t) BLOCK_SIZE * (uint64_t) BIT_32_PER_BLK * (uint64_t) BIT_32_PER_BLK * (uint64_t) BIT_32_PER_BLK))
+
 struct ext2_block_group_descriptor{
   uint32_t block_bitmap_addr;
   uint32_t inode_bitmap_addr;
