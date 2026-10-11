@@ -31,6 +31,8 @@
 #define SYS_RENAME_INODE 28
 #define SYS_APPEND_TO_INODE 29
 #define SYS_MAKE_LINK 30
+#define SYS_MAKE_SYMLINK 31
+#define SYS_RESOLVE_SYMLINK 32
 
 uint32_t write_char(char c)
 {
@@ -375,6 +377,30 @@ uint32_t lmake_hard(uint32_t inode_n, uint32_t parent_n, const char *name)
     "int $0x80"
     : "=a" (result)
     : "a" (SYS_MAKE_LINK), "b" (inode_n), "d" (parent_n), "c" ((uint32_t) name): "memory"
+  );
+
+  return result;
+}
+
+uint32_t lmake_sym(uint32_t parent_n, const char *name, const char *target)
+{
+  uint32_t result;
+  __asm__ volatile (
+    "int $0x80"
+    : "=a" (result)
+    : "a" (SYS_MAKE_SYMLINK), "b" (parent_n), "d" ((uint32_t) name), "c" ((uint32_t) target): "memory"
+  );
+
+  return result;
+}
+
+uint32_t resolve_symlink(const char *c)
+{
+  uint32_t result;
+  __asm__ volatile (
+    "int $0x80"
+    : "=a" (result)
+    : "a" (SYS_RESOLVE_SYMLINK), "b" ((uint32_t) c): "memory"
   );
 
   return result;

@@ -1,4 +1,5 @@
 #include "fs/ext2/directoryEntry.h"
+#include "strlen/strlen.h"
 #include "fs/ext2/directoryController.h"
 #include "fs/ext2/inode.h"
 #include "memory/heap/kernelHeap.h"
@@ -13,6 +14,8 @@
 #include <stdbool.h>
 
 #define MAX_DIR_DEPTH 1024
+#define MAX_SYMLINK_LEN 59
+#define SYMLINK_MAX_DEPTH 8
 
 static struct ext2_directory_entry *return_next_dir_entry(uint16_t *buf, uint32_t *pos)
 {
@@ -88,92 +91,177 @@ static bool lookup(uint16_t *buf, const char *name, uint32_t *out, uint32_t size
 }
 
 
-bool lookup_path(const char *path, uint32_t *out)
+bool lookup_path(const char *path, uint32_t *out, bool follow_leaf_link)
 {
   uint16_t *blk_buf = kmalloc(BLOCK_SIZE / 2 * INODE_BLK_PTR_AMT * sizeof(uint16_t));
+  uint16_t *splice_buf_a = kmalloc(NAME_LEN);
+  uint16_t *splice_buf_b = kmalloc(NAME_LEN);
+  const char *p = path;
   if (path[0] != '/'){
     kfree(blk_buf);
-    return false;
-  }
-
-  int len = 0;
-
-  for (int i = 0; i < NAME_LEN; i++) {
-    if (path[i] == 0)
-      break;
-
-    len++;
-  }
-
-  if (len == NAME_LEN){
-    kfree(blk_buf);
+    kfree(splice_buf_a);
+    kfree(splice_buf_b);
     return false;
   }
   
-  int ind = 1;
-  uint32_t curr_inode_num = ROOT_INODE_N;
+  for (uint32_t splices = 0; splices <= SYMLINK_MAX_DEPTH; splices++){
+    bool spliced = false;
+    int len = 0;
 
-  while (ind < len){
-    // get the current subdir's length
-    char c = path[ind];
-    int j = ind;
-    while (c != '/'){
-      if (j >= len){
-        j = len+1;
+    for (int i = 0; i < NAME_LEN; i++) {
+      if (p[i] == 0)
+        break;
+
+      len++;
+    }
+
+    if (len == NAME_LEN){
+      kfree(blk_buf);
+      kfree(splice_buf_a);
+      kfree(splice_buf_b);
+      return false;
+    }
+    
+    int ind = 1;
+    uint32_t curr_inode_num = ROOT_INODE_N;
+
+    while (ind < len){
+      // get the current subdir's length
+      char c = p[ind];
+      int j = ind;
+      while (c != '/'){
+        if (j >= len){
+          j = len+1;
+          break;
+        }
+
+        c = p[j];
+        j++;
+      }
+
+      j--;
+
+      if (j < ind)
+        j = ind;
+
+      int subdir_len = j - ind;
+
+      if (subdir_len == 0){
+        ind = j + 1;
+        continue;
+      }
+
+      // get name of subdir now
+      
+      char name[256];
+
+      for (int i = ind; i < j; i++) {
+        name[i-ind] = p[i];
+      }
+
+      name[subdir_len] = 0;
+
+      struct ext2_inode ino;    
+
+      bool success = get_inode(curr_inode_num, &ino);
+
+      if (!success){
+        kfree(blk_buf);
+        kfree(splice_buf_a);
+        kfree(splice_buf_b);
+        return false;
+      }
+ 
+      if ((ino.type_and_perms_lo & NO_PERMISSION_MASK) != INODE_DIR_TYPE){
+        kfree(blk_buf);
+        kfree(splice_buf_a);
+        kfree(splice_buf_b);
+        return false;
+      }
+
+      read_inode(&ino, blk_buf);
+      if (!lookup(blk_buf, name, &curr_inode_num, ino.size_lo)){
+        kfree(blk_buf);
+        kfree(splice_buf_a);
+        kfree(splice_buf_b);
+        return false;
+      }
+
+      success = get_inode(curr_inode_num, &ino);
+      if (!success){
+        kfree(blk_buf);
+        kfree(splice_buf_a);
+        kfree(splice_buf_b);
+        return false;
+      }
+      
+      if (j == len && !follow_leaf_link) {
         break;
       }
 
-      c = path[j];
-      j++;
+      if ((ino.type_and_perms_lo & NO_PERMISSION_MASK) == INODE_SYMLINK_TYPE) {
+        char *spare;
+        if (splices % 2 == 0) {
+          // use splice_buf_a
+          spare = (char *) splice_buf_a;
+        }
+        else{
+          spare = (char *) splice_buf_b;
+        }
+
+        char *target = (char *) &ino.dir_block_ptr[0];
+        uint32_t tlen = ino.size_lo;
+
+        char *dst = spare;
+        uint32_t w = 0;
+
+        if (target[0] != '/') {
+          // relative case
+          for (uint32_t k = 0; k < (uint32_t) ind; k++) {
+            dst[w++] = p[k];
+          }
+        }
+
+        for (uint32_t k = 0; k < tlen; k++){
+          if (w >= NAME_LEN - 1) {
+            kfree(blk_buf);
+            kfree(splice_buf_a);
+            kfree(splice_buf_b);
+            return false;
+          }
+          dst[w++] = target[k];
+        }
+
+        for (int k = j; k < len; k ++) {
+          if (w >= NAME_LEN - 1){
+            kfree(blk_buf);
+            kfree(splice_buf_a);
+            kfree(splice_buf_b);
+            return false;
+          }
+          dst[w++] = p[k];
+        }
+
+        dst[w] = 0;
+        p = dst;
+        spliced = true;
+        break;
+      }
+
+      ind = j+1;
     }
-
-    j--;
-
-    if (j < ind)
-      j = ind;
-
-    int subdir_len = j - ind;
-
-    if (subdir_len == 0){
-      ind = j + 1;
+    if (spliced)
       continue;
-    }
-
-    // get name of subdir now
-    
-    char name[256];
-
-    for (int i = ind; i < j; i++) {
-      name[i-ind] = path[i];
-    }
-
-    name[subdir_len] = 0;
-
-    struct ext2_inode ino;    
-
-    bool success = get_inode(curr_inode_num, &ino);
-
-    if (!success){
-      kfree(blk_buf);
-      return false;
-    }
-  
-    if ((ino.type_and_perms_lo & NO_PERMISSION_MASK) != INODE_DIR_TYPE){
-      kfree(blk_buf);
-      return false;
-    }
-
-    read_inode(&ino, blk_buf);
-    if (!lookup(blk_buf, name, &curr_inode_num, ino.size_lo)){
-      kfree(blk_buf);
-      return false;
-    }
-
-    ind = j+1;
+    *out = curr_inode_num;
+    kfree(blk_buf);
+    kfree(splice_buf_a);
+    kfree(splice_buf_b);
+    return true;
   }
-  *out = curr_inode_num;
   kfree(blk_buf);
-  return true;
+  kfree(splice_buf_a);
+  kfree(splice_buf_b);
+  return false;
 }
 
 static bool name_in(struct ext2_inode inode, const char *name, uint32_t *out)
@@ -285,7 +373,15 @@ bool dir_insert(uint32_t parent_inode_n, const char *name, uint32_t child_inode_
         for (uint32_t j = 0; j < len; j++) {
           entry->name[j] = name[j];
         }
-        entry->type = ((child_inode.type_and_perms_lo & NO_PERMISSION_MASK) == INODE_DIR_TYPE) ? 2 : 1;
+        if ((child_inode.type_and_perms_lo & NO_PERMISSION_MASK) == INODE_SYMLINK_TYPE) {
+          entry->type = 7;
+        }
+        else if ((child_inode.type_and_perms_lo & NO_PERMISSION_MASK) == INODE_DIR_TYPE) {
+          entry->type = 2;
+        }
+        else{
+          entry->type = 1;
+        }
         write_block(parent_inode.dir_block_ptr[i], scratch);
 
         kfree(scratch);
@@ -318,7 +414,15 @@ bool dir_insert(uint32_t parent_inode_n, const char *name, uint32_t child_inode_
         for (uint32_t j = 0; j < len; j++) {
           new->name[j] = name[j];
         }
-        new->type = ((child_inode.type_and_perms_lo & NO_PERMISSION_MASK) == INODE_DIR_TYPE) ? 2 : 1;
+        if ((child_inode.type_and_perms_lo & NO_PERMISSION_MASK) == INODE_SYMLINK_TYPE) {
+          new->type = 7;
+        }
+        else if ((child_inode.type_and_perms_lo & NO_PERMISSION_MASK) == INODE_DIR_TYPE) {
+          new->type = 2;
+        }
+        else{
+          new->type = 1;
+        }
         write_block(parent_inode.dir_block_ptr[i], scratch);
 
 
@@ -831,6 +935,39 @@ bool rename_inode(uint32_t old_parent_n, const char *old_name, uint32_t new_pare
     }
   }
 
+
+  return true;
+}
+
+bool make_symlink(uint32_t parent_n, const char *name, const char *target)
+{
+  uint32_t len = strlen(target);
+  if (len == 0 || len > MAX_SYMLINK_LEN)
+    return false;
+  
+  struct ext2_inode symlink;
+  uint32_t link_n = mint_inode(len, INODE_SYMLINK_TYPE, &symlink);
+
+  if (link_n == INODE_ERROR){
+    return false;
+  }
+  
+  // interpret the blk ptr field stuff as a 60-byte char buf
+  char *inline_target = (char *) &symlink.dir_block_ptr[0];
+
+  for (uint32_t i = 0; i <= len; i++) {
+    inline_target[i] = target[i];
+  }
+
+  if (!set_inode(link_n, &symlink)){
+    free_inode(link_n);
+    return false;
+  }
+  
+  if (!dir_insert(parent_n, name, link_n)){
+    free_inode(link_n);
+    return false;
+  }
 
   return true;
 }

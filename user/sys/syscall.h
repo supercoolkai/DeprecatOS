@@ -33,5 +33,7 @@ uint32_t get_epoch(uint64_t *epoch_out);
 uint32_t fmove(uint32_t old_parent_n, uint32_t new_parent_n, const char *old_name, const char *new_name);
 uint32_t fappend(uint32_t inode_n, uint16_t *buf, uint32_t f_size);
 uint32_t lmake_hard(uint32_t inode_n, uint32_t parent_n, const char *name);
+uint32_t lmake_sym(uint32_t parent_n, const char *name, const char *target);
+uint32_t resolve_symlink(const char *c);
 
 #endif

@@ -77,7 +77,7 @@ void cmd_mkdir(char *args)
     return;
   }
 
-  if (resolve_dir((const char *)path) != SYSCALL_ERROR){
+  if (resolve_symlink((const char *)path) != SYSCALL_ERROR){
     write_string("mkdir: cannot create directory, already exists\n");
     return;
   }

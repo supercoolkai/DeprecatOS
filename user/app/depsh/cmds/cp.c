@@ -165,7 +165,7 @@ void cmd_cp(char *args)
     return;
   }
 
-  if (resolve_dir(absolute_new_path) != SYSCALL_ERROR){
+  if (resolve_symlink(absolute_new_path) != SYSCALL_ERROR){
     write_string("cp: new path already taken\n");
     return;
   }

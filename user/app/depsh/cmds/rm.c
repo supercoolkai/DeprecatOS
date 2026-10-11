@@ -96,7 +96,7 @@ void cmd_rm(char *args)
     return;
   }
 
-  uint32_t to_remove_n = resolve_dir(path);
+  uint32_t to_remove_n = resolve_symlink(path);
   if (to_remove_n == SYSCALL_ERROR){
     write_string("rm: given path to remove does not exist\n");
     return;

@@ -144,7 +144,7 @@ static uint32_t sys_write_string_color(uint32_t *frame)
 
 }
 
-static uint32_t resolve_dir(const char *s)
+static uint32_t resolve_dir(const char *s, bool split_leaf_sym)
 {  
   uint32_t i = 0;
   for (;;) {
@@ -160,7 +160,7 @@ static uint32_t resolve_dir(const char *s)
   }
   
   uint32_t ino;
-  bool success = lookup_path(s, &ino);
+  bool success = lookup_path(s, &ino, split_leaf_sym);
 
   if (!success) {
     return SYSCALL_ERROR;
@@ -256,7 +256,7 @@ static uint32_t sys_resolve_dir(uint32_t *frame)
 {
   const char *s = (const char *) frame[4];
 
-  uint32_t ino = resolve_dir(s);
+  uint32_t ino = resolve_dir(s, true);
 
   frame[7] = ino;
 
@@ -673,6 +673,64 @@ static uint32_t sys_link_inode(uint32_t *frame)
   return (uint32_t) frame;
 }
 
+static uint32_t sys_make_symlink(uint32_t *frame)
+{
+  uint32_t parent_n = frame[4];
+  const char *name = (const char *) frame[5];
+  const char *target = (const char *) frame[6];
+
+  if (!inode_exists(parent_n)){
+    frame[7] = SYSCALL_ERROR;
+    return (uint32_t) frame;
+  }
+  
+  bool name_finished = false;
+  bool target_finished = false;
+  uint32_t i = 0;
+  for (;;) {
+    if((uint32_t) name + i < KERNEL_CEILING || (uint32_t) name + i >= USER_SPACE_END || (uint32_t) target + i < KERNEL_CEILING || (uint32_t) target + i >= USER_SPACE_END){
+      frame[7] = SYSCALL_ERROR;
+      return (uint32_t) frame;
+    }
+
+    if (!name[i])
+      name_finished = true;
+
+    if (!target[i])
+      target_finished = true;
+
+    if (target_finished && name_finished)
+      break;
+
+    i++;
+  }
+ 
+  uint32_t temp;
+  if (dir_contains(parent_n, (const char *) name, &temp)) {
+    frame[7] = SYSCALL_ERROR;
+    return (uint32_t) frame;
+  }
+  
+  if (!make_symlink(parent_n, name, target)){
+    frame[7] = SYSCALL_ERROR;
+    return (uint32_t) frame;
+  }
+
+  frame[7] = 0;
+  return (uint32_t) frame;
+}
+
+static uint32_t sys_resolve_symlink(uint32_t *frame)
+{
+  const char *s = (const char *) frame[4];
+
+  uint32_t ino = resolve_dir(s, false);
+
+  frame[7] = ino;
+
+  return (uint32_t) frame;
+}
+
 static uint32_t (*syscall_table[])(uint32_t *) = {
   sys_write_char,
   sys_write_string,
@@ -704,6 +762,8 @@ static uint32_t (*syscall_table[])(uint32_t *) = {
   sys_rename_inode,
   sys_append_to_inode,
   sys_link_inode,
+  sys_make_symlink,
+  sys_resolve_symlink,
 };
 
 void syscall_init(void)

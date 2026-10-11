@@ -226,15 +226,16 @@ bool delete_inode(uint32_t inode_n)
     return false;
 
   uint32_t (*unwind_buf)[BIT_32_PER_BLK] = kmalloc(INDIRECT_PTR_LAYERS * BLOCK_SIZE);
-  
-  for (int i = 0; i < INODE_BLK_PTR_AMT; i++) {
-    indir_free_block(inode.dir_block_ptr[i], 0, unwind_buf);
-  }
+  if ((inode.type_and_perms_lo & NO_PERMISSION_MASK) != INODE_SYMLINK_TYPE && inode.disk_sectors > 0)
+  {
+    for (int i = 0; i < INODE_BLK_PTR_AMT; i++) {
+      indir_free_block(inode.dir_block_ptr[i], 0, unwind_buf);
+    }
 
-  indir_free_block(inode.singly_indir_block_ptr, 1, unwind_buf);
-  indir_free_block(inode.doubly_indir_block_ptr, 2, unwind_buf);
-  indir_free_block(inode.triply_indir_block_ptr, 3, unwind_buf);
-  
+    indir_free_block(inode.singly_indir_block_ptr, 1, unwind_buf);
+    indir_free_block(inode.doubly_indir_block_ptr, 2, unwind_buf);
+    indir_free_block(inode.triply_indir_block_ptr, 3, unwind_buf);
+  }
 
   inode.hard_link_cnt = 0;
   inode.deletion_time = timer_get_epoch_sec();
@@ -260,7 +261,7 @@ bool delete_inode(uint32_t inode_n)
   return true;
 }
 
-static uint32_t mint_inode(uint32_t f_size, bool is_dir, struct ext2_inode *out)
+uint32_t mint_inode(uint32_t f_size, uint32_t type, struct ext2_inode *out)
 {
   uint32_t inode_n = alloc_inode();
 
@@ -269,12 +270,7 @@ static uint32_t mint_inode(uint32_t f_size, bool is_dir, struct ext2_inode *out)
 
   struct ext2_inode inode = {0};
 
-  if (is_dir) {
-    inode.type_and_perms_lo = INODE_DIR_TYPE;
-  }
-  else{
-    inode.type_and_perms_lo = INODE_FILE_TYPE;
-  }
+  inode.type_and_perms_lo = type;
 
   inode.size_lo = f_size;
 
@@ -1351,8 +1347,16 @@ uint32_t insert_in_inode(uint32_t inode_n, uint16_t *buf, uint32_t f_size, uint3
 // and updates a few other things.
 uint32_t put_inode(uint16_t *buf, uint32_t f_size, bool is_dir, struct ext2_inode *out)
 {
+  uint32_t type;
+  if (is_dir) {
+    type = INODE_DIR_TYPE;
+  }
+  else{
+    type = INODE_FILE_TYPE;
+  }
+
   struct ext2_inode inode;
-  uint32_t inode_n = mint_inode(f_size, is_dir, &inode);
+  uint32_t inode_n = mint_inode(f_size, type, &inode);
 
   if (inode_n == INODE_ERROR) return INODE_ERROR;
 

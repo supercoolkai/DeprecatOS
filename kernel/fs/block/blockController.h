@@ -27,5 +27,6 @@ uint32_t write_inode(uint16_t *buf, struct ext2_inode *inode);
 uint32_t replace_inode(uint32_t inode_n, uint16_t *buf, uint32_t f_size, struct ext2_inode *out);
 uint32_t append_to_inode(uint32_t inode_n, uint16_t *buf, uint32_t f_size, struct ext2_inode *out);
 uint32_t insert_in_inode(uint32_t inode_n, uint16_t *buf, uint32_t f_size, uint32_t offset, struct ext2_inode *out);
+uint32_t mint_inode(uint32_t f_size, uint32_t type, struct ext2_inode *out);
 
 #endif

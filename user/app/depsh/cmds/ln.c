@@ -45,20 +45,27 @@ void cmd_ln(char *args)
     return;
   }
 
+  bool sym = streq(flag, "-s");
+
+  if (!sym && !streq(flag, "")){
+    write_string("ln: invalid flags.\n");
+    return;
+  }
+
   char *absolute_og_path = (char *) return_path(path);
   
   if (absolute_og_path == 0){
     write_string("ln: path too long\n");
     return;
   }
-  
+   
   uint32_t inode_n;
-  if ((inode_n = resolve_dir(absolute_og_path)) == SYSCALL_ERROR){
+  if (!sym && (inode_n = resolve_dir(absolute_og_path)) == SYSCALL_ERROR){
     write_string("ln: cannot make a link to a nonexistent file\n");
     return;
   }
 
-  if (is_dir(inode_n)) {
+  if (!sym && is_dir(inode_n)) {
     write_string("ln: cannot make a link to a directory\n");
     return;
   }
@@ -70,7 +77,7 @@ void cmd_ln(char *args)
     return;
   }
 
-  if (resolve_dir(absolute_new_path) != SYSCALL_ERROR) {
+  if (resolve_symlink(absolute_new_path) != SYSCALL_ERROR) {
     write_string("ln: given link path already exists\n");
     return;
   }
@@ -83,6 +90,13 @@ void cmd_ln(char *args)
     return;
   }
 
+  if (streq(flag, "-s")) {
+    if (lmake_sym(link_parent_n, link_leaf, path) == SYSCALL_ERROR) {
+      write_string("ln: unexpected error occured while making the link\n");
+    }
+    return;
+  }
+  
   if (lmake_hard(inode_n, link_parent_n, link_leaf) == SYSCALL_ERROR) {
     write_string("ln: unexpected error occured while making the link\n");
   }

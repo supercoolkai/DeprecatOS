@@ -25,7 +25,7 @@ void cmd_touch(char *args)
     return;
   }
 
-  if (resolve_dir((const char *)path) != SYSCALL_ERROR){
+  if (resolve_symlink((const char *)path) != SYSCALL_ERROR){
     write_string("touch: file already exists\n");
     return;
   }

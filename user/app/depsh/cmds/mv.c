@@ -33,7 +33,7 @@ void cmd_mv(char *args)
     return;
   }
 
-  if (resolve_dir(absolute_new_path) != SYSCALL_ERROR){
+  if (resolve_symlink(absolute_new_path) != SYSCALL_ERROR){
     write_string("mv: new path already taken\n");
     return;
   }
@@ -54,7 +54,7 @@ void cmd_mv(char *args)
     return;
   }
 
-  if (resolve_dir(absolute_old_path) == SYSCALL_ERROR){
+  if (resolve_symlink(absolute_old_path) == SYSCALL_ERROR){
     write_string("mv: cannot rename a nonexistent file\n");
     return;
   }
