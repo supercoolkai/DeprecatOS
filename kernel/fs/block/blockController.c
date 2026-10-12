@@ -184,23 +184,6 @@ bool set_inode(uint32_t inode_n, struct ext2_inode *in)
   return true;
 }
 
-// reads the inputted inode
-// self explanatory imo 
-void read_inode(struct ext2_inode *inode, uint16_t *out)
-{
-  uint16_t (*indirect_buf)[WORDS_PER_BLK] = kmalloc(INDIRECT_PTR_LAYERS * BLOCK_SIZE);
-  uint32_t blocks_left = (inode->size_lo + BLOCK_SIZE - 1) / BLOCK_SIZE;
-
-  for (int i = 0; i < INODE_BLK_PTR_AMT && blocks_left > 0; i++) {
-    indir_read_block(&out, &blocks_left, inode->dir_block_ptr[i], 0, indirect_buf);
-  }
-  
-  if (blocks_left > 0) indir_read_block(&out, &blocks_left, inode->singly_indir_block_ptr, 1, indirect_buf);
-  if (blocks_left > 0) indir_read_block(&out, &blocks_left,inode->doubly_indir_block_ptr, 2, indirect_buf);
-  if (blocks_left > 0) indir_read_block(&out, &blocks_left, inode->triply_indir_block_ptr, 3, indirect_buf); 
-  kfree(indirect_buf);
-}
-
 static void zero_block_buf(uint32_t *buf)
 {
   for (uint32_t i = 0; i < BIT_32_PER_BLK; i++) {
@@ -905,22 +888,36 @@ uint32_t append_to_inode(uint32_t inode_n, uint16_t *buf, uint32_t f_size, struc
 
   uint32_t alloc_cnt = 0;
 
+  bool alloced_backward = false;
+
 
   if (size_needed < old_size) // out of inode space
     return INODE_ERROR;
 
   if (old_size % BLOCK_SIZE != 0){
+    uint16_t *slack_buf = kmalloc(BLOCK_SIZE);
     uint32_t tail_blk_n;
     uint32_t map_result = map_file_block(&inode, old_blk_cnt - 1, LOOKUP_MODE, &tail_blk_n, NULL, NULL, NULL);
-    if (map_result != INODE_WRITE_SUCCESS){
-      if (map_result == EMPTY_BLOCK)
-        return EMPTY_BLOCK;
+    if (map_result == EMPTY_BLOCK){
+      uint32_t alloc_result = map_file_block(&inode, old_blk_cnt - 1, ALLOC_MODE, &tail_blk_n, &alloc_cnt, NULL, NULL);
+      if (alloc_result != INODE_WRITE_SUCCESS) {
+        kfree(slack_buf);
+        return INODE_ERROR;
+      }
+
+      for (uint32_t i = 0; i < WORDS_PER_BLK; i++) {
+        slack_buf[i] = 0;
+      }
+
+      alloced_backward = true;
+    }
+    else if (map_result == INODE_WRITE_SUCCESS) {
+      read_block(tail_blk_n, slack_buf);
+    }
+    else {
+      kfree(slack_buf);
       return INODE_ERROR;
     }
-
-    uint16_t *slack_buf = kmalloc(BLOCK_SIZE);
-
-    read_block(tail_blk_n, slack_buf);
 
     uint8_t *slack_bytes =  (uint8_t *) slack_buf;
     uint8_t *src_bytes = (uint8_t *) buf;
@@ -949,6 +946,14 @@ uint32_t append_to_inode(uint32_t inode_n, uint16_t *buf, uint32_t f_size, struc
       uint32_t island_start = old_blk_cnt;
       for (uint32_t i = island_start; i < island_start + blk_idx; i++) { 
         if (map_file_block(&inode, i, FREE_MODE, &unwind_blk_n, NULL, NULL, NULL) != INODE_WRITE_SUCCESS) {
+          panic("KERNEL PANIC: Inode free block operation failed when attempting to free block after append failure, disk corruption occurred!!");
+        }
+        
+        free_block(unwind_blk_n);
+      }
+
+      if (alloced_backward) {
+        if (map_file_block(&inode, old_blk_cnt - 1, FREE_MODE, &unwind_blk_n, NULL, NULL, NULL) != INODE_WRITE_SUCCESS) {
           panic("KERNEL PANIC: Inode free block operation failed when attempting to free block after append failure, disk corruption occurred!!");
         }
         
@@ -1375,3 +1380,23 @@ uint32_t put_inode(uint16_t *buf, uint32_t f_size, bool is_dir, struct ext2_inod
   return inode_n;
 }
 
+// NOTE: All the functions below are no longer used, kept just-in-case something
+// comes up in the future where these should be used
+
+// reads the inputted inode
+// self explanatory imo 
+__attribute__((unused))
+static void read_inode(struct ext2_inode *inode, uint16_t *out)
+{
+  uint16_t (*indirect_buf)[WORDS_PER_BLK] = kmalloc(INDIRECT_PTR_LAYERS * BLOCK_SIZE);
+  uint32_t blocks_left = (inode->size_lo + BLOCK_SIZE - 1) / BLOCK_SIZE;
+
+  for (int i = 0; i < INODE_BLK_PTR_AMT && blocks_left > 0; i++) {
+    indir_read_block(&out, &blocks_left, inode->dir_block_ptr[i], 0, indirect_buf);
+  }
+  
+  if (blocks_left > 0) indir_read_block(&out, &blocks_left, inode->singly_indir_block_ptr, 1, indirect_buf);
+  if (blocks_left > 0) indir_read_block(&out, &blocks_left,inode->doubly_indir_block_ptr, 2, indirect_buf);
+  if (blocks_left > 0) indir_read_block(&out, &blocks_left, inode->triply_indir_block_ptr, 3, indirect_buf); 
+  kfree(indirect_buf);
+}

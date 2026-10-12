@@ -26,37 +26,6 @@ static struct ext2_directory_entry *return_next_dir_entry(uint16_t *buf, uint32_
   return entry;
 }
 
-bool ls_dir(uint16_t *buf, struct dir_row *out, uint32_t *len, uint32_t size, uint32_t max)
-{
-  uint32_t cursor = 0;
-  *len = 0;
-
-  while (cursor < size)
-  {
-    if (*len == max)
-      return false;
-
-    struct ext2_directory_entry *entry = return_next_dir_entry(buf, &cursor);
-
-    if (entry->curr_entry_size == 0)
-      return false;
-
-    if (entry->inode == 0)
-      continue;
-    
-    out[*len].inode = entry->inode;
-    
-    for (int i = 0; i < entry->name_len_lo; i++)
-      out[*len].name[i] = entry->name[i];
-
-    out[*len].name[entry->name_len_lo] = 0;
-
-    (*len)++;
-  }
-
-  return true;
-}
-
 static bool comp_name(const uint8_t *a, uint8_t len, const char *b)
 {
   for (int i = 0; i < len; i++) {
@@ -1096,6 +1065,41 @@ bool make_symlink(uint32_t parent_n, const char *name, const char *target)
   if (!dir_insert(parent_n, name, link_n)){
     free_inode(link_n);
     return false;
+  }
+
+  return true;
+}
+
+// NOTE: All the functions below are no longer used, kept just-in-case something
+// comes up in the future where these should be used
+
+__attribute__((unused))
+static bool ls_dir(uint16_t *buf, struct dir_row *out, uint32_t *len, uint32_t size, uint32_t max)
+{
+  uint32_t cursor = 0;
+  *len = 0;
+
+  while (cursor < size)
+  {
+    if (*len == max)
+      return false;
+
+    struct ext2_directory_entry *entry = return_next_dir_entry(buf, &cursor);
+
+    if (entry->curr_entry_size == 0)
+      return false;
+
+    if (entry->inode == 0)
+      continue;
+    
+    out[*len].inode = entry->inode;
+    
+    for (int i = 0; i < entry->name_len_lo; i++)
+      out[*len].name[i] = entry->name[i];
+
+    out[*len].name[entry->name_len_lo] = 0;
+
+    (*len)++;
   }
 
   return true;

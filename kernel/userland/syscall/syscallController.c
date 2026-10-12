@@ -171,14 +171,11 @@ static uint32_t resolve_dir(const char *s, bool split_leaf_sym)
 
 static uint32_t sys_read_chunk(uint32_t *frame)
 {
-  uint32_t *scratch = kmalloc(BLOCK_SIZE);
-
   uint32_t ino_n = frame[4];
   struct ext2_inode ino;
   
   if (!get_inode(ino_n, &ino)) {
     frame[7] = SYSCALL_ERROR;
-    kfree(scratch);
     return (uint32_t) frame;
   }
 
@@ -187,58 +184,29 @@ static uint32_t sys_read_chunk(uint32_t *frame)
 
   if ((uint32_t) buf < KERNEL_CEILING || (uint32_t) buf > USER_SPACE_END - BLOCK_SIZE){
     frame[7] = SYSCALL_ERROR;
-    kfree(scratch);
     return (uint32_t) frame;
   }
   
   uint32_t blocks = (ino.size_lo + BLOCK_SIZE - 1) / BLOCK_SIZE;
   if (n >= blocks) {
     frame[7] = 0;
-    kfree(scratch);
     return (uint32_t) frame;
   }
 
   uint32_t block_n;
-
-  if (n < INODE_BLK_PTR_AMT) {
-    block_n = ino.dir_block_ptr[n];
+  uint32_t lookup_map_status = map_file_block(&ino, n, LOOKUP_MODE, &block_n, NULL, NULL, NULL);
+  if (lookup_map_status == EMPTY_BLOCK) {
+    for (uint32_t i = 0; i < BIT_32_PER_BLK; i++) {
+      buf[i] = 0;
+    }
   }
-  else if(n < BIT_32_PER_BLK + INODE_BLK_PTR_AMT){
-    uint32_t m = n - INODE_BLK_PTR_AMT;
-    read_block(ino.singly_indir_block_ptr, (uint16_t *) scratch);
-
-    block_n = scratch[m];
+  else if (lookup_map_status == INODE_WRITE_SUCCESS) {
+    read_block(block_n, (uint16_t *) buf);
   }
-  else if (n < INODE_BLK_PTR_AMT + BIT_32_PER_BLK + (BIT_32_PER_BLK * BIT_32_PER_BLK)){
-    uint32_t m = n - INODE_BLK_PTR_AMT - BIT_32_PER_BLK;
-    read_block(ino.doubly_indir_block_ptr, (uint16_t *)scratch);
-
-    uint32_t o = scratch[m / BIT_32_PER_BLK];
-    read_block(o, (uint16_t *)scratch);
-
-    block_n = scratch[m % BIT_32_PER_BLK];
-  }
-
-  else {
-    uint32_t m = n - INODE_BLK_PTR_AMT - BIT_32_PER_BLK - (BIT_32_PER_BLK * BIT_32_PER_BLK);
-    read_block(ino.triply_indir_block_ptr, (uint16_t *)scratch);
-
-    uint32_t o = scratch[m / (BIT_32_PER_BLK * BIT_32_PER_BLK)];
-    read_block(o, (uint16_t *)scratch);
-
-    uint32_t p = scratch[(m / BIT_32_PER_BLK) % BIT_32_PER_BLK];
-    read_block(p, (uint16_t *)scratch);
-
-    block_n = scratch[m % BIT_32_PER_BLK];
-  }
-
-  if(block_n == 0) {
+  else{
     frame[7] = SYSCALL_ERROR;
-    kfree(scratch);
     return (uint32_t) frame;
   }
-  
-  read_block(block_n, (uint16_t *) buf);
 
   if (n == blocks - 1 && ino.size_lo % BLOCK_SIZE != 0){
     frame[7] = ino.size_lo % BLOCK_SIZE;
@@ -248,7 +216,6 @@ static uint32_t sys_read_chunk(uint32_t *frame)
     frame[7] = BLOCK_SIZE;
   }
 
-  kfree(scratch);
   return (uint32_t) frame;
 }
 
