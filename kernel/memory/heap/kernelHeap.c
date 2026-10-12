@@ -2,6 +2,7 @@
 #include "memory/heap/kernelHeap.h"
 #include "memory/paging/paging.h"
 #include "memory/frameAlloc/frameAllocator.h"
+#include <stddef.h>
 
 typedef struct {
   uint32_t size;
@@ -94,6 +95,9 @@ void *kmalloc(uint32_t size)
 
 void kfree(void *ptr)
 {
+  if (ptr == NULL)
+    return;
+
   BlockHeader *h = (BlockHeader *) ptr - 1;
 
   h->is_free = 1;

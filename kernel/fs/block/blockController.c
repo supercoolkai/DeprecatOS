@@ -198,7 +198,7 @@ bool delete_inode(uint32_t inode_n)
     return false;
 
   uint32_t (*unwind_buf)[BIT_32_PER_BLK] = kmalloc(INDIRECT_PTR_LAYERS * BLOCK_SIZE);
-  if ((inode.type_and_perms_lo & NO_PERMISSION_MASK) != INODE_SYMLINK_TYPE && inode.disk_sectors > 0)
+  if (inode.disk_sectors > 0)
   {
     for (int i = 0; i < INODE_BLK_PTR_AMT; i++) {
       indir_free_block(inode.dir_block_ptr[i], 0, unwind_buf);

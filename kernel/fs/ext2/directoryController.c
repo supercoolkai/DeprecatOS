@@ -16,6 +16,7 @@
 #define MAX_DIR_DEPTH 1024
 #define MAX_SYMLINK_LEN 59
 #define SYMLINK_MAX_DEPTH 8
+#define PATH_LEN 4096
 
 static uint16_t sectors_per_blk = BLOCK_SIZE / BYTES_PER_SECTOR;
 
@@ -65,8 +66,8 @@ static bool lookup(uint16_t *buf, const char *name, uint32_t *out, uint32_t size
 bool lookup_path(const char *path, uint32_t *out, bool follow_leaf_link)
 {
   uint16_t *blk_buf = kmalloc(BLOCK_SIZE);
-  uint16_t *splice_buf_a = kmalloc(NAME_LEN);
-  uint16_t *splice_buf_b = kmalloc(NAME_LEN);
+  uint16_t *splice_buf_a = kmalloc(PATH_LEN);
+  uint16_t *splice_buf_b = kmalloc(PATH_LEN);
   const char *p = path;
   if (path[0] != '/'){
     kfree(blk_buf);
@@ -79,14 +80,14 @@ bool lookup_path(const char *path, uint32_t *out, bool follow_leaf_link)
     bool spliced = false;
     int len = 0;
 
-    for (int i = 0; i < NAME_LEN; i++) {
+    for (int i = 0; i < PATH_LEN; i++) {
       if (p[i] == 0)
         break;
 
       len++;
     }
 
-    if (len == NAME_LEN){
+    if (len == PATH_LEN){
       kfree(blk_buf);
       kfree(splice_buf_a);
       kfree(splice_buf_b);
@@ -120,6 +121,13 @@ bool lookup_path(const char *path, uint32_t *out, bool follow_leaf_link)
       if (subdir_len == 0){
         ind = j + 1;
         continue;
+      }
+
+      if (subdir_len >= NAME_LEN){
+        kfree(blk_buf);
+        kfree(splice_buf_a);
+        kfree(splice_buf_b);
+        return false;
       }
 
       // get name of subdir now
@@ -199,8 +207,20 @@ bool lookup_path(const char *path, uint32_t *out, bool follow_leaf_link)
         else{
           spare = (char *) splice_buf_b;
         }
+        
+        char *target;
+        uint16_t *buf = NULL;
 
-        char *target = (char *) &ino.dir_block_ptr[0];
+        if (ino.disk_sectors == 0){
+          target = (char *) &ino.dir_block_ptr[0];
+        }
+        else{
+          buf = kmalloc(BLOCK_SIZE);
+          read_block(ino.dir_block_ptr[0], buf);
+
+          target = (char *) buf;
+        }
+
         uint32_t tlen = ino.size_lo;
 
         char *dst = spare;
@@ -214,20 +234,22 @@ bool lookup_path(const char *path, uint32_t *out, bool follow_leaf_link)
         }
 
         for (uint32_t k = 0; k < tlen; k++){
-          if (w >= NAME_LEN - 1) {
+          if (w >= PATH_LEN - 1) {
             kfree(blk_buf);
             kfree(splice_buf_a);
             kfree(splice_buf_b);
+            kfree(buf);
             return false;
           }
           dst[w++] = target[k];
         }
 
         for (int k = j; k < len; k ++) {
-          if (w >= NAME_LEN - 1){
+          if (w >= PATH_LEN - 1){
             kfree(blk_buf);
             kfree(splice_buf_a);
             kfree(splice_buf_b);
+            kfree(buf);
             return false;
           }
           dst[w++] = p[k];
@@ -236,6 +258,7 @@ bool lookup_path(const char *path, uint32_t *out, bool follow_leaf_link)
         dst[w] = 0;
         p = dst;
         spliced = true;
+        kfree(buf);
         break;
       }
 
@@ -1040,7 +1063,7 @@ bool rename_inode(uint32_t old_parent_n, const char *old_name, uint32_t new_pare
 bool make_symlink(uint32_t parent_n, const char *name, const char *target)
 {
   uint32_t len = strlen(target);
-  if (len == 0 || len > MAX_SYMLINK_LEN)
+  if (len == 0 || len >= BLOCK_SIZE)
     return false;
   
   struct ext2_inode symlink;
@@ -1050,20 +1073,49 @@ bool make_symlink(uint32_t parent_n, const char *name, const char *target)
     return false;
   }
   
-  // interpret the blk ptr field stuff as a 60-byte char buf
-  char *inline_target = (char *) &symlink.dir_block_ptr[0];
+  uint32_t block_n = 0;
 
-  for (uint32_t i = 0; i <= len; i++) {
-    inline_target[i] = target[i];
+  if (len > MAX_SYMLINK_LEN) {
+    // typical write, slower so thats why not default
+    uint32_t alloc_map_status = map_file_block(&symlink, 0, ALLOC_MODE, &block_n, NULL, NULL, NULL);
+
+    if (alloc_map_status != INODE_WRITE_SUCCESS){
+      free_inode(link_n);
+      return false;
+    }
+
+    char *buf = kmalloc(BLOCK_SIZE);
+    for (uint32_t i = 0; i <= len; i++) {
+      buf[i] = target[i];
+    }
+
+    write_block(block_n, (uint16_t *) buf);
+    kfree(buf);
+
+    symlink.disk_sectors += sectors_per_blk;
+  }
+  else{
+    // interpret the blk ptr field stuff as a 60-byte char buf
+    char *inline_target = (char *) &symlink.dir_block_ptr[0];
+
+    for (uint32_t i = 0; i <= len; i++) {
+      inline_target[i] = target[i];
+    }
   }
 
   if (!set_inode(link_n, &symlink)){
     free_inode(link_n);
+    if (block_n) {
+      free_block(block_n);
+    }
     return false;
   }
   
   if (!dir_insert(parent_n, name, link_n)){
     free_inode(link_n);
+    if (block_n) {
+      free_block(block_n);
+    }
     return false;
   }
 
