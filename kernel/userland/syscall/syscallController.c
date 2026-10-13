@@ -194,7 +194,7 @@ static uint32_t sys_read_chunk(uint32_t *frame)
   }
 
   uint32_t block_n;
-  uint32_t lookup_map_status = map_file_block(&ino, n, LOOKUP_MODE, &block_n, NULL, NULL, NULL);
+  uint32_t lookup_map_status = map_file_block(&ino, n, LOOKUP_MODE, &block_n, NULL);
   if (lookup_map_status == EMPTY_BLOCK) {
     for (uint32_t i = 0; i < BIT_32_PER_BLK; i++) {
       buf[i] = 0;
@@ -698,6 +698,22 @@ static uint32_t sys_resolve_symlink(uint32_t *frame)
   return (uint32_t) frame;
 }
 
+static uint32_t sys_truncate_inode(uint32_t *frame)
+{
+  uint32_t inode_n = frame[4];
+  uint32_t new_size = frame[6];
+
+  struct ext2_inode throwaway;
+
+  if (truncate_inode(inode_n, new_size, &throwaway) != INODE_WRITE_SUCCESS){
+    frame[7] = SYSCALL_ERROR;
+    return (uint32_t) frame;
+  }
+
+  frame[7] = 0;
+  return (uint32_t) frame;
+}
+
 static uint32_t (*syscall_table[])(uint32_t *) = {
   sys_write_char,
   sys_write_string,
@@ -731,6 +747,7 @@ static uint32_t (*syscall_table[])(uint32_t *) = {
   sys_link_inode,
   sys_make_symlink,
   sys_resolve_symlink,
+  sys_truncate_inode,
 };
 
 void syscall_init(void)

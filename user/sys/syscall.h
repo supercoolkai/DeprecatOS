@@ -35,5 +35,6 @@ uint32_t fappend(uint32_t inode_n, uint16_t *buf, uint32_t f_size);
 uint32_t lmake_hard(uint32_t inode_n, uint32_t parent_n, const char *name);
 uint32_t lmake_sym(uint32_t parent_n, const char *name, const char *target);
 uint32_t resolve_symlink(const char *c);
+uint32_t ftrunc(uint32_t inode_n, uint32_t new_size);
 
 #endif

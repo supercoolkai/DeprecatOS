@@ -2,9 +2,13 @@
 #include "app/depsh/depshCommon.h"
 #include "sys/syscall.h"
 #include "errors.h"
+#include <stdbool.h>
 
 #define ECHO_OUT_FLAG " >> "
 #define ECHO_OUT_FLAG_LEN 4
+
+#define ECHO_TRUNC_FLAG " > "
+#define ECHO_TRUNC_FLAG_LEN 3
 
 void cmd_echo(char *args)
 {
@@ -12,15 +16,41 @@ void cmd_echo(char *args)
   while (args[len] != '\0')
     len++;
 
+  bool truncate = false;
   uint32_t dir_path_start = len;
   uint32_t curr_flag_idx = 0;
-
-  if (args[0] == '>' && args[1] == '>' && args[2] == ' ')
-    dir_path_start = 3;
+  if (args[0] == '>' && args[1] == ' '){
+    dir_path_start = 2;
+    truncate = true;
+  }
 
   for (uint32_t i = 0; i < len; i++) {
-    if (curr_flag_idx >= ECHO_OUT_FLAG_LEN) {
+    if (curr_flag_idx >= ECHO_TRUNC_FLAG_LEN) {
       dir_path_start = i;
+      truncate = true;
+    }
+
+    if (ECHO_TRUNC_FLAG[curr_flag_idx] == args[i]) {
+      curr_flag_idx++;
+    }
+
+    else{
+      curr_flag_idx = (args[i] == ' ') ? 1 : 0;
+    }
+
+  }
+
+  curr_flag_idx = 0;
+
+  if (args[0] == '>' && args[1] == '>' && args[2] == ' ' && dir_path_start == len){
+    dir_path_start = 3;
+    truncate = false;
+  }
+
+  for (uint32_t i = 0; i < len; i++) {
+    if (curr_flag_idx >= ECHO_OUT_FLAG_LEN && i > dir_path_start) {
+      dir_path_start = i;
+      truncate = false;
     }
     if (ECHO_OUT_FLAG[curr_flag_idx] == args[i]){
       curr_flag_idx++;
@@ -29,6 +59,7 @@ void cmd_echo(char *args)
       curr_flag_idx = (args[i] == ' ') ? 1 : 0;
     }
   }
+  
   
   if (dir_path_start < len){
     const char *absolute_path = return_path(args + dir_path_start);
@@ -60,10 +91,23 @@ void cmd_echo(char *args)
       return;
     }
 
-    if (fappend(inode_n, (uint16_t *) args, dir_path_start == 3 ? 0 : dir_path_start - 4) == SYSCALL_ERROR) {
+    if (truncate) {
+      if (ftrunc(inode_n, 0) == SYSCALL_ERROR){
+        write_string("echo: disk error when trying to truncate file, disk corruption possible\n");
+        return;
+      }
+
+      if (fappend(inode_n, (uint16_t *) args, dir_path_start == 2 ? 0 : dir_path_start - 3) == SYSCALL_ERROR) {
+        write_string("echo: disk error or out of space, disk corruption possible\n");
+        return;
+      }
+    }
+
+    else if (fappend(inode_n, (uint16_t *) args, dir_path_start == 3 ? 0 : dir_path_start - 4) == SYSCALL_ERROR) {
       write_string("echo: disk error or out of space, disk corruption possible\n");
       return;
     }
+
     if (fappend(inode_n, (uint16_t *) "\n", 1) == SYSCALL_ERROR) {
       write_string("echo: disk error or out of space, disk corruption possible\n");
       return;

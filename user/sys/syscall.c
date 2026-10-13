@@ -33,6 +33,7 @@
 #define SYS_MAKE_LINK 30
 #define SYS_MAKE_SYMLINK 31
 #define SYS_RESOLVE_SYMLINK 32
+#define SYS_TRUNCATE_INODE 33
 
 uint32_t write_char(char c)
 {
@@ -401,6 +402,18 @@ uint32_t resolve_symlink(const char *c)
     "int $0x80"
     : "=a" (result)
     : "a" (SYS_RESOLVE_SYMLINK), "b" ((uint32_t) c): "memory"
+  );
+
+  return result;
+}
+
+uint32_t ftrunc(uint32_t inode_n, uint32_t new_size)
+{
+  uint32_t result;
+  __asm__ volatile (
+    "int $0x80"
+    : "=a" (result)
+    : "a" (SYS_TRUNCATE_INODE), "b" (inode_n), "c" (new_size) : "memory"
   );
 
   return result;
