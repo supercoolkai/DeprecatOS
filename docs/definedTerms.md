@@ -1,380 +1,554 @@
 # Defined Terms
 
-#### **ALIGN4** *(src/fs/ext2/directoryEntry.h)*
+#### **ALIGN4** *(kernel/fs/ext2/directoryEntry.h)*
 
-#### **ALLOC_MODE** *(src/fs/block/blockController.c)*
+#### **ALLOC_MODE** *(kernel/fs/block/blockController.h)*
 
-#### **ALT_STATUS_PORT** *(src/drivers/disk/ata.h)*
+#### **ALT_STATUS_PORT** *(kernel/drivers/disk/ata.h)*
 
-#### **ATA_H** *(src/drivers/disk/ata.h)*
+#### **APPCTL_H** *(user/app/appCtl.h)*
 
-#### **ATA_MASTER** *(src/drivers/disk/ata.h)*
+#### **ATA_H** *(kernel/drivers/disk/ata.h)*
 
-#### **ATA_SLAVE** *(src/drivers/disk/ata.h)*
+#### **ATA_MASTER** *(kernel/drivers/disk/ata.h)*
 
-#### **BAUD_RATE** *(src/drivers/serial/serialController.c)*
+#### **ATA_SLAVE** *(kernel/drivers/disk/ata.h)*
 
-#### **BIT_32_PER_BLK** *(src/fs/block/blockController.h)*
+#### **BAUD_RATE** *(kernel/drivers/serial/serialController.c)*
 
-#### **BITMAPCONTROLLER_H** *(src/fs/ext2/bitmapController.h)*
+#### **BIT_32_PER_BLK** *(kernel/fs/block/blockController.h)*
 
-#### **BLACK** *(src/drivers/fb/fbController.h)*
+#### **BITMAPCONTROLLER_H** *(kernel/fs/ext2/bitmapController.h)*
 
-#### **BLOCKCONTROLLER_H** *(src/fs/block/blockController.h)*
+#### **BLACK** *(etc/lib/colors/colors.h)*
 
-#### **BLOCKGROUPDESCRIPTOR_H** *(src/fs/ext2/blockGroupDescriptor.h)*
+#### **BLOCKCONTROLLER_H** *(kernel/fs/block/blockController.h)*
 
-#### **BLOCK_ERROR** *(src/errors.h)*
+#### **BLOCK_ERROR** *(kernel/errors.h)*
 
-#### **BLOCK_SIZE** *(src/fs/ext2/blockGroupDescriptor.h)*
+#### **BLOCKGROUPDESCRIPTOR_H** *(kernel/fs/ext2/blockGroupDescriptor.h)*
 
-#### **BLUE** *(src/drivers/fb/fbController.h)*
+#### **BLOCK_SIZE** *(kernel/fs/ext2/blockGroupDescriptor.h)*
 
-#### **BSY_BIT** *(src/drivers/disk/ata.h)*
+#### **BLUE** *(etc/lib/colors/colors.h)*
 
-#### **BUFFER_SIZE** *(src/util/kprintf/kprintf.c)*
+#### **BSY_BIT** *(kernel/drivers/disk/ata.h)*
 
 #### **BUF_CAP** *(user/shell/shell.c)*
 
-#### **BYTES_PER_SECTOR** *(src/drivers/disk/ata.h)*
+#### **BUFFER_SIZE** *(etc/kernel/kprintf/kprintf.c)*
 
-#### **CODE_ADDR** *(src/userland/userland.h)*
+#### **BYTES_PER_SECTOR** *(kernel/drivers/disk/ata.h)*
 
-#### **COLS_PER_ROW_LS** *(user/shell/shell.c)*
+#### **CODE_ADDR** *(kernel/userland/userland.h)*
 
-#### **COM1** *(src/drivers/serial/serialController.c)*
+#### **COL_OFFSET** *(user/app/dinv/dinv.c)*
 
-#### **COMMAND_IO_PORT** *(src/drivers/disk/ata.h)*
+#### **COLORS_H** *(etc/lib/colors/colors.h)*
 
-#### **CYAN** *(src/drivers/fb/fbController.h)*
+#### **COLS_PER_ROW_LS** *(user/app/depsh/cmds/ls.c)*
 
-#### **DARK_GRAY** *(src/drivers/fb/fbController.h)*
+#### **COM1** *(kernel/drivers/serial/serialController.c)*
 
-#### **DATA_PORT** *(src/drivers/disk/ata.h)*
+#### **COMMAND_IO_PORT** *(kernel/drivers/disk/ata.h)*
 
-#### **DEVICE_CONTROL_PORT** *(src/drivers/disk/ata.h)*
+#### **CP_H** *(user/app/depsh/cmds/cp.h)*
 
-#### **DF_BIT** *(src/drivers/disk/ata.h)*
+#### **CTRL_KEY_DELETE** *(etc/lib/keys/ctrlkeys.h)*
 
-#### **DIRECTORYCONTROLLER_H** *(src/fs/ext2/directoryController.h)*
+#### **CTRL_KEY_DOWN** *(etc/lib/keys/ctrlkeys.h)*
 
-#### **DIRECTORYENTRY_H** *(src/fs/ext2/directoryEntry.h)*
+#### **CTRL_KEY_END** *(etc/lib/keys/ctrlkeys.h)*
 
-#### **DOUBLY_ROOT** *(src/fs/block/blockController.c)*
+#### **CTRL_KEY_HOME** *(etc/lib/keys/ctrlkeys.h)*
 
-#### **DRIVE_SELECT_IO_PORT** *(src/drivers/disk/ata.h)*
+#### **CTRL_KEY_LEFT** *(etc/lib/keys/ctrlkeys.h)*
 
-#### **DRQ_BIT** *(src/drivers/disk/ata.h)*
+#### **CTRL_KEY_PGDN** *(etc/lib/keys/ctrlkeys.h)*
 
-#### **EMPTY_BLOCK** *(src/errors.h)*
+#### **CTRL_KEY_PGUP** *(etc/lib/keys/ctrlkeys.h)*
 
-#### **ERRORS_H** *(src/errors.h)*
+#### **CTRL_KEY_RIGHT** *(etc/lib/keys/ctrlkeys.h)*
 
-#### **ERR_BIT** *(src/drivers/disk/ata.h)*
+#### **CTRL_KEYS** *(etc/lib/keys/ctrlkeys.h)*
 
-#### **ERR_PORT** *(src/drivers/disk/ata.h)*
+#### **CTRL_KEY_UP** *(etc/lib/keys/ctrlkeys.h)*
 
-#### **ESC_PREFIX** *(src/util/kprintf/kprintf.h)*
+#### **CYAN** *(etc/lib/colors/colors.h)*
 
-#### **ESC_SUFFIX_LEN** *(src/util/kprintf/kprintf.h)*
+#### **DARK_GRAY** *(etc/lib/colors/colors.h)*
 
-#### **EXCEPTIONS_H** *(src/exceptions/exceptions.h)*
+#### **DATA_PORT** *(kernel/drivers/disk/ata.h)*
 
-#### **EXT2_SUPERBLOCK_OFFSET** *(src/fs/block/blockController.h)*
+#### **DATE_H** *(user/app/depsh/cmds/date.h)*
 
-#### **FBCONTROLLER_H** *(src/drivers/fb/fbController.h)*
+#### **DEPSH_CMD_CAT_H** *(user/app/depsh/cmds/cat.h)*
 
-#### **FIRST_IRQ_STUB_VECTOR** *(src/idt/idtController.h)*
+#### **DEPSH_CMD_CD_H** *(user/app/depsh/cmds/cd.h)*
 
-#### **FLUSH_EXT_CMD** *(src/drivers/disk/ata.h)*
+#### **DEPSH_CMD_CLEAR_H** *(user/app/depsh/cmds/clear.h)*
 
-#### **FRAMEALLOCATOR_H** *(src/memory/frameAlloc/frameAllocator.h)*
+#### **DEPSH_CMD_ECHO_H** *(user/app/depsh/cmds/echo.h)*
 
-#### **FRAME_BITMAP_LENGTH** *(src/memory/frameAlloc/frameAllocator.h)*
+#### **DEPSH_CMD_HELP_H** *(user/app/depsh/cmds/help.h)*
 
-#### **FRAME_CS_INDEX** *(src/process/scheduler/scheduler.h)*
+#### **DEPSH_CMD_LS_H** *(user/app/depsh/cmds/ls.h)*
 
-#### **FRAME_CS_INDEX_EXCEPTION** *(src/exceptions/exceptions.h)*
+#### **DEPSH_CMD_MKDIR_H** *(user/app/depsh/cmds/mkdir.h)*
 
-#### **FRAME_EFLAGS_INDEX** *(src/process/scheduler/scheduler.h)*
+#### **DEPSH_CMD_RM_H** *(user/app/depsh/cmds/rm.h)*
 
-#### **FRAME_EIP_INDEX** *(src/process/scheduler/scheduler.h)*
+#### **DEPSH_CMD_STAT_H** *(user/app/depsh/cmds/stat.h)*
 
-#### **FRAME_ERROR_CODE_INDEX_EXCEPTION** *(src/exceptions/exceptions.h)*
+#### **DEPSH_CMD_TICKS_H** *(user/app/depsh/cmds/ticks.h)*
 
-#### **FRAME_SIZE_BYTES** *(src/memory/frameAlloc/frameAllocator.h)*
+#### **DEPSH_CMD_TOUCH_H** *(user/app/depsh/cmds/touch.h)*
 
-#### **FRAME_SS_INDEX** *(src/process/scheduler/scheduler.h)*
+#### **DEPSH_COMMON_H** *(user/app/depsh/depshCommon.h)*
 
-#### **FRAME_USER_ESP_INDEX** *(src/process/scheduler/scheduler.h)*
+#### **DEPSH_H** *(user/app/depsh/depsh.h)*
 
-#### **FRAME_VECTOR_INDEX_EXCEPTION** *(src/exceptions/exceptions.h)*
+#### **DEVICE_CONTROL_PORT** *(kernel/drivers/disk/ata.h)*
 
-#### **FREE_MODE** *(src/fs/block/blockController.c)*
+#### **DF_BIT** *(kernel/drivers/disk/ata.h)*
 
-#### **GENERAL_ERROR** *(src/errors.h)*
+#### **DINV_H** *(user/app/dinv/dinv.h)*
 
-#### **GLYPH_HEIGHT** *(src/drivers/fb/fbController.h)*
+#### **DIRECTORYCONTROLLER_H** *(kernel/fs/ext2/directoryController.h)*
 
-#### **GLYPH_WIDTH** *(src/drivers/fb/fbController.h)*
+#### **DIRECTORYENTRY_H** *(kernel/fs/ext2/directoryEntry.h)*
 
-#### **GRAY** *(src/drivers/fb/fbController.h)*
+#### **DRIVE_SELECT_IO_PORT** *(kernel/drivers/disk/ata.h)*
 
-#### **GREEN** *(src/drivers/fb/fbController.h)*
+#### **DRQ_BIT** *(kernel/drivers/disk/ata.h)*
 
-#### **HEAP_END_MIN** *(src/memory/heap/kernelHeap.h)*
+#### **ECHO_OUT_FLAG_LEN** *(user/app/depsh/cmds/echo.c)*
 
-#### **HEAP_START** *(src/memory/heap/kernelHeap.h)*
+#### **ECHO_OUT_FLAG** *(user/app/depsh/cmds/echo.c)*
 
-#### **HEXPRINTER_H** *(src/util/hex/hexPrinter.h)*
+#### **ECHO_TRUNC_FLAG_LEN** *(user/app/depsh/cmds/echo.c)*
 
-#### **IDENTIFY_CMD** *(src/drivers/disk/ata.h)*
+#### **ECHO_TRUNC_FLAG** *(user/app/depsh/cmds/echo.c)*
 
-#### **IDENTIFY_VALUE_LENGTH** *(src/drivers/disk/ata.h)*
+#### **EMPTY_BLOCK** *(kernel/errors.h)*
 
-#### **IDT_CONTROLLER_H** *(src/idt/idtController.h)*
+#### **EPOCH_TO_DATE_H** *(etc/lib/epochToDate/epochToDate.h)*
 
-#### **IDT_ENTRY_AMT** *(src/idt/idtController.c)*
+#### **ERR_BIT** *(kernel/drivers/disk/ata.h)*
 
-#### **INDIRECT_PTR_LAYERS** *(src/fs/block/blockController.h)*
+#### **ERRORS_H** *(kernel/errors.h)*
 
-#### **INODE_BLK_PTR_AMT** *(src/fs/ext2/inode.h)*
+#### **ERR_PORT** *(kernel/drivers/disk/ata.h)*
 
-#### **INODE_DIR_TYPE** *(src/fs/ext2/directoryController.h)*
+#### **ESC_PREFIX** *(etc/kernel/kprintf/kprintf.h)*
 
-#### **INODE_ERROR** *(src/errors.h)*
+#### **ESC_SUFFIX_LEN** *(etc/kernel/kprintf/kprintf.h)*
 
-#### **INODE_FILE_TYPE** *(src/fs/ext2/directoryController.h)*
+#### **EXCEPTIONS_H** *(kernel/exceptions/exceptions.h)*
 
-#### **INODE_H** *(src/fs/ext2/inode.h)*
+#### **EXT2_SUPERBLOCK_OFFSET** *(kernel/fs/block/blockController.h)*
 
-#### **INTERRUPT_AND_RESERVED_EFLAGS** *(src/process/scheduler/scheduler.h)*
+#### **FBCONTROLLER_H** *(kernel/drivers/fb/fbController.h)*
 
-#### **INTERRUPT_GATE_TYPE** *(src/idt/idtController.c)*
+#### **FIRST_IRQ_STUB_VECTOR** *(kernel/idt/idtController.h)*
 
-#### **IS_PRINTING_FLAG** *(src/util/kprintf/kprintf.c)*
+#### **FLUSH_EXT_CMD** *(kernel/drivers/disk/ata.h)*
 
-#### **KERNELHEAP_H** *(src/memory/heap/kernelHeap.h)*
+#### **FRAMEALLOCATOR_H** *(kernel/memory/frameAlloc/frameAllocator.h)*
 
-#### **KERNEL_CEILING** *(src/memory/paging/paging.h)*
+#### **FRAME_BITMAP_LENGTH** *(kernel/memory/frameAlloc/frameAllocator.h)*
 
-#### **KERNEL_CODE_SEGMENT_SEL** *(src/gdt/segments.h)*
+#### **FRAME_CS_INDEX_EXCEPTION** *(kernel/exceptions/exceptions.h)*
 
-#### **KERNEL_DATA_SEGMENT_SEL** *(src/gdt/segments.h)*
+#### **FRAME_CS_INDEX** *(kernel/process/scheduler/scheduler.h)*
 
-#### **KERNEL_FRAME_SIZE** *(src/process/scheduler/scheduler.h)*
+#### **FRAME_EFLAGS_INDEX** *(kernel/process/scheduler/scheduler.h)*
 
-#### **KEYBOARD_H** *(src/drivers/keyboard/keyboard.h)*
+#### **FRAME_EIP_INDEX** *(kernel/process/scheduler/scheduler.h)*
 
-#### **KEY_EXTENDED_PREFIX** *(src/drivers/keyboard/keyboard.h)*
+#### **FRAME_ERROR_CODE_INDEX_EXCEPTION** *(kernel/exceptions/exceptions.h)*
 
-#### **KEY_PAUSE_PREFIX** *(src/drivers/keyboard/keyboard.h)*
+#### **FRAME_SIZE_BYTES** *(kernel/memory/frameAlloc/frameAllocator.h)*
 
-#### **KEY_RELEASE_BIT** *(src/drivers/keyboard/keyboard.h)*
+#### **FRAME_SS_INDEX** *(kernel/process/scheduler/scheduler.h)*
 
-#### **KPRINTF_BLACK** *(src/util/kprintf/kprintf.h)*
+#### **FRAME_USER_ESP_INDEX** *(kernel/process/scheduler/scheduler.h)*
 
-#### **KPRINTF_BLUE** *(src/util/kprintf/kprintf.h)*
+#### **FRAME_VECTOR_INDEX_EXCEPTION** *(kernel/exceptions/exceptions.h)*
 
-#### **KPRINTF_CYAN** *(src/util/kprintf/kprintf.h)*
+#### **FREE_MODE** *(kernel/fs/block/blockController.h)*
 
-#### **KPRINTF_GREEN** *(src/util/kprintf/kprintf.h)*
+#### **GENERAL_ERROR** *(kernel/errors.h)*
 
-#### **KPRINTF_H** *(src/util/kprintf/kprintf.h)*
+#### **GLYPH_HEIGHT** *(kernel/drivers/fb/fbController.h)*
 
-#### **KPRINTF_MAGENTA** *(src/util/kprintf/kprintf.h)*
+#### **GLYPH_WIDTH** *(kernel/drivers/fb/fbController.h)*
 
-#### **KPRINTF_RED** *(src/util/kprintf/kprintf.h)*
+#### **GRAY** *(etc/lib/colors/colors.h)*
 
-#### **KPRINTF_RESET** *(src/util/kprintf/kprintf.h)*
+#### **GREEN** *(etc/lib/colors/colors.h)*
 
-#### **KPRINTF_WHITE** *(src/util/kprintf/kprintf.h)*
+#### **HEAP_END_MIN** *(kernel/memory/heap/kernelHeap.h)*
 
-#### **KPRINTF_YELLOW** *(src/util/kprintf/kprintf.h)*
+#### **HEAP_START** *(kernel/memory/heap/kernelHeap.h)*
 
-#### **LBA48_MASTER_DRIVE** *(src/drivers/disk/ata.h)*
+#### **HEXPRINTER_H** *(etc/kernel/hex/hexPrinter.h)*
 
-#### **LBA48_SLAVE_DRIVE** *(src/drivers/disk/ata.h)*
+#### **HISTORY_CAP** *(user/shell/shell.c)*
 
-#### **LBA_HI_PORT** *(src/drivers/disk/ata.h)*
+#### **HISTORY_LINES** *(kernel/drivers/fb/fbController.c)*
 
-#### **LBA_LO_PORT** *(src/drivers/disk/ata.h)*
+#### **IDENTIFY_CMD** *(kernel/drivers/disk/ata.h)*
 
-#### **LBA_MID_PORT** *(src/drivers/disk/ata.h)*
+#### **IDENTIFY_VALUE_LENGTH** *(kernel/drivers/disk/ata.h)*
 
-#### **LBA_SECTOR_COUNT_HI_IND** *(src/drivers/disk/ata.h)*
+#### **IDT_CONTROLLER_H** *(kernel/idt/idtController.h)*
 
-#### **LBA_SECTOR_COUNT_LO_IND** *(src/drivers/disk/ata.h)*
+#### **IDT_ENTRY_AMT** *(kernel/idt/idtController.c)*
 
-#### **LBA_SECTOR_COUNT_MID_HI_IND** *(src/drivers/disk/ata.h)*
+#### **INDIRECT_PTR_LAYERS** *(kernel/fs/block/blockController.h)*
 
-#### **LBA_SECTOR_COUNT_MID_LO_IND** *(src/drivers/disk/ata.h)*
+#### **INODE_BLK_PTR_AMT** *(kernel/fs/ext2/inode.h)*
 
-#### **LIGHT_BLUE** *(src/drivers/fb/fbController.h)*
+#### **INODE_DIR_TYPE** *(kernel/fs/ext2/directoryController.h)*
 
-#### **LIGHT_CYAN** *(src/drivers/fb/fbController.h)*
+#### **INODE_ERROR** *(kernel/errors.h)*
 
-#### **LIGHT_GREEN** *(src/drivers/fb/fbController.h)*
+#### **INODE_FILE_TYPE** *(kernel/fs/ext2/directoryController.h)*
 
-#### **LIGHT_MAGENTA** *(src/drivers/fb/fbController.h)*
+#### **INODE_H** *(kernel/fs/ext2/inode.h)*
 
-#### **LIGHT_RED** *(src/drivers/fb/fbController.h)*
+#### **INODE_SYMLINK_TYPE** *(kernel/fs/ext2/directoryController.h)*
 
-#### **LOOKUP_MODE** *(src/fs/block/blockController.c)*
+#### **INODE_WRITE_SUCCESS** *(kernel/errors.h)*
 
-#### **MAGENTA** *(src/drivers/fb/fbController.h)*
+#### **INTERRUPT_AND_RESERVED_EFLAGS** *(kernel/process/scheduler/scheduler.h)*
 
-#### **MAX_POLL_REPEAT** *(src/drivers/disk/ata.h)*
+#### **INTERRUPT_GATE_TYPE** *(kernel/idt/idtController.c)*
 
-#### **MEMORY_MAP_H** *(src/memory/mmap/memoryMap.h)*
+#### **IS_PRINTING_FLAG** *(etc/kernel/kprintf/kprintf.c)*
 
-#### **MISC_PAGE_CNT** *(src/userland/userland.h)*
+#### **KERNEL_CEILING** *(kernel/memory/paging/paging.h)*
 
-#### **NAME_LEN** *(src/fs/ext2/directoryController.h)*
+#### **KERNEL_CODE_SEGMENT_SEL** *(kernel/gdt/segments.h)*
 
-#### **NIEN_BIT** *(src/drivers/disk/ata.h)*
+#### **KERNEL_DATA_SEGMENT_SEL** *(kernel/gdt/segments.h)*
 
-#### **NO_PERMISSION_MASK** *(src/fs/ext2/directoryController.h)*
+#### **KERNEL_FRAME_SIZE** *(kernel/process/scheduler/scheduler.h)*
 
-#### **ORANGE** *(src/drivers/fb/fbController.h)*
+#### **KERNELHEAP_H** *(kernel/memory/heap/kernelHeap.h)*
 
-#### **PAGE_FAULT_VECTOR** *(src/exceptions/exceptions.h)*
+#### **KEYBOARD_H** *(kernel/drivers/keyboard/keyboard.h)*
 
-#### **PAGE_PRESENT** *(src/memory/paging/paging.h)*
+#### **KEY_ESC** *(user/app/dinv/dinv.c)*
 
-#### **PAGE_RW** *(src/memory/paging/paging.h)*
+#### **KEY_EXTENDED_PREFIX** *(kernel/drivers/keyboard/keyboard.h)*
 
-#### **PAGE_USER** *(src/memory/paging/paging.h)*
+#### **KEY_PAUSE_PREFIX** *(kernel/drivers/keyboard/keyboard.h)*
 
-#### **PAGING_H** *(src/memory/paging/paging.h)*
+#### **KEY_RELEASE_BIT** *(kernel/drivers/keyboard/keyboard.h)*
 
-#### **PALETTE_LENGTH** *(src/util/kprintf/kprintf.c)*
+#### **KPRINTF_BLACK** *(etc/kernel/kprintf/kprintf.h)*
 
-#### **PALETTE_SIZE** *(src/drivers/fb/fbController.h)*
+#### **KPRINTF_BLUE** *(etc/kernel/kprintf/kprintf.h)*
 
-#### **PIC1_CMD** *(src/idt/idtController.h)*
+#### **KPRINTF_CYAN** *(etc/kernel/kprintf/kprintf.h)*
 
-#### **PIC1_DATA** *(src/idt/idtController.h)*
+#### **KPRINTF_GREEN** *(etc/kernel/kprintf/kprintf.h)*
 
-#### **PIC1_VECTOR_OFFSET** *(src/idt/idtController.h)*
+#### **KPRINTF_H** *(etc/kernel/kprintf/kprintf.h)*
 
-#### **PIC2_CMD** *(src/idt/idtController.h)*
+#### **KPRINTF_MAGENTA** *(etc/kernel/kprintf/kprintf.h)*
 
-#### **PIC2_DATA** *(src/idt/idtController.h)*
+#### **KPRINTF_RED** *(etc/kernel/kprintf/kprintf.h)*
 
-#### **PIC2_VECTOR_OFFSET** *(src/idt/idtController.h)*
+#### **KPRINTF_RESET** *(etc/kernel/kprintf/kprintf.h)*
 
-#### **PIC_EOI** *(src/idt/idtController.h)*
+#### **KPRINTF_WHITE** *(etc/kernel/kprintf/kprintf.h)*
 
-#### **PIT_CH0** *(src/drivers/timer/timerController.c)*
+#### **KPRINTF_YELLOW** *(etc/kernel/kprintf/kprintf.h)*
 
-#### **PIT_CMD** *(src/drivers/timer/timerController.c)*
+#### **LBA48_MASTER_DRIVE** *(kernel/drivers/disk/ata.h)*
 
-#### **PIT_HZ** *(src/drivers/timer/timerController.c)*
+#### **LBA48_SLAVE_DRIVE** *(kernel/drivers/disk/ata.h)*
+
+#### **LBA_HI_PORT** *(kernel/drivers/disk/ata.h)*
+
+#### **LBA_LO_PORT** *(kernel/drivers/disk/ata.h)*
+
+#### **LBA_MID_PORT** *(kernel/drivers/disk/ata.h)*
+
+#### **LBA_SECTOR_COUNT_HI_IND** *(kernel/drivers/disk/ata.h)*
+
+#### **LBA_SECTOR_COUNT_LO_IND** *(kernel/drivers/disk/ata.h)*
+
+#### **LBA_SECTOR_COUNT_MID_HI_IND** *(kernel/drivers/disk/ata.h)*
+
+#### **LBA_SECTOR_COUNT_MID_LO_IND** *(kernel/drivers/disk/ata.h)*
+
+#### **LIGHT_BLUE** *(etc/lib/colors/colors.h)*
+
+#### **LIGHT_CYAN** *(etc/lib/colors/colors.h)*
+
+#### **LIGHT_GREEN** *(etc/lib/colors/colors.h)*
+
+#### **LIGHT_MAGENTA** *(etc/lib/colors/colors.h)*
+
+#### **LIGHT_RED** *(etc/lib/colors/colors.h)*
+
+#### **LN_H** *(user/app/depsh/cmds/ln.h)*
+
+#### **LONGOPS_H** *(etc/lib/longops/longops.h)*
+
+#### **LOOKUP_MODE** *(kernel/fs/block/blockController.h)*
+
+#### **MAGENTA** *(etc/lib/colors/colors.h)*
+
+#### **MAX_COMP_LEN** *(etc/lib/strlen/strlen.h)*
+
+#### **MAX_DIR_DEPTH** *(kernel/fs/ext2/directoryController.c)*
+
+#### **MAX_FILE_SIZE** *(kernel/fs/ext2/blockGroupDescriptor.h)*
+
+#### **MAX_H** *(etc/lib/max/max.h)*
+
+#### **MAX_POLL_REPEAT** *(kernel/drivers/disk/ata.h)*
+
+#### **MAX_SYMLINK_LEN** *(kernel/fs/ext2/directoryController.c)*
+
+#### **MEM_H** *(etc/lib/mem/mem.h)*
+
+#### **MEMORY_MAP_H** *(kernel/memory/mmap/memoryMap.h)*
+
+#### **MIN_H** *(etc/lib/min/min.h)*
+
+#### **MISC_PAGE_CNT** *(kernel/userland/userland.h)*
+
+#### **MV_H** *(user/app/depsh/cmds/mv.h)*
+
+#### **NAME_LEN** *(kernel/fs/ext2/directoryController.h)*
+
+#### **NIEN_BIT** *(kernel/drivers/disk/ata.h)*
+
+#### **NO_PERMISSION_MASK** *(kernel/fs/ext2/directoryController.h)*
+
+#### **ORANGE** *(etc/lib/colors/colors.h)*
+
+#### **PAGE_FAULT_VECTOR** *(kernel/exceptions/exceptions.h)*
+
+#### **PAGE_PRESENT** *(kernel/memory/paging/paging.h)*
+
+#### **PAGE_RW** *(kernel/memory/paging/paging.h)*
+
+#### **PAGE_USER** *(kernel/memory/paging/paging.h)*
+
+#### **PAGING_H** *(kernel/memory/paging/paging.h)*
+
+#### **PALETTE_LENGTH** *(etc/kernel/kprintf/kprintf.c)*
+
+#### **PALETTE_SIZE** *(kernel/drivers/fb/fbController.h)*
+
+#### **PATH_LEN** *(kernel/fs/ext2/directoryController.c)*
+
+#### **PIC1_CMD** *(kernel/idt/idtController.h)*
+
+#### **PIC1_DATA** *(kernel/idt/idtController.h)*
+
+#### **PIC1_VECTOR_OFFSET** *(kernel/idt/idtController.h)*
+
+#### **PIC2_CMD** *(kernel/idt/idtController.h)*
+
+#### **PIC2_DATA** *(kernel/idt/idtController.h)*
+
+#### **PIC2_VECTOR_OFFSET** *(kernel/idt/idtController.h)*
+
+#### **PIC_EOI** *(kernel/idt/idtController.h)*
+
+#### **PIT_CH0** *(kernel/drivers/timer/timerController.c)*
+
+#### **PIT_CMD** *(kernel/drivers/timer/timerController.c)*
+
+#### **PIT_HZ** *(kernel/drivers/timer/timerController.c)*
 
 #### **PORT_IO_H** *(include/portio.h)*
 
-#### **PQUEUE_SIZE_ELEMENTS** *(src/process/queue/processQueue.h)*
+#### **PQUEUE_SIZE_ELEMENTS** *(kernel/process/queue/processQueue.h)*
 
-#### **PROCESSQUEUE_H** *(src/process/queue/processQueue.h)*
+#### **PROCESSQUEUE_H** *(kernel/process/queue/processQueue.h)*
 
-#### **READ48_SUPPORT_BIT** *(src/drivers/disk/ata.h)*
+#### **READ48_SUPPORT_BIT** *(kernel/drivers/disk/ata.h)*
 
-#### **READ_EXT** *(src/drivers/disk/ata.h)*
+#### **READ_EXT** *(kernel/drivers/disk/ata.h)*
 
-#### **RED** *(src/drivers/fb/fbController.h)*
+#### **RED** *(etc/lib/colors/colors.h)*
 
-#### **RINGBUFFER_H** *(src/util/rb/ringBuffer.h)*
+#### **RELEASE_YEAR** *(kernel/drivers/timer/timerController.c)*
 
-#### **ROOT_INODE_N** *(src/fs/ext2/directoryController.h)*
+#### **RINGBUFFER_H** *(etc/lib/rb/ringBuffer.h)*
 
-#### **SCHEDULER_H** *(src/process/scheduler/scheduler.h)*
+#### **ROOT_INODE_N** *(kernel/fs/ext2/directoryController.h)*
 
-#### **SECTOR_COUNT_PORT** *(src/drivers/disk/ata.h)*
+#### **RTC_CENTURY_REGISTER** *(kernel/drivers/timer/timerController.c)*
 
-#### **SEGMENTS_H** *(src/gdt/segments.h)*
+#### **RTC_CLOCK_FORMAT_BIT** *(kernel/drivers/timer/timerController.c)*
 
-#### **SENTINEL** *(src/userland/syscall/syscallController.h)*
+#### **RTC_COMMAND_PORT** *(kernel/drivers/timer/timerController.c)*
 
-#### **SERIAL_CONTROLLER_H** *(src/drivers/serial/serialController.h)*
+#### **RTC_DAY_REGISTER** *(kernel/drivers/timer/timerController.c)*
 
-#### **SINGLY_ROOT** *(src/fs/block/blockController.c)*
+#### **RTC_HOUR_REGISTER** *(kernel/drivers/timer/timerController.c)*
 
-#### **STACK_ADDR** *(src/userland/userland.h)*
+#### **RTC_MINUTE_REGISTER** *(kernel/drivers/timer/timerController.c)*
 
-#### **STACK_SIZE** *(src/process/scheduler/scheduler.h)*
+#### **RTC_MONTH_REGISTER** *(kernel/drivers/timer/timerController.c)*
 
-#### **STATUS_PORT** *(src/drivers/disk/ata.h)*
+#### **RTC_PM_BIT** *(kernel/drivers/timer/timerController.c)*
 
-#### **STREQ_H** *(src/util/streq/streq.h)*
+#### **RTC_READ_PORT** *(kernel/drivers/timer/timerController.c)*
 
-#### **SUPERBLOCK_H** *(src/fs/ext2/superblock.h)*
+#### **RTC_SECOND_REGISTER** *(kernel/drivers/timer/timerController.c)*
 
-#### **SUPPORTED_CMDS_IND** *(src/drivers/disk/ata.h)*
+#### **RTC_STATUS_REGISTER_A** *(kernel/drivers/timer/timerController.c)*
 
-#### **SYSCALLCONTROLLER_H** *(src/userland/syscall/syscallController.h)*
+#### **RTC_STATUS_REGISTER_B** *(kernel/drivers/timer/timerController.c)*
 
-#### **SYSCALL_ERROR** *(src/errors.h)*
+#### **RTC_UPDATE_IN_PROGRESS_BIT** *(kernel/drivers/timer/timerController.c)*
 
-#### **SYSCALL_H** *(user/shell/sys/syscall.h)*
+#### **RTC_WAIT_TIME** *(kernel/drivers/timer/timerController.c)*
 
-#### **SYSCALL_VECTOR_NUMBER** *(src/userland/syscall/syscallController.h)*
+#### **RTC_WEEKDAY_REGISTER** *(kernel/drivers/timer/timerController.c)*
 
-#### **SYS_EXIT** *(user/shell/sys/syscall.c)*
+#### **RTC_YEAR_REGISTER** *(kernel/drivers/timer/timerController.c)*
 
-#### **SYS_GET_STAT** *(user/shell/sys/syscall.c)*
+#### **SCHEDULER_H** *(kernel/process/scheduler/scheduler.h)*
 
-#### **SYS_GET_TICKS** *(user/shell/sys/syscall.c)*
+#### **SECTOR_COUNT_PORT** *(kernel/drivers/disk/ata.h)*
 
-#### **SYS_MAKE_DIR** *(user/shell/sys/syscall.c)*
+#### **SEGMENTS_H** *(kernel/gdt/segments.h)*
 
-#### **SYS_READ_CHAR** *(user/shell/sys/syscall.c)*
+#### **SENTINEL** *(kernel/userland/syscall/syscallController.h)*
 
-#### **SYS_READ_CHUNK** *(user/shell/sys/syscall.c)*
+#### **SERIAL_CONTROLLER_H** *(kernel/drivers/serial/serialController.h)*
 
-#### **SYS_RESOLVE_DIR** *(user/shell/sys/syscall.c)*
+#### **STACK_ADDR** *(kernel/userland/userland.h)*
 
-#### **SYS_WRITE_CHAR** *(user/shell/sys/syscall.c)*
+#### **STACK_SIZE** *(kernel/process/scheduler/scheduler.h)*
 
-#### **SYS_WRITE_CHAR_COLOR** *(user/shell/sys/syscall.c)*
+#### **STATUS_PORT** *(kernel/drivers/disk/ata.h)*
 
-#### **SYS_WRITE_STR** *(user/shell/sys/syscall.c)*
+#### **STREQ_H** *(etc/lib/streq/streq.h)*
 
-#### **SYS_WRITE_STR_COLOR** *(user/shell/sys/syscall.c)*
+#### **STRLEN_H** *(etc/lib/strlen/strlen.h)*
 
-#### **SYS_WRITE_STR_LEN** *(user/shell/sys/syscall.c)*
+#### **SUPERBLOCK_H** *(kernel/fs/ext2/superblock.h)*
 
-#### **SYS_YIELD** *(user/shell/sys/syscall.c)*
+#### **SUPPORTED_CMDS_IND** *(kernel/drivers/disk/ata.h)*
 
-#### **TARGET_HZ** *(src/drivers/timer/timerController.c)*
+#### **SYMLINK_MAX_DEPTH** *(kernel/fs/ext2/directoryController.c)*
 
-#### **TIMER_CONTROLLER_H** *(src/drivers/timer/timerController.h)*
+#### **SYS_APPEND_TO_INODE** *(user/sys/syscall.c)*
 
-#### **TRIPLY_ROOT** *(src/fs/block/blockController.c)*
+#### **SYSCALLCONTROLLER_H** *(kernel/userland/syscall/syscallController.h)*
 
-#### **TSSCONTROLLER_H** *(src/gdt/tssController.h)*
+#### **SYSCALL_ERROR** *(kernel/errors.h)*
 
-#### **TSS_GDT_ENTRY_IND** *(src/gdt/tssController.h)*
+#### **SYSCALL_H** *(user/sys/syscall.h)*
 
-#### **UART_CLOCK_HZ** *(src/drivers/serial/serialController.c)*
+#### **SYSCALL_VECTOR_NUMBER** *(kernel/userland/syscall/syscallController.h)*
 
-#### **USERLAND_H** *(src/userland/userland.h)*
+#### **SYS_CLEAR_SCREEN** *(user/sys/syscall.c)*
 
-#### **USER_CODE_SEGMENT_SEL** *(src/gdt/segments.h)*
+#### **SYS_EXIT** *(user/sys/syscall.c)*
 
-#### **USER_DATA_SEGMENT_SEL** *(src/gdt/segments.h)*
+#### **SYS_GET_CURSOR** *(user/sys/syscall.c)*
 
-#### **USER_FRAME_SIZE** *(src/process/scheduler/scheduler.h)*
+#### **SYS_GET_EPOCH** *(user/sys/syscall.c)*
 
-#### **USER_SPACE_END** *(src/userland/userland.h)*
+#### **SYS_GET_SCREEN_DIMS** *(user/sys/syscall.c)*
 
-#### **WHITE** *(src/drivers/fb/fbController.h)*
+#### **SYS_GET_STAT** *(user/sys/syscall.c)*
 
-#### **WORDS_PER_BLK** *(src/fs/block/blockController.h)*
+#### **SYS_GET_TICKS** *(user/sys/syscall.c)*
 
-#### **WORDS_PER_SECTOR** *(src/drivers/disk/ata.h)*
+#### **SYS_MAKE_DIR** *(user/sys/syscall.c)*
 
-#### **WRITE_EXT** *(src/drivers/disk/ata.h)*
+#### **SYS_MAKE_INODE** *(user/sys/syscall.c)*
 
-#### **YELLOW** *(src/drivers/fb/fbController.h)*
+#### **SYS_MAKE_LINK** *(user/sys/syscall.c)*
+
+#### **SYS_MAKE_SYMLINK** *(user/sys/syscall.c)*
+
+#### **SYS_READ_CHAR** *(user/sys/syscall.c)*
+
+#### **SYS_READ_CHUNK** *(user/sys/syscall.c)*
+
+#### **SYS_REMOVE_DIR** *(user/sys/syscall.c)*
+
+#### **SYS_REMOVE_INODE** *(user/sys/syscall.c)*
+
+#### **SYS_RENAME_INODE** *(user/sys/syscall.c)*
+
+#### **SYS_REPLACE_INODE** *(user/sys/syscall.c)*
+
+#### **SYS_RESOLVE_DIR** *(user/sys/syscall.c)*
+
+#### **SYS_RESOLVE_SYMLINK** *(user/sys/syscall.c)*
+
+#### **SYS_SET_CURSOR_NO_UPD** *(user/sys/syscall.c)*
+
+#### **SYS_SET_CURSOR** *(user/sys/syscall.c)*
+
+#### **SYS_SET_SCROLLBACK** *(user/sys/syscall.c)*
+
+#### **SYS_TRUNCATE_INODE** *(user/sys/syscall.c)*
+
+#### **SYS_WRITE_CHAR_COLOR** *(user/sys/syscall.c)*
+
+#### **SYS_WRITE_CHAR_NO_UPD** *(user/sys/syscall.c)*
+
+#### **SYS_WRITE_CHAR** *(user/sys/syscall.c)*
+
+#### **SYS_WRITE_STR_COLOR** *(user/sys/syscall.c)*
+
+#### **SYS_WRITE_STR_LEN_NO_UPD** *(user/sys/syscall.c)*
+
+#### **SYS_WRITE_STR_LEN** *(user/sys/syscall.c)*
+
+#### **SYS_WRITE_STR_NO_UPD** *(user/sys/syscall.c)*
+
+#### **SYS_WRITE_STR** *(user/sys/syscall.c)*
+
+#### **SYS_YIELD** *(user/sys/syscall.c)*
+
+#### **TARGET_HZ** *(kernel/drivers/timer/timerController.c)*
+
+#### **TEXT_CAP** *(user/app/dinv/dinv.c)*
+
+#### **TIMER_CONTROLLER_H** *(kernel/drivers/timer/timerController.h)*
+
+#### **TSSCONTROLLER_H** *(kernel/gdt/tssController.h)*
+
+#### **TSS_GDT_ENTRY_IND** *(kernel/gdt/tssController.h)*
+
+#### **UART_CLOCK_HZ** *(kernel/drivers/serial/serialController.c)*
+
+#### **USER_CODE_SEGMENT_SEL** *(kernel/gdt/segments.h)*
+
+#### **USER_DATA_SEGMENT_SEL** *(kernel/gdt/segments.h)*
+
+#### **USER_FRAME_SIZE** *(kernel/process/scheduler/scheduler.h)*
+
+#### **USERLAND_H** *(kernel/userland/userland.h)*
+
+#### **USER_SPACE_END** *(kernel/userland/userland.h)*
+
+#### **WHITE** *(etc/lib/colors/colors.h)*
+
+#### **WORDS_PER_BLK** *(kernel/fs/block/blockController.h)*
+
+#### **WORDS_PER_SECTOR** *(kernel/drivers/disk/ata.h)*
+
+#### **WRITE_EXT** *(kernel/drivers/disk/ata.h)*
+
+#### **YELLOW** *(etc/lib/colors/colors.h)*
 
