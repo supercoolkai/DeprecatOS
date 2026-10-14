@@ -45,7 +45,10 @@ throws away the press/release distinction given by the original scancode and ret
 calls `keyboard_handler()` and signals to the PIC command port (0x20) that the IRQ is closed (command 0x20)
 
 ### `void keyboard_handler`
-gets the scancode, if the scancode is signaling for the extended then it notes then returns. if its 0xE1 then skip for 5 iterations. then handles the release/down case seperately, checks if the key down exists in the enum, then handles each case for it. (switches the lock if its a lock, push the key to `g_rb` if its not one **and** is not released. also updates `keys_down` to be whether or not the key is released)
+gets the scancode, if the scancode is signaling for the extended then it notes then returns. if its 0xE1 then skip for 5 iterations. then handles the release/down case seperately, checks if the key down exists in the enum, then handles each case for it. (switches the lock if its a lock, push the key to `g_rb` if its not one **and** is not released. also updates `keys_down` to be whether or not the key is released). 
+notable combinations/commands:
+ - `PGUP` OR `PGDN`: Scrolls the entire framebuffer up/down by a page
+ - `SHIFT` + (`UP` OR `DOWN`): Scrolls the entire framebuffer up/down by a row
 
 ### `bool is_key_held(unsigned char key)`
 gets the `KeyCode` of the given `key` and returns whether or not that keycode is held using `keys_down`.

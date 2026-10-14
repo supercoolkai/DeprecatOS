@@ -76,7 +76,7 @@ gets the real `ext2_inode` struct from the unique `inode_n` representing it. ret
 ### `bool set_inode(uint32_t inode_n, struct ext2_inode *in)`
 like `put_inode()`, but instead it redirects the given `inode_n` point to the given inode `in`
 
-### `void read_inode(struct ext2_inode *inode, uint16_t *out)`
+### `static void read_inode(struct ext2_inode *inode, uint16_t *out)`
 calls the `indir_read_block()` function to read an inode typically returned from `get_inode()` into the buffer `out`. do note that it completely trusts in `indir_read_block()` to work properly and does not return/warn anything if something goes wrong, only panics if the block is out of range.
 
 ### `static void zero_block_buf(uint32_t *buf)`
@@ -85,14 +85,17 @@ zeroes the given array at `buf`. must be exactly `BIT_32_PER_BLK` in size, becau
 ### `bool delete_inode(uint32_t inode_n)`
 frees all the blocks at the inode at `inode_n` and saves it to disk. do note that this does not unlink it, it only deletes the data inside of it.
 
+### `uint32_t mint_inode(uint32_t f_size, uint32_t type, struct ext2_inode *out)`
+creates a blank inode with its `size_lo` being `f_size`, its `type_and_perms_lo` being `type`, and sets up all other relevant fields. then, sets `*out` to point to the new inode and returns its number.
+
 ### `void write_inode(uint16_t *buf, uint32_t f_size, bool is_dir, struct ext2_inode *out)`
-a function similar to `indir_read_block()` but it writes an inode from scratch, with data `buf`. iterative because too complicated to do recursive (maybe i was too lazy idk. either way its fine). uses `f_size` as `size_lo`, so `f_size` MUST match `buf`'s size. returns the inode number of the created inode, and returns the actual inode as a pointer to `out`.
+a function similar to `indir_read_block()` but it writes an inode from scratch, with data `buf`. iterative because too complicated to do recursive (maybe i was too lazy idk. either way its fine). first, calls `mint_inode` with the given parameters. uses `f_size` as `size_lo`, so `f_size` MUST match `buf`'s size. returns the inode number of the created inode, and returns the actual inode as a pointer to `out`.
 
 ### `uint32_t replace_inode(uint32_t inode_n, uint16_t *buf, uint32_t f_size, struct ext2_inode *out)`
 replaces the given `inode_n`'s contents with the contents inside `buf`
 
 ### `static uint32_t map_file_block(struct ext2_inode *inode, uint32_t file_blk_idx, uint32_t mode, uint32_t *disk_blk_out, uint32_t *alloc_cnt, struct pointer_table_record *pointer_table, uint32_t *table_cursor)`
-a really really naive function (which probably should be iterative), which looks up the given `file_blk_idx` in the inode `inode`. it essentially searches the inode's block pointers for it, and if it doesnt exist, two things can happen: if `mode` is `LOOKUP_MODE` or `FREE_MODE`, then it returns an error. if `mode` is `ALLOC_MODE`, it allocates a new block and points the block pointer to it, increments `alloc_cnt` if it exists, (and also adds the current entry to `pointer_table` if it's a block pointer,) then continues on with the function. if `mode` is `FREE_MODE` then it unlinks the block pointer.
+a really really naive function (which probably should be iterative), which looks up the given `file_blk_idx` in the inode `inode`. it essentially searches the inode's block pointers for it, and if it doesnt exist, two things can happen: if `mode` is `LOOKUP_MODE` or `FREE_MODE`, then it returns `EMPTY_BLOCK`. if `mode` is `ALLOC_MODE`, it allocates a new block and points the block pointer to it, increments `alloc_cnt` if it exists, (and also adds the current entry to `pointer_table` if it's a block pointer,) then continues on with the function. if `mode` is `FREE_MODE` then it unlinks the block pointer.
 
 ### `uint32_t append_to_inode(uint32_t inode_n, uint16_t *buf, uint32_t f_size, struct ext2_inode *out)`
 appends the given `buf` to the end of the inode at `inode_n`, and updates relevant inode fields (`last_mod_time`, `last_access_time`, `disk_sectors`, `size_lo`). afterwards it returns the inode at `inode_n`
