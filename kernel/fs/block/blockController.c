@@ -127,7 +127,6 @@ static void indir_free_block(uint32_t block_n, uint32_t layer, uint32_t (*indire
 // init globals n stuff for future reference
 void block_init(void)
 {
-  //read_block(1, sprblk_buf)
   for (uint32_t part = 0; part < MAX_MOUNTS; part++) {
     uint32_t drive = part/PARTS_PER_DRIVE;
 
@@ -135,7 +134,6 @@ void block_init(void)
     uint32_t mbr_part_n = part % PARTS_PER_DRIVE;
     uint8_t *part_entry;
     
-    // TODO: add the uhhhhh array init thingy 
     if (drive == 0) {
       mbr = read_mbr(master_drive);
 
