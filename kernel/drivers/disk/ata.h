@@ -46,9 +46,22 @@
 #define LBA_SECTOR_COUNT_MID_HI_IND 102
 #define LBA_SECTOR_COUNT_HI_IND 103
 
+struct ata_drive {
+  bool supports_read48;
+  uint8_t identify_magic;
+  uint64_t lba_sector_count;
+
+  uint16_t identify_values[IDENTIFY_VALUE_LENGTH];
+};
+
+extern struct ata_drive master_drive;
+extern struct ata_drive slave_drive;
+
 bool ata_identify(uint8_t drive);
 void ata_read48(uint8_t drive, uint64_t lba, uint16_t count, uint16_t *buf);
 void ata_write48(uint8_t drive, uint64_t lba, uint16_t count, uint16_t *buf);
+void ata_read48_part(uint8_t drive, uint64_t base_lba, uint64_t part_len, uint64_t lba, uint16_t count, uint16_t *buf);
+void ata_write48_part(uint8_t drive, uint64_t base_lba, uint64_t part_len, uint64_t lba, uint16_t count, uint16_t *buf);
 void ata_init(void);
 
 #endif

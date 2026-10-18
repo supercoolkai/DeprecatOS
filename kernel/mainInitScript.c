@@ -1,5 +1,6 @@
 #include "idt/idtController.h"
 #include "drivers/timer/timerController.h"
+#include "fs/mount/mount.h"
 #include "drivers/serial/serialController.h"
 #include "drivers/fb/fbController.h"
 #include "memory/mmap/memoryMap.h"
@@ -70,6 +71,10 @@ void mainInitScript(MBIInfo *info)
 
   kprintf(KPRINTF_GREEN "* " KPRINTF_RESET KPRINTF_WHITE "Initializing the ext2 bitmap layer...       ");
   ext2_bitmap_init();
+  kprintf(KPRINTF_WHITE "[ " KPRINTF_RESET KPRINTF_GREEN "OK" KPRINTF_RESET KPRINTF_WHITE " ]\n");
+
+  kprintf(KPRINTF_GREEN "* " KPRINTF_RESET KPRINTF_WHITE "Initializing the mount handler...           ");
+  mount_init();
   kprintf(KPRINTF_WHITE "[ " KPRINTF_RESET KPRINTF_GREEN "OK" KPRINTF_RESET KPRINTF_WHITE " ]\n");
 
   kprintf(KPRINTF_GREEN "* " KPRINTF_RESET KPRINTF_WHITE "Initializing the GDT and TSS controller...  ");

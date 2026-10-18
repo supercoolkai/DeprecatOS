@@ -23,6 +23,14 @@ static uint32_t ngroups;
 static uint32_t bgdt_blk_n = 1;
 static uint32_t first_inode_n = 1;
 
+static uint64_t part_start_lba;
+static uint64_t part_sector_count;
+
+void set_bitmap_controller_part_bounds(uint64_t start_lba, uint64_t sector_count){
+  part_start_lba = start_lba;
+  part_sector_count = sector_count;
+}
+
 // a quick connection point between
 // different files using the bgdt,
 // put this in all files using bgdt
@@ -39,7 +47,7 @@ void set_bitmap_controller_superblk(struct ext2_superblock *new_superblk){
 
 void ext2_bitmap_init(void)
 {
-  ata_read48(ATA_MASTER, superblk_pos / BYTES_PER_SECTOR, sizeof(struct ext2_superblock) / BYTES_PER_SECTOR, sprblk_buf);
+  ata_read48_part(ATA_MASTER, part_start_lba, part_sector_count, superblk_pos / BYTES_PER_SECTOR, sizeof(struct ext2_superblock) / BYTES_PER_SECTOR, sprblk_buf);
   read_block(bgdt_blk_n, bgdt_buf);
 
   superblk = (struct ext2_superblock *) sprblk_buf;
@@ -88,7 +96,7 @@ uint32_t alloc_inode(void)
         superblk->unalloc_inodes--;
 
         write_block(bgdt_blk_n, (uint16_t *) bgdt);
-        ata_write48(ATA_MASTER, superblk_pos / BYTES_PER_SECTOR, sizeof(struct ext2_superblock) / BYTES_PER_SECTOR, sprblk_buf);
+        ata_write48_part(ATA_MASTER, part_start_lba, part_sector_count, superblk_pos / BYTES_PER_SECTOR, sizeof(struct ext2_superblock) / BYTES_PER_SECTOR, sprblk_buf);
         write_block(bgdt[group_n].inode_bitmap_addr, (uint16_t *) bitmap);
         set_block_controller_bgdt(bgdt);
         set_block_controller_superblk(superblk);
@@ -148,7 +156,7 @@ uint32_t alloc_block(void)
         superblk->unalloc_blocks--;
 
         write_block(bgdt_blk_n, (uint16_t *) bgdt);
-        ata_write48(ATA_MASTER, superblk_pos / BYTES_PER_SECTOR, sizeof(struct ext2_superblock) / BYTES_PER_SECTOR, sprblk_buf);
+        ata_write48_part(ATA_MASTER, part_start_lba, part_sector_count, superblk_pos / BYTES_PER_SECTOR, sizeof(struct ext2_superblock) / BYTES_PER_SECTOR, sprblk_buf);
         write_block(bgdt[group_n].block_bitmap_addr, (uint16_t *) bitmap);
         set_block_controller_bgdt(bgdt);
         set_block_controller_superblk(superblk);
@@ -200,7 +208,7 @@ bool free_inode(uint32_t inode_n)
     superblk->unalloc_inodes++;
 
     write_block(bgdt_blk_n, (uint16_t *) bgdt);
-    ata_write48(ATA_MASTER, superblk_pos / BYTES_PER_SECTOR, sizeof(struct ext2_superblock) / BYTES_PER_SECTOR, sprblk_buf);
+    ata_write48_part(ATA_MASTER, part_start_lba, part_sector_count, superblk_pos / BYTES_PER_SECTOR, sizeof(struct ext2_superblock) / BYTES_PER_SECTOR, sprblk_buf);
     write_block(bgdt[group_n].inode_bitmap_addr, (uint16_t *) bitmap);
     set_block_controller_bgdt(bgdt);
     set_block_controller_superblk(superblk);
@@ -242,7 +250,7 @@ bool free_block(uint32_t block_n)
     superblk->unalloc_blocks++;
 
     write_block(bgdt_blk_n, (uint16_t *) bgdt);
-    ata_write48(ATA_MASTER, superblk_pos / BYTES_PER_SECTOR, sizeof(struct ext2_superblock) / BYTES_PER_SECTOR, sprblk_buf);
+    ata_write48_part(ATA_MASTER, part_start_lba, part_sector_count, superblk_pos / BYTES_PER_SECTOR, sizeof(struct ext2_superblock) / BYTES_PER_SECTOR, sprblk_buf);
     write_block(bgdt[group_n].block_bitmap_addr, (uint16_t *) bitmap);
     set_block_controller_bgdt(bgdt);
     set_block_controller_superblk(superblk);

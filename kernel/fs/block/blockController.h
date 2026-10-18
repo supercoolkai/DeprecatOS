@@ -13,9 +13,36 @@
 #define EXT2_SUPERBLOCK_OFFSET 1024
 #define INDIRECT_PTR_LAYERS 3
 
+#define PARTS_PER_DRIVE 4
+
 #define LOOKUP_MODE 0
 #define ALLOC_MODE 1
 #define FREE_MODE 2
+
+#define MAX_MOUNTS 8
+#define FS_INFO_LABEL_LEN 17
+
+struct fs_info {
+  uint16_t bgdt_buf[WORDS_PER_BLK];                        
+  uint16_t sprblk_buf[sizeof(struct ext2_superblock) / 2]; 
+  struct ata_drive *drive;
+  struct ext2_superblock *superblk;
+  struct ext2_block_group_descriptor *bgdt;
+
+  uint64_t start_lba;
+  uint64_t sector_count;
+
+  uint32_t inode_size;       
+  uint32_t inodes_per_grp;   
+  uint32_t blks_per_grp;     
+  uint32_t frags_per_grp;    
+  uint32_t ngroups;          
+  
+  uint32_t mountpoint;
+  char label[FS_INFO_LABEL_LEN];
+};
+
+extern struct fs_info fs_entries[MAX_MOUNTS];
 
 void read_block(uint32_t block_n, uint16_t *buf);
 void write_block(uint32_t block_n, uint16_t *buf);

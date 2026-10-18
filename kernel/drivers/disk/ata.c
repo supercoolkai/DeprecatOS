@@ -7,12 +7,10 @@
 #include "portio.h"
 #include <stdbool.h>
 #include "hex/hexPrinter.h"
+#include "errors.h"
 
-
-
-static uint16_t identify_values[IDENTIFY_VALUE_LENGTH];
-static bool supports_read48;
-static uint64_t lba_sector_count;
+struct ata_drive master_drive;
+struct ata_drive slave_drive;
 
 static void poll(void){
   uint8_t test = inb(STATUS_PORT);
@@ -96,7 +94,10 @@ bool ata_identify(uint8_t drive) {
   for (int i = 0; i < IDENTIFY_VALUE_LENGTH; i++) {
     uint16_t val = inw(DATA_PORT);
     if (drive == ATA_MASTER) {
-      identify_values[i] = val;
+      master_drive.identify_values[i] = val;
+    }
+    else{
+      slave_drive.identify_values[i] = val;
     }
   }
 
@@ -105,6 +106,14 @@ bool ata_identify(uint8_t drive) {
 
 void ata_read48(uint8_t drive, uint64_t lba, uint16_t count, uint16_t *buf)
 {
+  uint64_t lba_sector_count;
+  if (drive == ATA_MASTER)
+    lba_sector_count = master_drive.lba_sector_count;
+  else if (drive == ATA_SLAVE)
+    lba_sector_count = slave_drive.lba_sector_count;
+  else{
+    return;
+  }
   if (lba + count > lba_sector_count) {
     panic("KERNEL PANIC: LBA OUT OF BOUNDS");
   }
@@ -143,6 +152,14 @@ void ata_read48(uint8_t drive, uint64_t lba, uint16_t count, uint16_t *buf)
 
 void ata_write48(uint8_t drive, uint64_t lba, uint16_t count, uint16_t *buf)
 {
+  uint64_t lba_sector_count;
+  if (drive == ATA_MASTER)
+    lba_sector_count = master_drive.lba_sector_count;
+  else if (drive == ATA_SLAVE)
+    lba_sector_count = slave_drive.lba_sector_count;
+  else{
+    return;
+  }
   if (lba + count > lba_sector_count) {
     panic("KERNEL PANIC: LBA OUT OF BOUNDS");
   }
@@ -177,19 +194,40 @@ void ata_write48(uint8_t drive, uint64_t lba, uint16_t count, uint16_t *buf)
   }
   wait_bsy_clear();
   outb(COMMAND_IO_PORT, FLUSH_EXT_CMD);
-  
+
   for (int k = 0; k < 4; k++)
     wait_100_ns();
 
   wait_bsy_clear();
 }
 
+void ata_read48_part(uint8_t drive, uint64_t base_lba, uint64_t part_len, uint64_t lba, uint16_t count, uint16_t *buf)
+{
+  if (lba + count > part_len) {
+    panic("KERNEL PANIC: LBA OUT OF PARTITION BOUNDS");
+  }
+
+  ata_read48(drive, base_lba + lba, count, buf);
+}
+
+void ata_write48_part(uint8_t drive, uint64_t base_lba, uint64_t part_len, uint64_t lba, uint16_t count, uint16_t *buf)
+{
+  if (lba + count > part_len) {
+    panic("KERNEL PANIC: LBA OUT OF PARTITION BOUNDS");
+  }
+
+  ata_write48(drive, base_lba + lba, count, buf);
+}
+
 
 void ata_init(void)
 {
+  master_drive.identify_magic = ATA_MASTER;
+  slave_drive.identify_magic = ATA_SLAVE;
+
   // identification, warn if slave no exist
-  ata_identify(ATA_MASTER);
-  bool b = ata_identify(ATA_SLAVE);
+  ata_identify(master_drive.identify_magic);
+  bool b = ata_identify(slave_drive.identify_magic);
 
   if (!b) {
     kprintf(KPRINTF_YELLOW "\nIdentification failed for the slave driver. Highly recommended to reboot and try again if you are sure this is not a hardware issue. Initialization has continued without.\n" KPRINTF_RESET);
@@ -198,14 +236,30 @@ void ata_init(void)
   outb(DEVICE_CONTROL_PORT, NIEN_BIT);
   
   // get lba sector count for bounds check
-  lba_sector_count = (uint64_t)identify_values[LBA_SECTOR_COUNT_LO_IND]
-                   | (uint64_t)identify_values[LBA_SECTOR_COUNT_MID_LO_IND] << 16
-                   | (uint64_t)identify_values[LBA_SECTOR_COUNT_MID_HI_IND] << 32
-                   | (uint64_t)identify_values[LBA_SECTOR_COUNT_HI_IND] << 48;
+  master_drive.lba_sector_count = (uint64_t)master_drive.identify_values[LBA_SECTOR_COUNT_LO_IND]
+                   | (uint64_t)master_drive.identify_values[LBA_SECTOR_COUNT_MID_LO_IND] << 16
+                   | (uint64_t)master_drive.identify_values[LBA_SECTOR_COUNT_MID_HI_IND] << 32
+                   | (uint64_t)master_drive.identify_values[LBA_SECTOR_COUNT_HI_IND] << 48;
   
   // if no support then panic because no bueno 
-  supports_read48 = (identify_values[SUPPORTED_CMDS_IND] & READ48_SUPPORT_BIT);
+  master_drive.supports_read48 = (master_drive.identify_values[SUPPORTED_CMDS_IND] & READ48_SUPPORT_BIT);
+  
+  if (b){
+    // get lba sector count for bounds check
+    slave_drive.lba_sector_count = (uint64_t)slave_drive.identify_values[LBA_SECTOR_COUNT_LO_IND]
+                    | (uint64_t)slave_drive.identify_values[LBA_SECTOR_COUNT_MID_LO_IND] << 16
+                    | (uint64_t)slave_drive.identify_values[LBA_SECTOR_COUNT_MID_HI_IND] << 32
+                    | (uint64_t)slave_drive.identify_values[LBA_SECTOR_COUNT_HI_IND] << 48;
+    
+    // if no support then panic because no bueno 
+    slave_drive.supports_read48 = (slave_drive.identify_values[SUPPORTED_CMDS_IND] & READ48_SUPPORT_BIT);
+  }
 
-  if (!supports_read48) 
+  if (!master_drive.supports_read48) 
     panic("KERNEL PANIC: INCOMPATBILE HARDWARE, NO 48-BIT PIO SUPPORT");
+  
+  if (b && !slave_drive.supports_read48){
+    kprintf(KPRINTF_YELLOW "\nSlave drive does not support read48, unusable." KPRINTF_RESET);
+    slave_drive.lba_sector_count = 0;
+  }
 }
