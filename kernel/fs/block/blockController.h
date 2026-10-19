@@ -43,14 +43,13 @@ struct fs_info {
 };
 
 extern struct fs_info fs_entries[MAX_MOUNTS];
+extern struct fs_info *root_fs;
 
 void read_block(uint32_t block_n, uint16_t *buf);
 void write_block(uint32_t block_n, uint16_t *buf);
 void block_init(void);
 bool get_inode(uint32_t inode_n, struct ext2_inode *out);
 uint32_t put_inode(uint16_t *buf, uint32_t f_size, bool is_dir, struct ext2_inode *out);
-void set_block_controller_bgdt(struct ext2_block_group_descriptor *new_bgdt);
-void set_block_controller_superblk(struct ext2_superblock *new_superblk);
 bool set_inode(uint32_t inode_n, struct ext2_inode *in);
 bool delete_inode(uint32_t inode_n);
 uint32_t write_inode(uint16_t *buf, struct ext2_inode *inode);

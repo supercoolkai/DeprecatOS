@@ -19,41 +19,13 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-static uint16_t root_bgdt_buf[WORDS_PER_BLK];
-static uint16_t root_sprblk_buf[sizeof(struct ext2_superblock) / 2];
-
-static struct ext2_superblock *root_superblk;
-static struct ext2_block_group_descriptor *root_bgdt;
-
-static uint64_t root_start_lba;
-static uint64_t root_sector_count;
-
-static uint32_t root_inode_size;
-static uint32_t root_inodes_per_grp;
-static uint32_t root_blks_per_grp;
-static uint32_t root_frags_per_grp;
-static uint32_t root_ngroups;
-
 static uint16_t sectors_per_blk = BLOCK_SIZE / BYTES_PER_SECTOR;
 static uint32_t superblk_pos = EXT2_SUPERBLOCK_OFFSET;
 static uint32_t bgdt_blk_n = 1;
 static uint32_t first_inode_n = 1;
 
 struct fs_info fs_entries[MAX_MOUNTS];
-
-// a quick connection point between
-// different files using the root_bgdt,
-// put this in all files using root_bgdt
-void set_block_controller_bgdt(struct ext2_block_group_descriptor *new_bgdt){
-  root_bgdt = new_bgdt;
-}
-
-// a quick connection point between
-// different files using the superblock,
-// put this in all files using the superblock
-void set_block_controller_superblk(struct ext2_superblock *new_superblk){
-  root_superblk = new_superblk;
-}
+struct fs_info *root_fs;
 
 // dum block reading function. very simple math u just 
 // get lba get sectors then u get block.
@@ -61,14 +33,14 @@ void read_block(uint32_t block_n, uint16_t *buf)
 {
   uint64_t lba = (uint64_t) (block_n * sectors_per_blk);
 
-  ata_read48_part(ATA_MASTER, root_start_lba, root_sector_count, lba, sectors_per_blk, buf);
+  ata_read48_part(ATA_MASTER, root_fs->start_lba, root_fs->sector_count, lba, sectors_per_blk, buf);
 }
 
 void write_block(uint32_t block_n, uint16_t *buf)
 {
   uint64_t lba = (uint64_t) (block_n * sectors_per_blk);
 
-  ata_write48_part(ATA_MASTER, root_start_lba, root_sector_count, lba, sectors_per_blk, buf);
+  ata_write48_part(ATA_MASTER, root_fs->start_lba, root_fs->sector_count, lba, sectors_per_blk, buf);
 }
 
 static void indir_read_block(uint16_t **out_cursor, uint32_t *blocks_left, uint32_t block_n, int layer, uint16_t (*indirect_buf) [WORDS_PER_BLK])
@@ -259,23 +231,7 @@ void block_init(void)
     panic("KERNEL PANIC: bad drive");
   }
 
-  root_start_lba = fs_entries[root_part].start_lba;
-  root_sector_count = fs_entries[root_part].sector_count;
-
-  ata_read48_part(ATA_MASTER, root_start_lba, root_sector_count, superblk_pos / BYTES_PER_SECTOR, sizeof(struct ext2_superblock) / BYTES_PER_SECTOR, root_sprblk_buf);
-  read_block(bgdt_blk_n, root_bgdt_buf);
-
-  root_superblk = (struct ext2_superblock *) root_sprblk_buf;
-  root_bgdt = (struct ext2_block_group_descriptor *) root_bgdt_buf;
-
-  root_inodes_per_grp = root_superblk->inodes_per_group;
-  root_blks_per_grp = root_superblk->blocks_per_group;
-  root_frags_per_grp = root_superblk->frags_per_group;
-  root_inode_size = root_superblk->inode_size;
-
-  root_ngroups = (root_superblk->block_cnt + root_blks_per_grp - 1) / root_blks_per_grp;
-
-  set_bitmap_controller_part_bounds(root_start_lba, root_sector_count);
+  root_fs = &fs_entries[root_part];
 }
 
 // get inode  part one of pipeline need 
@@ -283,17 +239,17 @@ void block_init(void)
 bool get_inode(uint32_t inode_n, struct ext2_inode *out)
 {
   uint16_t *buf = kmalloc(BLOCK_SIZE);
-  uint32_t g = (inode_n - 1) / root_inodes_per_grp;
-  uint32_t ind = (inode_n - 1) % root_inodes_per_grp;
+  uint32_t g = (inode_n - 1) / root_fs->inodes_per_grp;
+  uint32_t ind = (inode_n - 1) % root_fs->inodes_per_grp;
   
-  if (inode_n == 0 || inode_n > root_superblk->inode_cnt)
+  if (inode_n == 0 || inode_n > root_fs->superblk->inode_cnt)
   {
     kfree(buf);
     return false;
   }
 
-  uint32_t blk = root_bgdt[g].inode_table_start_addr + (ind * root_inode_size) / BLOCK_SIZE;
-  uint32_t off = (ind * root_inode_size) % BLOCK_SIZE;
+  uint32_t blk = root_fs->bgdt[g].inode_table_start_addr + (ind * root_fs->inode_size) / BLOCK_SIZE;
+  uint32_t off = (ind * root_fs->inode_size) % BLOCK_SIZE;
   
   read_block(blk, buf);
   *out = *(struct ext2_inode *)(((uint8_t *)buf) + off);
@@ -305,17 +261,17 @@ bool get_inode(uint32_t inode_n, struct ext2_inode *out)
 bool set_inode(uint32_t inode_n, struct ext2_inode *in)
 {
   uint16_t *buf = kmalloc(BLOCK_SIZE);
-  uint32_t g = (inode_n - 1) / root_inodes_per_grp;
-  uint32_t ind = (inode_n - 1) % root_inodes_per_grp;
+  uint32_t g = (inode_n - 1) / root_fs->inodes_per_grp;
+  uint32_t ind = (inode_n - 1) % root_fs->inodes_per_grp;
   
-  if (inode_n == 0 || inode_n > root_superblk->inode_cnt)
+  if (inode_n == 0 || inode_n > root_fs->superblk->inode_cnt)
   {
     kfree(buf);
     return false;
   }
 
-  uint32_t blk = root_bgdt[g].inode_table_start_addr + (ind * root_inode_size) / BLOCK_SIZE;
-  uint32_t off = (ind * root_inode_size) % BLOCK_SIZE;
+  uint32_t blk = root_fs->bgdt[g].inode_table_start_addr + (ind * root_fs->inode_size) / BLOCK_SIZE;
+  uint32_t off = (ind * root_fs->inode_size) % BLOCK_SIZE;
   
   read_block(blk, buf);
   *(struct ext2_inode *)(((uint8_t *)buf) + off) = *in;
@@ -358,10 +314,9 @@ bool delete_inode(uint32_t inode_n)
   }
   
   if((inode.type_and_perms_lo & NO_PERMISSION_MASK) == INODE_DIR_TYPE){
-    uint32_t group_n = (inode_n - first_inode_n) / root_inodes_per_grp;
-    root_bgdt[group_n].dir_cnt--;
-    write_block(bgdt_blk_n, (uint16_t *) root_bgdt);
-    set_bitmap_controller_bgdt(root_bgdt);
+    uint32_t group_n = (inode_n - first_inode_n) / root_fs->inodes_per_grp;
+    root_fs->bgdt[group_n].dir_cnt--;
+    write_block(bgdt_blk_n, (uint16_t *) root_fs->bgdt);
   }
 
   if (!free_inode(inode_n)){
@@ -1558,9 +1513,9 @@ uint32_t put_inode(uint16_t *buf, uint32_t f_size, bool is_dir, struct ext2_inod
     return INODE_ERROR;
   }
 
-  uint32_t group_n = (inode_n - first_inode_n) / root_inodes_per_grp;
+  uint32_t group_n = (inode_n - first_inode_n) / root_fs->inodes_per_grp;
 
-  if (group_n >= root_ngroups || inode_n > root_superblk->inode_cnt) {
+  if (group_n >= root_fs->ngroups || inode_n > root_fs->superblk->inode_cnt) {
     panic("mint_inode() failed to return a correct value!! disk corruption likely :-(");
   }
 
@@ -1571,9 +1526,8 @@ uint32_t put_inode(uint16_t *buf, uint32_t f_size, bool is_dir, struct ext2_inod
   }
 
   if (is_dir){
-    root_bgdt[group_n].dir_cnt++;
-    write_block(bgdt_blk_n, (uint16_t *) root_bgdt);
-    set_bitmap_controller_bgdt(root_bgdt);
+    root_fs->bgdt[group_n].dir_cnt++;
+    write_block(bgdt_blk_n, (uint16_t *) root_fs->bgdt);
   }
 
   return inode_n;

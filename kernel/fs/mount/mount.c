@@ -11,20 +11,9 @@
 #define MOUNT_PATH_SEED "/mnt/"
 #define MOUNT_PATH_SEED_LEN 5
 
-static uint32_t root_slot_n = 0xFFFFFFFF;
-
 void mount_init(void)
 {
-  for (uint32_t i = 0; i < 4; i ++){
-    if (fs_entries[i].sector_count != 0) {
-      root_slot_n = i;
-      break;
-    }
-  }
-
-  if (root_slot_n == 0xFFFFFFFF){
-    panic("KERNEL PANIC: No root partition available");
-  }
+  uint32_t root_slot_n = root_fs - fs_entries;
 
   char mount_path[MOUNT_PATH_SEED_LEN + FS_INFO_LABEL_LEN];
   for (uint32_t i = root_slot_n + 1; i < MAX_MOUNTS; i++) {
