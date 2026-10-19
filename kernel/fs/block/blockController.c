@@ -124,164 +124,129 @@ static void indir_free_block(uint32_t block_n, uint32_t layer, uint32_t (*indire
   free_block(block_n);
 }
 
+static bool fill_partition_entry(uint8_t drive_magic, uint32_t part)
+{
+  struct ata_drive drive;
+  struct ata_drive *drive_ptr;
+  if (drive_magic == ATA_MASTER){
+    drive = master_drive;
+    drive_ptr = &master_drive;
+  }
+  else if (drive_magic == ATA_SLAVE){
+    drive = slave_drive;
+    drive_ptr = &slave_drive;
+  }
+  else
+    return false;
+
+  struct drive_mbr *mbr;
+  uint8_t *part_entry;
+  uint32_t mbr_part_n = part % PARTS_PER_DRIVE;
+
+  mbr = read_mbr(drive);
+
+  if (mbr == NULL){
+    if (drive_magic == ATA_MASTER)
+      panic("KERNEL PANIC: master drive has no MBR");
+    return false;
+  }
+
+  if (!(mbr->partition_magic_1 == 0x55 && mbr->partition_magic_2 == 0xAA)){
+    if (drive_magic == ATA_MASTER)
+      panic("KERNEL PANIC: master drive has a bad MBR signature");
+    kprintf(KPRINTF_YELLOW "WARNING: slave drive bad" KPRINTF_RESET);
+    kfree(mbr);
+    return false;
+  }
+
+  part_entry = (uint8_t *)(((uint8_t *) mbr) + DRIVE_UNUSED_SIZE + PART_ENTRY_SIZE * mbr_part_n);
+  uint8_t part_good = *((uint8_t*)(part_entry + PART_GOOD_OFFSET));
+  
+  if (part_good == 0x05 || part_good == 0x0F){
+    if (drive_magic == ATA_MASTER)
+      panic("KERNEL PANIC: master drive has an extended partition");
+    kprintf(KPRINTF_YELLOW "WARNING: slave drive bad" KPRINTF_RESET);
+    kfree(mbr);
+    return false;
+  }
+
+  if (part_good != 0x83){
+    kfree(mbr);
+    return true;
+  }
+
+  fs_entries[part].drive = drive_ptr;
+  fs_entries[part].start_lba = 
+    (uint32_t)*(part_entry + PART_LBA_OFFSET) |
+    ((uint32_t)*(part_entry + PART_LBA_OFFSET + 1)) << 8 |
+    ((uint32_t)*(part_entry + PART_LBA_OFFSET + 2)) << 16 |
+    ((uint32_t)*(part_entry + PART_LBA_OFFSET + 3)) << 24;
+  
+  fs_entries[part].sector_count = 
+    (uint32_t)*(part_entry + PART_SECTOR_COUNT_OFFSET) |
+    ((uint32_t)*(part_entry + PART_SECTOR_COUNT_OFFSET + 1)) << 8 |
+    ((uint32_t)*(part_entry + PART_SECTOR_COUNT_OFFSET + 2)) << 16 |
+    ((uint32_t)*(part_entry + PART_SECTOR_COUNT_OFFSET + 3)) << 24;
+  
+  if (fs_entries[part].sector_count == 0 || fs_entries[part].start_lba + fs_entries[part].sector_count > drive.lba_sector_count){
+    if (drive_magic == ATA_MASTER)
+      panic("KERNEL PANIC: master drive partition is out of bounds");
+    kprintf(KPRINTF_YELLOW "WARNING: slave drive bad" KPRINTF_RESET);
+    fs_entries[part].sector_count = 0;
+    kfree(mbr);
+    return false;
+  }
+
+  ata_read48_part(fs_entries[part].drive->identify_magic,
+                  fs_entries[part].start_lba,
+                  fs_entries[part].sector_count,
+                  superblk_pos / BYTES_PER_SECTOR,
+                  sizeof(struct ext2_superblock) / BYTES_PER_SECTOR,
+                  fs_entries[part].sprblk_buf);
+
+  fs_entries[part].superblk = (struct ext2_superblock *) fs_entries[part].sprblk_buf;
+
+  if (!(fs_entries[part].superblk->ext2_signature == 0xEF53 && (1024 << fs_entries[part].superblk->block_size_adjusted) == 4096)){
+    if (drive_magic == ATA_MASTER)
+      panic("KERNEL PANIC: master drive partition is not ext2 with 4K blocks");
+    kprintf(KPRINTF_YELLOW "WARNING: slave drive bad" KPRINTF_RESET);
+    fs_entries[part].sector_count = 0;
+    fs_entries[part].superblk = NULL;
+    kfree(mbr);
+    return false;
+  }
+
+  ata_read48_part(fs_entries[part].drive->identify_magic,
+                  fs_entries[part].start_lba,
+                  fs_entries[part].sector_count,
+                  bgdt_blk_n * sectors_per_blk,
+                  sectors_per_blk,
+                  fs_entries[part].bgdt_buf);
+
+  fs_entries[part].bgdt = (struct ext2_block_group_descriptor *) fs_entries[part].bgdt_buf;
+
+  fs_entries[part].inodes_per_grp = fs_entries[part].superblk->inodes_per_group;
+  fs_entries[part].blks_per_grp = fs_entries[part].superblk->blocks_per_group;
+  fs_entries[part].frags_per_grp = fs_entries[part].superblk->frags_per_group;
+  fs_entries[part].inode_size = fs_entries[part].superblk->inode_size;
+  
+  fs_entries[part].ngroups = 
+    (fs_entries[part].superblk->block_cnt +
+    fs_entries[part].blks_per_grp - 1) / 
+    fs_entries[part].blks_per_grp;
+
+  kfree(mbr);
+  return true;
+}
+
 // init globals n stuff for future reference
 void block_init(void)
 {
   for (uint32_t part = 0; part < MAX_MOUNTS; part++) {
-    uint32_t drive = part/PARTS_PER_DRIVE;
+    uint8_t drive_magic = part / PARTS_PER_DRIVE == 0 ? ATA_MASTER : ATA_SLAVE;
 
-    struct drive_mbr *mbr;
-    uint32_t mbr_part_n = part % PARTS_PER_DRIVE;
-    uint8_t *part_entry;
-    
-    if (drive == 0) {
-      mbr = read_mbr(master_drive);
-
-      if (mbr == NULL || !(mbr->partition_magic_1 == 0x55 && mbr->partition_magic_2 == 0xAA)){
-        panic("KERNEL PANIC: bad drive");
-      }
-
-      part_entry = (uint8_t *)(((uint8_t *) mbr) + DRIVE_UNUSED_SIZE + PART_ENTRY_SIZE * mbr_part_n);
-      uint8_t part_good = *((uint8_t*)(part_entry + PART_GOOD_OFFSET));
-      
-      if (part_good == 0x05 || part_good == 0x0F)
-        panic("KERNEL PANIC: bad drive");
-
-      if (part_good != 0x83){
-        kfree(mbr);
-        continue;
-      }
-
-      fs_entries[part].drive = &master_drive;
-      fs_entries[part].start_lba = 
-        (uint32_t)*(part_entry + PART_LBA_OFFSET) |
-        ((uint32_t)*(part_entry + PART_LBA_OFFSET + 1)) << 8 |
-        ((uint32_t)*(part_entry + PART_LBA_OFFSET + 2)) << 16 |
-        ((uint32_t)*(part_entry + PART_LBA_OFFSET + 3)) << 24;
-      
-      fs_entries[part].sector_count = 
-        (uint32_t)*(part_entry + PART_SECTOR_COUNT_OFFSET) |
-        ((uint32_t)*(part_entry + PART_SECTOR_COUNT_OFFSET + 1)) << 8 |
-        ((uint32_t)*(part_entry + PART_SECTOR_COUNT_OFFSET + 2)) << 16 |
-        ((uint32_t)*(part_entry + PART_SECTOR_COUNT_OFFSET + 3)) << 24;
-      
-      if (fs_entries[part].sector_count == 0 || fs_entries[part].start_lba + fs_entries[part].sector_count > master_drive.lba_sector_count){
-        panic("KERNEL PANIC: bad drive");
-      }
-
-      ata_read48_part(fs_entries[part].drive->identify_magic,
-                      fs_entries[part].start_lba,
-                      fs_entries[part].sector_count,
-                      superblk_pos / BYTES_PER_SECTOR,
-                      sizeof(struct ext2_superblock) / BYTES_PER_SECTOR,
-                      fs_entries[part].sprblk_buf);
-
-      fs_entries[part].superblk = (struct ext2_superblock *) fs_entries[part].sprblk_buf;
-
-      if (!(fs_entries[part].superblk->ext2_signature == 0xEF53 && (1024 << fs_entries[part].superblk->block_size_adjusted) == 4096)){
-        panic("KERNEL PANIC: bad drive");
-      }
-      
-      
-      ata_read48_part(fs_entries[part].drive->identify_magic,
-                      fs_entries[part].start_lba,
-                      fs_entries[part].sector_count,
-                      bgdt_blk_n * sectors_per_blk,
-                      sectors_per_blk,
-                      fs_entries[part].bgdt_buf);
-
-      fs_entries[part].bgdt = (struct ext2_block_group_descriptor *) fs_entries[part].bgdt_buf;
-    
-      fs_entries[part].inodes_per_grp = fs_entries[part].superblk->inodes_per_group;
-      fs_entries[part].blks_per_grp = fs_entries[part].superblk->blocks_per_group;
-      fs_entries[part].frags_per_grp = fs_entries[part].superblk->frags_per_group;
-      fs_entries[part].inode_size = fs_entries[part].superblk->inode_size;
-      
-      fs_entries[part].ngroups = 
-        (fs_entries[part].superblk->block_cnt +
-        fs_entries[part].blks_per_grp - 1) / 
-        fs_entries[part].blks_per_grp;
-    }
-    else{
-      mbr = read_mbr(slave_drive);
-      if (mbr == NULL){
-        break;
-      }
-      
-      if (!(mbr->partition_magic_1 == 0x55 && mbr->partition_magic_2 == 0xAA)){
-        kprintf(KPRINTF_YELLOW "WARNING: slave drive bad" KPRINTF_RESET);
-        kfree(mbr);
-        break;
-      }
-
-      part_entry = (uint8_t *)(((uint8_t *) mbr) + DRIVE_UNUSED_SIZE + PART_ENTRY_SIZE * mbr_part_n);
-      uint8_t part_good = *((uint8_t*)(part_entry + PART_GOOD_OFFSET));
-      if (part_good == 0x05 || part_good == 0x0F){
-        kprintf(KPRINTF_YELLOW "WARNING: slave drive bad" KPRINTF_RESET);
-        kfree(mbr);
-        break;
-      } 
-
-      if (part_good != 0x83){
-        kfree(mbr);
-        continue;
-      }
-
-      fs_entries[part].drive = &slave_drive;
-      fs_entries[part].start_lba = 
-        (uint32_t)*(part_entry + PART_LBA_OFFSET) |
-        ((uint32_t)*(part_entry + PART_LBA_OFFSET + 1)) << 8 |
-        ((uint32_t)*(part_entry + PART_LBA_OFFSET + 2)) << 16 |
-        ((uint32_t)*(part_entry + PART_LBA_OFFSET + 3)) << 24;
-
-      fs_entries[part].sector_count = 
-        (uint32_t)*(part_entry + PART_SECTOR_COUNT_OFFSET) |
-        ((uint32_t)*(part_entry + PART_SECTOR_COUNT_OFFSET + 1)) << 8 |
-        ((uint32_t)*(part_entry + PART_SECTOR_COUNT_OFFSET + 2)) << 16 |
-        ((uint32_t)*(part_entry + PART_SECTOR_COUNT_OFFSET + 3)) << 24;
-
-      if (fs_entries[part].sector_count == 0 || fs_entries[part].start_lba + fs_entries[part].sector_count > slave_drive.lba_sector_count){
-        kprintf(KPRINTF_YELLOW "WARNING: slave drive bad" KPRINTF_RESET);
-        kfree(mbr);
-        break;
-      }
-      
-      ata_read48_part(fs_entries[part].drive->identify_magic,
-                      fs_entries[part].start_lba,
-                      fs_entries[part].sector_count,
-                      superblk_pos / BYTES_PER_SECTOR,
-                      sizeof(struct ext2_superblock) / BYTES_PER_SECTOR,
-                      fs_entries[part].sprblk_buf);
-      
-      fs_entries[part].superblk = (struct ext2_superblock *) fs_entries[part].sprblk_buf;
-
-      if (!(fs_entries[part].superblk->ext2_signature == 0xEF53 && (1024 << fs_entries[part].superblk->block_size_adjusted) == 4096)){
-        kprintf(KPRINTF_YELLOW "WARNING: slave drive bad" KPRINTF_RESET);
-        kfree(mbr);
-        break;
-      }
-      
-      ata_read48_part(fs_entries[part].drive->identify_magic,
-                      fs_entries[part].start_lba,
-                      fs_entries[part].sector_count,
-                      bgdt_blk_n * sectors_per_blk,
-                      sectors_per_blk,
-                      fs_entries[part].bgdt_buf);
-      
-      fs_entries[part].bgdt = (struct ext2_block_group_descriptor *) fs_entries[part].bgdt_buf;
-      
-      fs_entries[part].inodes_per_grp = fs_entries[part].superblk->inodes_per_group;
-      fs_entries[part].blks_per_grp = fs_entries[part].superblk->blocks_per_group;
-      fs_entries[part].frags_per_grp = fs_entries[part].superblk->frags_per_group;
-      fs_entries[part].inode_size = fs_entries[part].superblk->inode_size;
-      
-      fs_entries[part].ngroups = 
-        (fs_entries[part].superblk->block_cnt +
-        fs_entries[part].blks_per_grp - 1) / 
-        fs_entries[part].blks_per_grp;
-    }
-
-    kfree(mbr);
+    if (!fill_partition_entry(drive_magic, part))
+      break;
   }
 
   uint32_t root_part;
