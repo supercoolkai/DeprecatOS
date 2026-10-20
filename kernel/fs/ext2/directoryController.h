@@ -4,6 +4,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+struct fs_info;
+
 #define NO_PERMISSION_MASK 0xF000
 #define INODE_DIR_TYPE 0x4000
 #define INODE_FILE_TYPE 0x8000
@@ -18,15 +20,15 @@ struct dir_row
   uint8_t name[NAME_LEN];
 };
 
-bool lookup_path(const char *path, uint32_t *out, bool follow_leaf_link);
-bool dir_insert(uint32_t parent_inode_n, const char *name, uint32_t child_inode_n);
-bool dir_contains(uint32_t parent_inode_n, const char *name, uint32_t *out);
-uint32_t make_dir(uint32_t parent_inode_n, const char *name);
-bool dir_remove(uint32_t parent_inode_n, const char *name, uint32_t *removed_inode_n);
-bool unlink_inode(uint32_t parent_inode_n, const char *name);
-bool unlink_dir(uint32_t parent_inode_n, const char *name);
-uint32_t make_file(uint32_t parent_inode_n, const char *name);
-bool rename_inode(uint32_t old_parent_n, const char *old_name, uint32_t new_parent_n, const char *new_name);
-bool make_symlink(uint32_t parent_n, const char *name, const char *target);
+bool lookup_path(struct fs_info *fs, const char *path, uint32_t *out, bool follow_leaf_link);
+bool dir_insert(struct fs_info *fs, uint32_t parent_inode_n, const char *name, uint32_t child_inode_n);
+bool dir_contains(struct fs_info *fs, uint32_t parent_inode_n, const char *name, uint32_t *out);
+uint32_t make_dir(struct fs_info *fs, uint32_t parent_inode_n, const char *name);
+bool dir_remove(struct fs_info *fs, uint32_t parent_inode_n, const char *name, uint32_t *removed_inode_n);
+bool unlink_inode(struct fs_info *fs, uint32_t parent_inode_n, const char *name);
+bool unlink_dir(struct fs_info *fs, uint32_t parent_inode_n, const char *name);
+uint32_t make_file(struct fs_info *fs, uint32_t parent_inode_n, const char *name);
+bool rename_inode(struct fs_info *fs, uint32_t old_parent_n, const char *old_name, uint32_t new_parent_n, const char *new_name);
+bool make_symlink(struct fs_info *fs, uint32_t parent_n, const char *name, const char *target);
 
 #endif

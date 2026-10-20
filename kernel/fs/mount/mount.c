@@ -67,13 +67,13 @@ void mount_init(void)
       mount_path[j] = fs_entries[i].label[j - MOUNT_PATH_SEED_LEN];
     }
     uint32_t mount_inode_n;
-    if (!lookup_path((const char *) mount_path, &mount_inode_n, false)) {
+    if (!lookup_path(root_fs, (const char *) mount_path, &mount_inode_n, false)) {
       kprintf(KPRINTF_YELLOW "attempted to mount a partition to a nonexistent dir\n" KPRINTF_RESET);
       continue;
     }
   
     struct ext2_inode mount_inode;
-    if (!get_inode(mount_inode_n, &mount_inode)) {
+    if (!get_inode(root_fs, mount_inode_n, &mount_inode)) {
       kprintf(KPRINTF_YELLOW "bad mount directory\n" KPRINTF_RESET);
       continue;
     }

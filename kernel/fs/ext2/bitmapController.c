@@ -14,13 +14,13 @@ static uint32_t superblk_pos = EXT2_SUPERBLOCK_OFFSET;
 static uint32_t bgdt_blk_n = 1;
 static uint32_t first_inode_n = 1;
 
-uint32_t alloc_inode(void)
+uint32_t alloc_inode(struct fs_info *fs)
 {
   uint32_t group_n;
   bool found_grp = false;
 
-  for(group_n = 0; group_n < root_fs->ngroups; group_n++){
-    if (root_fs->bgdt[group_n].unalloc_inode_cnt > 0) {
+  for(group_n = 0; group_n < fs->ngroups; group_n++){
+    if (fs->bgdt[group_n].unalloc_inode_cnt > 0) {
       found_grp = true;
       break;
     }
@@ -32,13 +32,13 @@ uint32_t alloc_inode(void)
   }
 
   uint16_t *bitmap_buf = (uint16_t *) kmalloc(BLOCK_SIZE);
-  read_block(root_fs->bgdt[group_n].inode_bitmap_addr, bitmap_buf);
+  read_block(fs, fs->bgdt[group_n].inode_bitmap_addr, bitmap_buf);
 
   uint8_t *bitmap = (uint8_t *)bitmap_buf;
 
   uint32_t grp_inode_idx = 0;
   bool found_inode = false;
-  for (uint32_t byte_idx = 0; byte_idx < root_fs->inodes_per_grp / 8; byte_idx++)
+  for (uint32_t byte_idx = 0; byte_idx < fs->inodes_per_grp / 8; byte_idx++)
   {
     for (uint8_t bit = 0; bit < 8; bit++) {
       uint8_t mask = 1 << bit;
@@ -47,12 +47,12 @@ uint32_t alloc_inode(void)
       if (free) {
         found_inode = true;
         bitmap[byte_idx] |= mask;
-        root_fs->bgdt[group_n].unalloc_inode_cnt--;
-        root_fs->superblk->unalloc_inodes--;
+        fs->bgdt[group_n].unalloc_inode_cnt--;
+        fs->superblk->unalloc_inodes--;
 
-        write_block(bgdt_blk_n, (uint16_t *) root_fs->bgdt);
-        ata_write48_part(ATA_MASTER, root_fs->start_lba, root_fs->sector_count, superblk_pos / BYTES_PER_SECTOR, sizeof(struct ext2_superblock) / BYTES_PER_SECTOR, root_fs->sprblk_buf);
-        write_block(root_fs->bgdt[group_n].inode_bitmap_addr, (uint16_t *) bitmap);
+        write_block(fs, bgdt_blk_n, (uint16_t *) fs->bgdt);
+        ata_write48_part(fs->drive->identify_magic, fs->start_lba, fs->sector_count, superblk_pos / BYTES_PER_SECTOR, sizeof(struct ext2_superblock) / BYTES_PER_SECTOR, fs->sprblk_buf);
+        write_block(fs, fs->bgdt[group_n].inode_bitmap_addr, (uint16_t *) bitmap);
         break;
       }
 
@@ -69,16 +69,16 @@ uint32_t alloc_inode(void)
 
   kfree(bitmap_buf);
 
-  return group_n * root_fs->inodes_per_grp + grp_inode_idx + first_inode_n;
+  return group_n * fs->inodes_per_grp + grp_inode_idx + first_inode_n;
 }
 
-uint32_t alloc_block(void)
+uint32_t alloc_block(struct fs_info *fs)
 {
   uint32_t group_n;
   bool found_grp = false;
 
-  for(group_n = 0; group_n < root_fs->ngroups; group_n++){
-    if (root_fs->bgdt[group_n].unalloc_block_cnt > 0) {
+  for(group_n = 0; group_n < fs->ngroups; group_n++){
+    if (fs->bgdt[group_n].unalloc_block_cnt > 0) {
       found_grp = true;
       break;
     }
@@ -90,7 +90,7 @@ uint32_t alloc_block(void)
   }
 
   uint16_t *bitmap_buf = (uint16_t *) kmalloc(BLOCK_SIZE);
-  read_block(root_fs->bgdt[group_n].block_bitmap_addr, bitmap_buf);
+  read_block(fs, fs->bgdt[group_n].block_bitmap_addr, bitmap_buf);
 
   uint8_t *bitmap = (uint8_t *)bitmap_buf;
 
@@ -105,12 +105,12 @@ uint32_t alloc_block(void)
       if (free) {
         found_blk = true;
         bitmap[byte_idx] |= mask;
-        root_fs->bgdt[group_n].unalloc_block_cnt--;
-        root_fs->superblk->unalloc_blocks--;
+        fs->bgdt[group_n].unalloc_block_cnt--;
+        fs->superblk->unalloc_blocks--;
 
-        write_block(bgdt_blk_n, (uint16_t *) root_fs->bgdt);
-        ata_write48_part(ATA_MASTER, root_fs->start_lba, root_fs->sector_count, superblk_pos / BYTES_PER_SECTOR, sizeof(struct ext2_superblock) / BYTES_PER_SECTOR, root_fs->sprblk_buf);
-        write_block(root_fs->bgdt[group_n].block_bitmap_addr, (uint16_t *) bitmap);
+        write_block(fs, bgdt_blk_n, (uint16_t *) fs->bgdt);
+        ata_write48_part(fs->drive->identify_magic, fs->start_lba, fs->sector_count, superblk_pos / BYTES_PER_SECTOR, sizeof(struct ext2_superblock) / BYTES_PER_SECTOR, fs->sprblk_buf);
+        write_block(fs, fs->bgdt[group_n].block_bitmap_addr, (uint16_t *) bitmap);
         break;
       }
 
@@ -127,22 +127,22 @@ uint32_t alloc_block(void)
 
   kfree(bitmap_buf);
 
-  return group_n * root_fs->blks_per_grp + grp_block_idx + root_fs->superblk->super_block_num;
+  return group_n * fs->blks_per_grp + grp_block_idx + fs->superblk->super_block_num;
 }
 
-bool free_inode(uint32_t inode_n)
+bool free_inode(struct fs_info *fs, uint32_t inode_n)
 {
-  uint32_t group_n = (inode_n - first_inode_n) / root_fs->inodes_per_grp;
+  uint32_t group_n = (inode_n - first_inode_n) / fs->inodes_per_grp;
   
-  if (group_n >= root_fs->ngroups || inode_n > root_fs->superblk->inode_cnt) {
+  if (group_n >= fs->ngroups || inode_n > fs->superblk->inode_cnt) {
     kprintf(KPRINTF_RED "Invalid inode number");
     return false;
   }
 
-  uint32_t bitmap_idx = (inode_n - first_inode_n) % root_fs->inodes_per_grp;
+  uint32_t bitmap_idx = (inode_n - first_inode_n) % fs->inodes_per_grp;
 
   uint16_t *bitmap_buf = (uint16_t *) kmalloc(BLOCK_SIZE);
-  read_block(root_fs->bgdt[group_n].inode_bitmap_addr, bitmap_buf);
+  read_block(fs, fs->bgdt[group_n].inode_bitmap_addr, bitmap_buf);
 
   uint8_t *bitmap = (uint8_t *)bitmap_buf;
 
@@ -155,34 +155,34 @@ bool free_inode(uint32_t inode_n)
     bitmap[byte_idx] &= ~mask;
     // for alloc its bitmap[byte] |= mask
   
-    root_fs->bgdt[group_n].unalloc_inode_cnt++;
-    root_fs->superblk->unalloc_inodes++;
+    fs->bgdt[group_n].unalloc_inode_cnt++;
+    fs->superblk->unalloc_inodes++;
 
-    write_block(bgdt_blk_n, (uint16_t *) root_fs->bgdt);
-    ata_write48_part(ATA_MASTER, root_fs->start_lba, root_fs->sector_count, superblk_pos / BYTES_PER_SECTOR, sizeof(struct ext2_superblock) / BYTES_PER_SECTOR, root_fs->sprblk_buf);
-    write_block(root_fs->bgdt[group_n].inode_bitmap_addr, (uint16_t *) bitmap);
+    write_block(fs, bgdt_blk_n, (uint16_t *) fs->bgdt);
+    ata_write48_part(fs->drive->identify_magic, fs->start_lba, fs->sector_count, superblk_pos / BYTES_PER_SECTOR, sizeof(struct ext2_superblock) / BYTES_PER_SECTOR, fs->sprblk_buf);
+    write_block(fs, fs->bgdt[group_n].inode_bitmap_addr, (uint16_t *) bitmap);
   }
 
   kfree(bitmap_buf);
   return true;
 }
 
-bool free_block(uint32_t block_n)
+bool free_block(struct fs_info *fs, uint32_t block_n)
 {
   if (block_n == 0)
     return false;
 
-  uint32_t group_n = (block_n - root_fs->superblk->super_block_num) / root_fs->blks_per_grp;
+  uint32_t group_n = (block_n - fs->superblk->super_block_num) / fs->blks_per_grp;
   
-  if (group_n >= root_fs->ngroups || block_n >= root_fs->superblk->block_cnt) {
+  if (group_n >= fs->ngroups || block_n >= fs->superblk->block_cnt) {
     kprintf(KPRINTF_RED "Invalid block number");
     return false;
   }
 
-  uint32_t bitmap_idx = (block_n - root_fs->superblk->super_block_num) % root_fs->blks_per_grp;
+  uint32_t bitmap_idx = (block_n - fs->superblk->super_block_num) % fs->blks_per_grp;
 
   uint16_t *bitmap_buf = (uint16_t *) kmalloc(BLOCK_SIZE);
-  read_block(root_fs->bgdt[group_n].block_bitmap_addr, bitmap_buf);
+  read_block(fs, fs->bgdt[group_n].block_bitmap_addr, bitmap_buf);
 
   uint8_t *bitmap = (uint8_t *)bitmap_buf;
 
@@ -195,31 +195,31 @@ bool free_block(uint32_t block_n)
     bitmap[byte_idx] &= ~mask;
     // for alloc its bitmap[byte] |= mask
   
-    root_fs->bgdt[group_n].unalloc_block_cnt++;
-    root_fs->superblk->unalloc_blocks++;
+    fs->bgdt[group_n].unalloc_block_cnt++;
+    fs->superblk->unalloc_blocks++;
 
-    write_block(bgdt_blk_n, (uint16_t *) root_fs->bgdt);
-    ata_write48_part(ATA_MASTER, root_fs->start_lba, root_fs->sector_count, superblk_pos / BYTES_PER_SECTOR, sizeof(struct ext2_superblock) / BYTES_PER_SECTOR, root_fs->sprblk_buf);
-    write_block(root_fs->bgdt[group_n].block_bitmap_addr, (uint16_t *) bitmap);
+    write_block(fs, bgdt_blk_n, (uint16_t *) fs->bgdt);
+    ata_write48_part(fs->drive->identify_magic, fs->start_lba, fs->sector_count, superblk_pos / BYTES_PER_SECTOR, sizeof(struct ext2_superblock) / BYTES_PER_SECTOR, fs->sprblk_buf);
+    write_block(fs, fs->bgdt[group_n].block_bitmap_addr, (uint16_t *) bitmap);
   }
 
   kfree(bitmap_buf);
   return true;
 }
 
-bool inode_exists(uint32_t inode_n)
+bool inode_exists(struct fs_info *fs, uint32_t inode_n)
 {
-  uint32_t group_n = (inode_n - first_inode_n) / root_fs->inodes_per_grp;
+  uint32_t group_n = (inode_n - first_inode_n) / fs->inodes_per_grp;
   
-  if (group_n >= root_fs->ngroups || inode_n > root_fs->superblk->inode_cnt) {
+  if (group_n >= fs->ngroups || inode_n > fs->superblk->inode_cnt) {
     kprintf(KPRINTF_RED "Invalid inode number");
     return false;
   }
 
-  uint32_t bitmap_idx = (inode_n - first_inode_n) % root_fs->inodes_per_grp;
+  uint32_t bitmap_idx = (inode_n - first_inode_n) % fs->inodes_per_grp;
 
   uint16_t *bitmap_buf = (uint16_t *) kmalloc(BLOCK_SIZE);
-  read_block(root_fs->bgdt[group_n].inode_bitmap_addr, bitmap_buf);
+  read_block(fs, fs->bgdt[group_n].inode_bitmap_addr, bitmap_buf);
 
   uint8_t *bitmap = (uint8_t *)bitmap_buf;
 

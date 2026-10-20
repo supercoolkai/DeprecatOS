@@ -45,20 +45,20 @@ struct fs_info {
 extern struct fs_info fs_entries[MAX_MOUNTS];
 extern struct fs_info *root_fs;
 
-void read_block(uint32_t block_n, uint16_t *buf);
-void write_block(uint32_t block_n, uint16_t *buf);
+void read_block(struct fs_info *fs, uint32_t block_n, uint16_t *buf);
+void write_block(struct fs_info *fs, uint32_t block_n, uint16_t *buf);
 void block_init(void);
-bool get_inode(uint32_t inode_n, struct ext2_inode *out);
-uint32_t put_inode(uint16_t *buf, uint32_t f_size, bool is_dir, struct ext2_inode *out);
-bool set_inode(uint32_t inode_n, struct ext2_inode *in);
-bool delete_inode(uint32_t inode_n);
-uint32_t write_inode(uint16_t *buf, struct ext2_inode *inode);
-uint32_t replace_inode(uint32_t inode_n, uint16_t *buf, uint32_t f_size, struct ext2_inode *out);
-uint32_t append_to_inode(uint32_t inode_n, uint16_t *buf, uint32_t f_size, struct ext2_inode *out);
-uint32_t insert_in_inode(uint32_t inode_n, uint16_t *buf, uint32_t f_size, uint32_t offset, struct ext2_inode *out);
-uint32_t mint_inode(uint32_t f_size, uint32_t type, struct ext2_inode *out);
-uint32_t map_file_block(struct ext2_inode *inode, uint32_t file_blk_idx, uint32_t mode, uint32_t *disk_blk_out, uint32_t *alloc_cnt);
-void unwind_insert(uint32_t inode_n, struct ext2_inode *inode, uint32_t *unwind_buf, uint32_t unwind_cursor, uint32_t free_cnt, uint32_t minted_cnt);
-uint32_t truncate_inode(uint32_t inode_n, uint32_t new_size, struct ext2_inode *out);
+bool get_inode(struct fs_info *fs, uint32_t inode_n, struct ext2_inode *out);
+uint32_t put_inode(struct fs_info *fs, uint16_t *buf, uint32_t f_size, bool is_dir, struct ext2_inode *out);
+bool set_inode(struct fs_info *fs, uint32_t inode_n, struct ext2_inode *in);
+bool delete_inode(struct fs_info *fs, uint32_t inode_n);
+uint32_t write_inode(struct fs_info *fs, uint16_t *buf, struct ext2_inode *inode);
+uint32_t replace_inode(struct fs_info *fs, uint32_t inode_n, uint16_t *buf, uint32_t f_size, struct ext2_inode *out);
+uint32_t append_to_inode(struct fs_info *fs, uint32_t inode_n, uint16_t *buf, uint32_t f_size, struct ext2_inode *out);
+uint32_t insert_in_inode(struct fs_info *fs, uint32_t inode_n, uint16_t *buf, uint32_t f_size, uint32_t offset, struct ext2_inode *out);
+uint32_t mint_inode(struct fs_info *fs, uint32_t f_size, uint32_t type, struct ext2_inode *out);
+uint32_t map_file_block(struct fs_info *fs, struct ext2_inode *inode, uint32_t file_blk_idx, uint32_t mode, uint32_t *disk_blk_out, uint32_t *alloc_cnt);
+void unwind_insert(struct fs_info *fs, uint32_t inode_n, struct ext2_inode *inode, uint32_t *unwind_buf, uint32_t unwind_cursor, uint32_t free_cnt, uint32_t minted_cnt);
+uint32_t truncate_inode(struct fs_info *fs, uint32_t inode_n, uint32_t new_size, struct ext2_inode *out);
 
 #endif
