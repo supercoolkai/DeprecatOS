@@ -48,7 +48,7 @@ void cmd_echo(char *args)
   }
 
   for (uint32_t i = 0; i < len; i++) {
-    if (curr_flag_idx >= ECHO_OUT_FLAG_LEN && i > dir_path_start) {
+    if (curr_flag_idx >= ECHO_OUT_FLAG_LEN) {
       dir_path_start = i;
       truncate = false;
     }
