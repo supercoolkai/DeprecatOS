@@ -8,6 +8,7 @@
 #include "kprintf/kprintf.h"
 #include "drivers/timer/timerController.h"
 #include "fs/ext2/bitmapController.h"
+#include "fs/mount/mount.h"
 #include "errors.h"
 #include "streq/streq.h"
 #include <stdint.h>
@@ -63,7 +64,7 @@ static bool lookup(uint16_t *buf, const char *name, uint32_t *out, uint32_t size
 }
 
 
-bool lookup_path(struct fs_info *fs, const char *path, uint32_t *out, bool follow_leaf_link)
+bool lookup_path(struct fs_info *fs, const char *path, uint32_t *out, bool follow_leaf_link, struct fs_info **fs_out)
 {
   uint16_t *blk_buf = kmalloc(BLOCK_SIZE);
   uint16_t *splice_buf_a = kmalloc(PATH_LEN);
@@ -96,6 +97,7 @@ bool lookup_path(struct fs_info *fs, const char *path, uint32_t *out, bool follo
     
     int ind = 1;
     uint32_t curr_inode_num = ROOT_INODE_N;
+    struct fs_info *curr_fs = root_fs;
 
     while (ind < len){
       // get the current subdir's length
@@ -142,7 +144,9 @@ bool lookup_path(struct fs_info *fs, const char *path, uint32_t *out, bool follo
 
       struct ext2_inode ino;    
 
-      bool success = get_inode(fs, curr_inode_num, &ino);
+      return_mnt_root(curr_fs, curr_inode_num, &curr_fs, &curr_inode_num);
+
+      bool success = get_inode(curr_fs, curr_inode_num, &ino);
 
       if (!success){
         kfree(blk_buf);
@@ -163,7 +167,7 @@ bool lookup_path(struct fs_info *fs, const char *path, uint32_t *out, bool follo
 
       for (uint32_t relative_blk = 0; relative_blk < blk_cnt; relative_blk++) {
         uint32_t dest_blk;
-        uint32_t lookup_map_status = map_file_block(fs, &ino, relative_blk, LOOKUP_MODE, &dest_blk, NULL);
+        uint32_t lookup_map_status = map_file_block(curr_fs, &ino, relative_blk, LOOKUP_MODE, &dest_blk, NULL);
         if (lookup_map_status != INODE_WRITE_SUCCESS) {
           kfree(blk_buf);
           kfree(splice_buf_a);
@@ -171,7 +175,7 @@ bool lookup_path(struct fs_info *fs, const char *path, uint32_t *out, bool follo
           return false;
         }
 
-        read_block(fs, dest_blk, blk_buf);
+        read_block(curr_fs, dest_blk, blk_buf);
 
         if (lookup(blk_buf, name, &curr_inode_num, BLOCK_SIZE)) {
           found = true;
@@ -186,13 +190,15 @@ bool lookup_path(struct fs_info *fs, const char *path, uint32_t *out, bool follo
         return false;
       }
 
-      success = get_inode(fs, curr_inode_num, &ino);
+      success = get_inode(curr_fs, curr_inode_num, &ino);
       if (!success){
         kfree(blk_buf);
         kfree(splice_buf_a);
         kfree(splice_buf_b);
         return false;
       }
+
+      return_mnt_mountpoint(curr_fs, curr_inode_num, &curr_fs, &curr_inode_num);
       
       if (j == len && !follow_leaf_link) {
         break;
@@ -216,7 +222,7 @@ bool lookup_path(struct fs_info *fs, const char *path, uint32_t *out, bool follo
         }
         else{
           buf = kmalloc(BLOCK_SIZE);
-          read_block(fs, ino.dir_block_ptr[0], buf);
+          read_block(curr_fs, ino.dir_block_ptr[0], buf);
 
           target = (char *) buf;
         }
@@ -266,8 +272,10 @@ bool lookup_path(struct fs_info *fs, const char *path, uint32_t *out, bool follo
     }
     if (spliced)
       continue;
+    
+    *fs_out = curr_fs;
     *out = curr_inode_num;
-    kfree(blk_buf);
+    kfree(blk_buf); 
     kfree(splice_buf_a);
     kfree(splice_buf_b);
     return true;
@@ -313,6 +321,8 @@ static bool name_in(struct fs_info *fs, struct ext2_inode inode, const char *nam
 
 bool dir_contains(struct fs_info *fs, uint32_t parent_inode_n, const char *name, uint32_t *out)
 {
+  return_mnt_root(fs, parent_inode_n, &fs, &parent_inode_n);
+
   struct ext2_inode parent_inode;
   if (!get_inode(fs, parent_inode_n, &parent_inode))
     return false;
@@ -367,8 +377,16 @@ bool dir_insert(struct fs_info *fs, uint32_t parent_inode_n, const char *name, u
   if (len == 0 || len >= NAME_LEN)
     return false;
 
+  struct fs_info *child_fs = fs;
   struct ext2_inode child_inode;
-  if (!get_inode(fs, child_inode_n, &child_inode)) {
+  if (!get_inode(child_fs, child_inode_n, &child_inode)) {
+    return false;
+  }
+
+  return_mnt_root(fs, parent_inode_n, &fs, &parent_inode_n);
+
+  if (fs != child_fs) {
+    kprintf(KPRINTF_RED "dir_insert: cannot link across filesystems\n" KPRINTF_RESET);
     return false;
   }
 
@@ -568,6 +586,8 @@ bool dir_remove(struct fs_info *fs, uint32_t parent_inode_n, const char *name, u
   if (len == 0 || len >= NAME_LEN)
     return false;
 
+  return_mnt_root(fs, parent_inode_n, &fs, &parent_inode_n);
+
   struct ext2_inode parent_inode;
 
   if (!get_inode(fs, parent_inode_n, &parent_inode)) 
@@ -660,6 +680,8 @@ uint32_t make_dir(struct fs_info *fs, uint32_t parent_inode_n, const char *name)
   if (len == 0 || len >= NAME_LEN)
     return INODE_ERROR;
 
+  return_mnt_root(fs, parent_inode_n, &fs, &parent_inode_n);
+
   struct ext2_inode parent_inode;
   if (!get_inode(fs, parent_inode_n, &parent_inode))
     return INODE_ERROR;
@@ -715,6 +737,8 @@ uint32_t make_dir(struct fs_info *fs, uint32_t parent_inode_n, const char *name)
 
 bool unlink_inode(struct fs_info *fs, uint32_t parent_inode_n, const char *name)
 {
+  return_mnt_root(fs, parent_inode_n, &fs, &parent_inode_n);
+
   struct ext2_inode parent_inode;
   if (!get_inode(fs, parent_inode_n, &parent_inode)) {
     return false;
@@ -768,6 +792,8 @@ bool unlink_dir(struct fs_info *fs, uint32_t parent_inode_n, const char *name)
     return false;
   }
 
+  return_mnt_root(fs, parent_inode_n, &fs, &parent_inode_n);
+
   struct ext2_inode parent_inode;
   if (!get_inode(fs, parent_inode_n, &parent_inode)) {
     return false;
@@ -785,6 +811,12 @@ bool unlink_dir(struct fs_info *fs, uint32_t parent_inode_n, const char *name)
     return false;
   }
 
+  struct fs_info *busy_fs;
+  uint32_t busy_n;
+  if (return_mnt_root(fs, remove_inode_n, &busy_fs, &busy_n)) {
+    kprintf(KPRINTF_RED "unlink_dir: given path is a mountpoint\n" KPRINTF_RESET);
+    return false;
+  }
 
   struct ext2_inode to_remove;
   if (!get_inode(fs, remove_inode_n, &to_remove))
@@ -837,6 +869,8 @@ uint32_t make_file(struct fs_info *fs, uint32_t parent_inode_n, const char *name
 
   if (len == 0 || len >= NAME_LEN)
     return INODE_ERROR;
+
+  return_mnt_root(fs, parent_inode_n, &fs, &parent_inode_n);
 
   struct ext2_inode parent_inode;
   if (!get_inode(fs, parent_inode_n, &parent_inode))
@@ -959,6 +993,18 @@ bool rename_inode(struct fs_info *fs, uint32_t old_parent_n, const char *old_nam
     kprintf(KPRINTF_RED "rename_inode: Cannot rename to and from \".\" or \"..\"\n" KPRINTF_RESET);
     return false;
   }
+
+  struct fs_info *old_fs = fs;
+  struct fs_info *new_fs = fs;
+
+  return_mnt_root(fs, old_parent_n, &old_fs, &old_parent_n);
+  return_mnt_root(fs, new_parent_n, &new_fs, &new_parent_n);
+    
+  if (old_fs != new_fs) {
+    return false;
+  }
+  
+  fs = old_fs;
   
   struct ext2_inode old_parent;
   if (!get_inode(fs, old_parent_n, &old_parent)){
@@ -987,8 +1033,13 @@ bool rename_inode(struct fs_info *fs, uint32_t old_parent_n, const char *old_nam
     kprintf(KPRINTF_RED "rename_inode: given child inode is not in the given old parent\n" KPRINTF_RESET);
     return false;
   }
-  
+
+  struct fs_info *fs_throwaway;
   uint32_t throwaway;
+  if (return_mnt_root(fs, child_n, &fs_throwaway, &throwaway)) {
+    return false;
+  }
+  
   if (name_in(fs, new_parent, new_name, &throwaway)) {
     kprintf(KPRINTF_RED "rename_inode: given new name is already taken in the given new parent\n" KPRINTF_RESET);
     return false;
@@ -1065,6 +1116,8 @@ bool make_symlink(struct fs_info *fs, uint32_t parent_n, const char *name, const
   uint32_t len = strlen(target);
   if (len == 0 || len >= BLOCK_SIZE)
     return false;
+
+  return_mnt_root(fs, parent_n, &fs, &parent_n);
   
   struct ext2_inode symlink;
   uint32_t link_n = mint_inode(fs, len, INODE_SYMLINK_TYPE, &symlink);

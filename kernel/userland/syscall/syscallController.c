@@ -1,4 +1,5 @@
 #include "userland/syscall/syscallController.h"
+#include "fs/mount/mount.h"
 #include "fs/ext2/bitmapController.h" 
 #include "errors.h"
 #include "kprintf/kprintf.h"
@@ -160,7 +161,8 @@ static uint32_t resolve_dir(const char *s, bool split_leaf_sym)
   }
   
   uint32_t ino;
-  bool success = lookup_path(root_fs, s, &ino, split_leaf_sym);
+  struct fs_info *ino_fs;
+  bool success = lookup_path(root_fs, s, &ino, split_leaf_sym, &ino_fs);
 
   if (!success) {
     return SYSCALL_ERROR;
@@ -179,6 +181,16 @@ static uint32_t sys_read_chunk(uint32_t *frame)
     return (uint32_t) frame;
   }
 
+  struct fs_info *fs = root_fs;
+  if ((ino.type_and_perms_lo & NO_PERMISSION_MASK) == INODE_DIR_TYPE) {
+    return_mnt_root(fs, ino_n, &fs, &ino_n);
+
+    if (!get_inode(fs, ino_n, &ino)) {
+      frame[7] = SYSCALL_ERROR;
+      return (uint32_t) frame;
+    }
+  }
+
   uint32_t n = frame[5];
   uint32_t *buf = (uint32_t *) frame[6];
 
@@ -194,14 +206,14 @@ static uint32_t sys_read_chunk(uint32_t *frame)
   }
 
   uint32_t block_n;
-  uint32_t lookup_map_status = map_file_block(root_fs, &ino, n, LOOKUP_MODE, &block_n, NULL);
+  uint32_t lookup_map_status = map_file_block(fs, &ino, n, LOOKUP_MODE, &block_n, NULL);
   if (lookup_map_status == EMPTY_BLOCK) {
     for (uint32_t i = 0; i < BIT_32_PER_BLK; i++) {
       buf[i] = 0;
     }
   }
   else if (lookup_map_status == INODE_WRITE_SUCCESS) {
-    read_block(root_fs, block_n, (uint16_t *) buf);
+    read_block(fs, block_n, (uint16_t *) buf);
   }
   else{
     frame[7] = SYSCALL_ERROR;

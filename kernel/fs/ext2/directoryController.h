@@ -20,7 +20,7 @@ struct dir_row
   uint8_t name[NAME_LEN];
 };
 
-bool lookup_path(struct fs_info *fs, const char *path, uint32_t *out, bool follow_leaf_link);
+bool lookup_path(struct fs_info *fs, const char *path, uint32_t *out, bool follow_leaf_link, struct fs_info **fs_out);
 bool dir_insert(struct fs_info *fs, uint32_t parent_inode_n, const char *name, uint32_t child_inode_n);
 bool dir_contains(struct fs_info *fs, uint32_t parent_inode_n, const char *name, uint32_t *out);
 uint32_t make_dir(struct fs_info *fs, uint32_t parent_inode_n, const char *name);

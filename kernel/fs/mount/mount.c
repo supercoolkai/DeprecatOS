@@ -67,8 +67,14 @@ void mount_init(void)
       mount_path[j] = fs_entries[i].label[j - MOUNT_PATH_SEED_LEN];
     }
     uint32_t mount_inode_n;
-    if (!lookup_path(root_fs, (const char *) mount_path, &mount_inode_n, false)) {
+    struct fs_info *mount_fs;
+    if (!lookup_path(root_fs, (const char *) mount_path, &mount_inode_n, false, &mount_fs)) {
       kprintf(KPRINTF_YELLOW "attempted to mount a partition to a nonexistent dir\n" KPRINTF_RESET);
+      continue;
+    }
+
+    if (mount_fs != root_fs) {
+      kprintf(KPRINTF_YELLOW "mount dir resolved outside the root fs\n" KPRINTF_RESET);
       continue;
     }
   
@@ -85,4 +91,41 @@ void mount_init(void)
 
     fs_entries[i].mountpoint = mount_inode_n;
   }
+}
+
+
+bool return_mnt_root(struct fs_info *fs, uint32_t inode_n, struct fs_info **out_fs, uint32_t *out_inode_n)
+{
+  if (fs != root_fs){
+    *out_fs = fs;
+    *out_inode_n = inode_n;
+    return false;
+  }
+
+  for (uint32_t part = 0; part < MAX_MOUNTS; part++) {
+    if (fs_entries[part].mountpoint == inode_n){
+      *out_fs = &fs_entries[part];
+      *out_inode_n = ROOT_INODE_N;
+      return true;
+    }
+  }
+
+  *out_fs = fs;
+  *out_inode_n = inode_n;
+  return false;
+}
+
+// NOTE: false return value doesn't necessarily mean failure in this case, just means
+// that it didnt return a mountpoint
+bool return_mnt_mountpoint(struct fs_info *fs, uint32_t inode_n, struct fs_info **out_fs, uint32_t *out_inode_n)
+{
+  if (fs == root_fs || inode_n != ROOT_INODE_N){
+    *out_fs = fs;
+    *out_inode_n = inode_n;
+    return false;
+  }
+
+  *out_fs = root_fs;
+  *out_inode_n = fs->mountpoint;
+  return true;
 }
