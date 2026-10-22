@@ -4,12 +4,12 @@
 #include "errors.h"
 #include <stdint.h>
 
-static bool copy_file(uint32_t src_n, uint32_t inode_n)
+static bool copy_file(uint32_t src_n, uint32_t inode_n, uint32_t src_fs, uint32_t inode_fs)
 {
   uint32_t n = 0;
   uint32_t r;
   for (;;) {
-    r = read_chunk(src_n, n, fs_buf);
+    r = read_chunk(src_fs, src_n, n, fs_buf);
     if (r == 0){
       return true;
     }
@@ -21,7 +21,7 @@ static bool copy_file(uint32_t src_n, uint32_t inode_n)
     }
 
     else {
-      if (fappend(inode_n, (uint16_t *) fs_buf, r) == SYSCALL_ERROR) {
+      if (fappend(inode_fs, inode_n, (uint16_t *) fs_buf, r) == SYSCALL_ERROR) {
         write_string("cp: an unknown error occured while writing to the new file, file corruption occured. recommended you delete the copy.\n");
         return false;
       }
@@ -31,7 +31,7 @@ static bool copy_file(uint32_t src_n, uint32_t inode_n)
   }
 }
 
-static bool cp_walk(uint32_t src_dir, uint32_t target_dir)
+static bool cp_walk(uint32_t src_dir, uint32_t target_dir, uint32_t src_fs, uint32_t *target_fs)
 { 
   char child_name[256];
 
@@ -45,7 +45,7 @@ static bool cp_walk(uint32_t src_dir, uint32_t target_dir)
     
     
     while (!found){
-      uint32_t r = read_chunk(src_dir, chunk, fs_buf);
+      uint32_t r = read_chunk(src_fs, src_dir, chunk, fs_buf);
 
       if (r == 0) return true;
 
@@ -91,21 +91,25 @@ static bool cp_walk(uint32_t src_dir, uint32_t target_dir)
     }
     
     if (!child_is_dir) {
-      uint32_t new_n = touch(target_dir, child_name);
+      uint32_t new_n = touch(*target_fs, target_dir, child_name, target_fs);
       if (new_n == SYSCALL_ERROR) {
         write_string("cp: make file failed, disk error or file out of space\n");
         return false;
       }
-      if (!copy_file(child_n, new_n))
+      if (!copy_file(child_n, new_n, src_fs, *target_fs))
         return false;
     }
     else{
-      uint32_t new_n = mkdir(target_dir, child_name);
+      if (is_mountpoint(src_fs, child_n) != 0) {
+        write_string("cp: cannot copy a mountpoint\n");
+        return false;
+      }
+      uint32_t new_n = mkdir(*target_fs, target_dir, child_name, target_fs);
       if (new_n == SYSCALL_ERROR) {
         write_string("cp: make dir failed, disk error or file out of space\n");
         return false;
       }
-      if (!cp_walk(child_n, new_n))
+      if (!cp_walk(child_n, new_n, src_fs, target_fs))
         return false;
     }
   }
@@ -165,7 +169,8 @@ void cmd_cp(char *args)
     return;
   }
 
-  if (resolve_symlink(absolute_new_path) != SYSCALL_ERROR){
+  uint32_t throwaway_fs;
+  if (resolve_symlink(absolute_new_path, &throwaway_fs) != SYSCALL_ERROR){
     write_string("cp: new path already taken\n");
     return;
   }
@@ -186,7 +191,7 @@ void cmd_cp(char *args)
     return;
   }
 
-  if (resolve_dir(absolute_old_path) == SYSCALL_ERROR){
+  if (resolve_dir(absolute_old_path, &throwaway_fs) == SYSCALL_ERROR){
     write_string("cp: cannot copy a nonexistent file\n");
     return;
   }
@@ -213,33 +218,37 @@ void cmd_cp(char *args)
   char *new_leaf;
   uint32_t new_parent_n;
 
-  if (!split_parent_leaf(absolute_new_path, &new_parent_n, &new_leaf)) {
+  uint32_t new_parent_fs;
+  if (!split_parent_leaf(absolute_new_path, &new_parent_n, &new_leaf, &new_parent_fs)) {
     write_string("cp: given new parent directory does not exist\n");
     return;
   }
   
-  uint32_t src_n = resolve_dir(absolute_old_path); 
-  if (is_dir(src_n)) {
+  uint32_t src_fs;
+  uint32_t src_n = resolve_dir(absolute_old_path, &src_fs);
+  if (is_dir(src_n, src_fs)) {
     if (!recursive){
       write_string("cp: cannot copy a dir without the -r flag\n");
       return;
     }
 
-    uint32_t inode_n = mkdir(new_parent_n, (const char *) new_leaf);
+    uint32_t inode_fs;
+    uint32_t inode_n = mkdir(new_parent_fs, new_parent_n, (const char *) new_leaf, &inode_fs);
     if (inode_n == SYSCALL_ERROR) {
       write_string("cp: creating the new file failed unexpectedly\n");
       return;
     }
 
-    cp_walk(src_n, inode_n);
+    cp_walk(src_n, inode_n, src_fs, &inode_fs);
     return;
   }
 
-  uint32_t inode_n = touch(new_parent_n, (const char *) new_leaf);
+  uint32_t inode_fs;
+  uint32_t inode_n = touch(new_parent_fs, new_parent_n, (const char *) new_leaf, &inode_fs);
   if (inode_n == SYSCALL_ERROR) {
     write_string("cp: creating the new file failed unexpectedly\n");
     return;
   }
   
-  copy_file(src_n, inode_n);
+  copy_file(src_n, inode_n, src_fs, inode_fs);
 }

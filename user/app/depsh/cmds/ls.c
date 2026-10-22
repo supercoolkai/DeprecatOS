@@ -16,7 +16,8 @@ void cmd_ls(char *args)
     return;
   }
 
-  uint32_t inode_n = resolve_dir(path);
+  uint32_t inode_fs;
+  uint32_t inode_n = resolve_dir(path, &inode_fs);
 
   if (inode_n == SYSCALL_ERROR) {
     write_string("ls: directory ");
@@ -25,7 +26,7 @@ void cmd_ls(char *args)
     return;
   }
 
-  if (!is_dir(inode_n)) {
+  if (!is_dir(inode_n, inode_fs)) {
     write_string("ls: cannot list a file\n");
     return;
   }
@@ -34,7 +35,7 @@ void cmd_ls(char *args)
   uint32_t r;
   int writes = 0;
   for (;;) {
-    r = read_chunk(inode_n, n, fs_buf);
+    r = read_chunk(inode_fs, inode_n, n, fs_buf);
     if (r == 0){
       write_char('\n');
       return;

@@ -68,14 +68,14 @@ const char *return_path(char *args)
   return path;
 }
 
-bool is_dir(uint32_t inode_n)
+bool is_dir(uint32_t inode_n, uint32_t fs)
 {
-  get_stat(inode_n, (uint32_t *)stat_buf);
+  get_stat(fs, inode_n, (uint32_t *)stat_buf);
 
   return ((*(uint16_t *) stat_buf & NO_PERMISSION_MASK) == INODE_DIR_TYPE);
 }
 
-bool split_parent_leaf(char *abs_path, uint32_t *parent_n_out, char **leaf_out)
+bool split_parent_leaf(char *abs_path, uint32_t *parent_n_out, char **leaf_out, uint32_t *fs_out)
 {
   int len = 0;
   while (abs_path[len] != 0) len++;
@@ -98,7 +98,8 @@ bool split_parent_leaf(char *abs_path, uint32_t *parent_n_out, char **leaf_out)
 
   const char *parent = (last == 0) ? "/" : abs_path;
 
-  *parent_n_out = resolve_dir(parent);
+  *parent_n_out = resolve_dir(parent, fs_out);
+
 
   return *parent_n_out != SYSCALL_ERROR;
 }

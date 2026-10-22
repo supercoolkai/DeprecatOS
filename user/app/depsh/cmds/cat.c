@@ -20,7 +20,8 @@ void cmd_cat(char *args)
     return;
   }
 
-  uint32_t inode_n = resolve_dir(path);
+  uint32_t inode_fs;
+  uint32_t inode_n = resolve_dir(path, &inode_fs);
 
   if (inode_n == SYSCALL_ERROR) {
     write_string("cat: file ");
@@ -29,7 +30,7 @@ void cmd_cat(char *args)
     return;
   }
 
-  if (is_dir(inode_n)) {
+  if (is_dir(inode_n, inode_fs)) {
     write_string("cat: cannot read a dir\n");
     return;
   }
@@ -37,7 +38,7 @@ void cmd_cat(char *args)
   uint32_t n = 0;
   uint32_t r;
   for (;;) {
-    r = read_chunk(inode_n, n, fs_buf);
+    r = read_chunk(inode_fs, inode_n, n, fs_buf);
     if (r == 0){
       write_char_color('%', GREEN);
       write_char('\n');

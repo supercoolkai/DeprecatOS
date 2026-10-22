@@ -23,11 +23,11 @@ struct dir_row
 bool lookup_path(struct fs_info *fs, const char *path, uint32_t *out, bool follow_leaf_link, struct fs_info **fs_out);
 bool dir_insert(struct fs_info *fs, uint32_t parent_inode_n, const char *name, uint32_t child_inode_n);
 bool dir_contains(struct fs_info *fs, uint32_t parent_inode_n, const char *name, uint32_t *out);
-uint32_t make_dir(struct fs_info *fs, uint32_t parent_inode_n, const char *name);
+uint32_t make_dir(struct fs_info *fs, uint32_t parent_inode_n, const char *name, struct fs_info **fs_out);
 bool dir_remove(struct fs_info *fs, uint32_t parent_inode_n, const char *name, uint32_t *removed_inode_n);
 bool unlink_inode(struct fs_info *fs, uint32_t parent_inode_n, const char *name);
 bool unlink_dir(struct fs_info *fs, uint32_t parent_inode_n, const char *name);
-uint32_t make_file(struct fs_info *fs, uint32_t parent_inode_n, const char *name);
+uint32_t make_file(struct fs_info *fs, uint32_t parent_inode_n, const char *name, struct fs_info **fs_out);
 bool rename_inode(struct fs_info *fs, uint32_t old_parent_n, const char *old_name, uint32_t new_parent_n, const char *new_name);
 bool make_symlink(struct fs_info *fs, uint32_t parent_n, const char *name, const char *target);
 

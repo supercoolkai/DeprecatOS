@@ -134,11 +134,13 @@ static void save(void)
   while (gap_end != TEXT_CAP)
     cursor_right();
 
-  if (resolve_dir(path) == SYSCALL_ERROR){
+  uint32_t throwaway_fs;
+  if (resolve_dir(path, &throwaway_fs) == SYSCALL_ERROR){
     cmd_touch(args_save);
   }
 
-  uint32_t ino = resolve_dir(path);
+  uint32_t ino_fs;
+  uint32_t ino = resolve_dir(path, &ino_fs);
   if (ino == SYSCALL_ERROR){
     char *complaint_temp = "Failed to save";
     for (uint32_t i = 0; i < 15; i++) {
@@ -150,7 +152,7 @@ static void save(void)
     return;
   }
 
-  if (fsave(ino, (uint16_t *) text, gap_start) == SYSCALL_ERROR){
+  if (fsave(ino_fs, ino, (uint16_t *) text, gap_start) == SYSCALL_ERROR){
     char *complaint_temp = "Failed to save";
     for (uint32_t i = 0; i < 15; i++) {
       complaint[i] = complaint_temp[i];
@@ -704,14 +706,15 @@ void app_dinv(char *args)
 
   args_save = args;
 
-  uint32_t path_n = resolve_dir(path);
+  uint32_t path_fs;
+  uint32_t path_n = resolve_dir(path, &path_fs);
   if (path_n != SYSCALL_ERROR){
-    if (is_dir(path_n)){
+    if (is_dir(path_n, path_fs)){
       write_string("dinv: dir provided, must give a file\n");
       return;
     }
     
-    get_stat(path_n, (uint32_t *)stat_buf);
+    get_stat(path_fs, path_n, (uint32_t *)stat_buf);
     if (*(uint32_t*)(stat_buf + 4) >= TEXT_CAP){
       write_string("dinv: file is too large to render properly\n");
       return;
@@ -720,7 +723,7 @@ void app_dinv(char *args)
     uint32_t n = 0;
     uint32_t r;
     for (;;) {
-      r = read_chunk(path_n, n, fs_buf);
+      r = read_chunk(path_fs, path_n, n, fs_buf);
       if (r == 0){
         break;
       }

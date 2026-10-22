@@ -60,12 +60,13 @@ void cmd_ln(char *args)
   }
    
   uint32_t inode_n;
-  if (!sym && (inode_n = resolve_dir(absolute_og_path)) == SYSCALL_ERROR){
+  uint32_t inode_fs;
+  if (!sym && (inode_n = resolve_dir(absolute_og_path, &inode_fs)) == SYSCALL_ERROR){
     write_string("ln: cannot make a link to a nonexistent file\n");
     return;
   }
 
-  if (!sym && is_dir(inode_n)) {
+  if (!sym && is_dir(inode_n, inode_fs)) {
     write_string("ln: cannot make a link to a directory\n");
     return;
   }
@@ -77,7 +78,8 @@ void cmd_ln(char *args)
     return;
   }
 
-  if (resolve_symlink(absolute_new_path) != SYSCALL_ERROR) {
+  uint32_t throwaway_fs;
+  if (resolve_symlink(absolute_new_path, &throwaway_fs) != SYSCALL_ERROR) {
     write_string("ln: given link path already exists\n");
     return;
   }
@@ -85,19 +87,20 @@ void cmd_ln(char *args)
   uint32_t link_parent_n;
   char *link_leaf;
 
-  if (!split_parent_leaf(absolute_new_path, &link_parent_n, &link_leaf)) {
+  uint32_t link_parent_fs;
+  if (!split_parent_leaf(absolute_new_path, &link_parent_n, &link_leaf, &link_parent_fs)) {
     write_string("ln: given link path's parent does not exist\n");
     return;
   }
 
   if (streq(flag, "-s")) {
-    if (lmake_sym(link_parent_n, link_leaf, path) == SYSCALL_ERROR) {
+    if (lmake_sym(link_parent_fs, link_parent_n, link_leaf, path) == SYSCALL_ERROR) {
       write_string("ln: unexpected error occured while making the link\n");
     }
     return;
   }
   
-  if (lmake_hard(inode_n, link_parent_n, link_leaf) == SYSCALL_ERROR) {
+  if (lmake_hard(inode_fs, inode_n, link_parent_fs, link_parent_n, link_leaf) == SYSCALL_ERROR) {
     write_string("ln: unexpected error occured while making the link\n");
   }
 }

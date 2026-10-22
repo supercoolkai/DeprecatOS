@@ -5,7 +5,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-static bool rm_tree(uint32_t parent_n, const char *name, uint32_t dir_n)
+static bool rm_tree(uint32_t parent_n, const char *name, uint32_t dir_n, uint32_t fs, bool *warned)
 {
   char child_name[256];
 
@@ -16,12 +16,13 @@ static bool rm_tree(uint32_t parent_n, const char *name, uint32_t dir_n)
 
 
     for (uint32_t chunk = 0; !found; chunk++) {
-      uint32_t r = read_chunk(dir_n, chunk, fs_buf);
+      uint32_t r = read_chunk(fs, dir_n, chunk, fs_buf);
 
       if (r == 0) break;
 
       if (r == SYSCALL_ERROR) {
         write_string("rm: unknown read error\n");
+        *warned = true;
         return false;
       }
 
@@ -56,14 +57,19 @@ static bool rm_tree(uint32_t parent_n, const char *name, uint32_t dir_n)
      }
     if (!found) break;
     if (child_is_dir) {
-      if (!rm_tree(dir_n, child_name, child_n)) return false;
+      if (is_mountpoint(fs, child_n) != 0) {
+        write_string("rm: busy dir\n");
+        *warned = true;
+        return false;
+      }
+      if (!rm_tree(dir_n, child_name, child_n, fs, warned)) return false;
     }
     else{
-      if (rm_inode(dir_n, child_name) == SYSCALL_ERROR) return false; 
+      if (rm_inode(fs,dir_n, child_name) == SYSCALL_ERROR) return false; 
     }
   }
 
-  return rm_dir(parent_n, name) != SYSCALL_ERROR;
+  return rm_dir(fs,parent_n, name) != SYSCALL_ERROR;
 }
 
 
@@ -96,7 +102,8 @@ void cmd_rm(char *args)
     return;
   }
 
-  uint32_t to_remove_n = resolve_symlink(path);
+  uint32_t to_remove_fs;
+  uint32_t to_remove_n = resolve_symlink(path, &to_remove_fs);
   if (to_remove_n == SYSCALL_ERROR){
     write_string("rm: given path to remove does not exist\n");
     return;
@@ -118,32 +125,39 @@ void cmd_rm(char *args)
 
   char *parent = (last == 0) ? "/" : path;
 
-  uint32_t parent_n = resolve_dir((const char *) parent);
+  uint32_t parent_fs;
+  uint32_t parent_n = resolve_dir((const char *) parent, &parent_fs);
 
   if (parent_n == SYSCALL_ERROR) {
     write_string("rm: given parent directory does not exist\n");
     return;
   }
 
+  if (is_mountpoint(to_remove_fs, to_remove_n) != 0) {
+    write_string("rm: busy dir\n");
+    return;
+  }
+
   if (recursive) {
-    if (!is_dir(to_remove_n)){
+    if (!is_dir(to_remove_n, to_remove_fs)){
       write_string("rm: cannot recursively remove a file\n");
       return;
     }
-
-    if (!rm_tree(parent_n, (const char *) leaf, to_remove_n)){
-      write_string("rm: failed (disk error)\n");
+    bool warned = false;
+    if (!rm_tree(parent_n, (const char *) leaf, to_remove_n, parent_fs, &warned)){
+      if (!warned)
+        write_string("rm: failed (disk error)\n");
       return;
     }
   }
 
   else{
-    if (is_dir(to_remove_n)){
+    if (is_dir(to_remove_n, to_remove_fs)){
       write_string("rm: cannot remove, is a directory\n");
       return;
     }
 
-    if (rm_inode(parent_n, (const char *) leaf)){
+    if (rm_inode(parent_fs, parent_n, (const char *) leaf)){
       write_string("rm: failed (disk error)\n");
       return;
     }

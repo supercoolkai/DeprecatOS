@@ -33,7 +33,8 @@ void cmd_mv(char *args)
     return;
   }
 
-  if (resolve_symlink(absolute_new_path) != SYSCALL_ERROR){
+  uint32_t throwaway_fs;
+  if (resolve_symlink(absolute_new_path, &throwaway_fs) != SYSCALL_ERROR){
     write_string("mv: new path already taken\n");
     return;
   }
@@ -54,7 +55,7 @@ void cmd_mv(char *args)
     return;
   }
 
-  if (resolve_symlink(absolute_old_path) == SYSCALL_ERROR){
+  if (resolve_symlink(absolute_old_path, &throwaway_fs) == SYSCALL_ERROR){
     write_string("mv: cannot rename a nonexistent file\n");
     return;
   }
@@ -62,7 +63,8 @@ void cmd_mv(char *args)
   char *old_leaf;
   uint32_t old_parent_n;
 
-  if (!split_parent_leaf(absolute_old_path, &old_parent_n, &old_leaf)) {
+  uint32_t old_parent_fs;
+  if (!split_parent_leaf(absolute_old_path, &old_parent_n, &old_leaf, &old_parent_fs)) {
     write_string("mv: given old parent directory does not exist\n");
     return;
   }
@@ -70,12 +72,18 @@ void cmd_mv(char *args)
   char *new_leaf;
   uint32_t new_parent_n;
 
-  if (!split_parent_leaf(absolute_new_path, &new_parent_n, &new_leaf)) {
+  uint32_t new_parent_fs;
+  if (!split_parent_leaf(absolute_new_path, &new_parent_n, &new_leaf, &new_parent_fs)) {
     write_string("mv: given new parent directory does not exist\n");
     return;
   }
 
-  if (fmove(old_parent_n, new_parent_n, (const char *) old_leaf, (const char *) new_leaf) == SYSCALL_ERROR) {
+  if (old_parent_fs != new_parent_fs) {
+    write_string("mv: cannot move across filesystems\n");
+    return;
+  }
+
+  if (fmove(old_parent_fs, old_parent_n, new_parent_n, (const char *) old_leaf, (const char *) new_leaf) == SYSCALL_ERROR) {
     write_string("mv: failed, disk error\n");
     return;
   }

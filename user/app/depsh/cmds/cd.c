@@ -17,7 +17,8 @@ void cmd_cd(char *args)
     path = "/";
   }
 
-  uint32_t d = resolve_dir(path);
+  uint32_t d_fs;
+  uint32_t d = resolve_dir(path, &d_fs);
 
   if (d == SYSCALL_ERROR)
   {
@@ -25,7 +26,7 @@ void cmd_cd(char *args)
     return;
   }
 
-  if (!is_dir(d)) {
+  if (!is_dir(d, d_fs)) {
     write_string("cd: cannot cd into a file\n");
     return;
   }

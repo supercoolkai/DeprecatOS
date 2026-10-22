@@ -25,7 +25,8 @@ void cmd_touch(char *args)
     return;
   }
 
-  if (resolve_symlink((const char *)path) != SYSCALL_ERROR){
+  uint32_t throwaway_fs;
+  if (resolve_symlink((const char *)path, &throwaway_fs) != SYSCALL_ERROR){
     write_string("touch: file already exists\n");
     return;
   }
@@ -33,12 +34,13 @@ void cmd_touch(char *args)
   char *leaf;
   uint32_t parent_n;
 
-  if (!split_parent_leaf(path, &parent_n, &leaf)) {
+  uint32_t parent_fs;
+  if (!split_parent_leaf(path, &parent_n, &leaf, &parent_fs)) {
     write_string("touch: given parent directory does not exist\n");
     return;
   }
 
-  if (touch(parent_n, leaf) == SYSCALL_ERROR) {
+  if (touch(parent_fs, parent_n, leaf, &throwaway_fs) == SYSCALL_ERROR) {
     write_string("touch: failed (out of space or disk error)\n");
     return;
   }

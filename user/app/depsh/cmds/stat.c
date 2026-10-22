@@ -42,7 +42,8 @@ void cmd_stat(char *args)
     return;
   }
 
-  uint32_t inode_n = resolve_dir(absolute_path);
+  uint32_t inode_fs;
+  uint32_t inode_n = resolve_dir(absolute_path, &inode_fs);
 
   if (inode_n == SYSCALL_ERROR) {
     write_string("stat: file ");
@@ -51,7 +52,7 @@ void cmd_stat(char *args)
     return;
   }
 
-  get_stat(inode_n, (uint32_t *) stat_buf);
+  get_stat(inode_fs, inode_n, (uint32_t *) stat_buf);
 
   uint32_t return_val;
   if (streq(flag, "-s") || streq(flag, "--size")) {

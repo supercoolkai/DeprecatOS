@@ -69,46 +69,48 @@ void cmd_echo(char *args)
       return;
     }
 
-    uint32_t inode_n = resolve_dir(absolute_path);
+    uint32_t inode_fs;
+    uint32_t inode_n = resolve_dir(absolute_path, &inode_fs);
 
     if (inode_n == SYSCALL_ERROR) {
       uint32_t parent_n;
       char *leaf;
 
-      if (!split_parent_leaf((char *) absolute_path, &parent_n, &leaf)) {
+      uint32_t parent_fs;
+      if (!split_parent_leaf((char *) absolute_path, &parent_n, &leaf, &parent_fs)) {
         write_string("echo: when attempting to create missing file, an unexpected error occurred when splitting the path\n");
         return;
       }
 
-      if ((inode_n = touch(parent_n, (const char *) leaf)) == SYSCALL_ERROR) {
+      if ((inode_n = touch(parent_fs, parent_n, (const char *) leaf, &inode_fs)) == SYSCALL_ERROR) {
         write_string("echo: when attempting to create missing file, an unexpected error occurred when creating the file\n");
         return;
       }
     }
 
-    if (is_dir(inode_n)) {
+    if (is_dir(inode_n, inode_fs)) {
       write_string("echo: cannot echo into a directory\n");
       return;
     }
 
     if (truncate) {
-      if (ftrunc(inode_n, 0) == SYSCALL_ERROR){
+      if (ftrunc(inode_fs, inode_n, 0) == SYSCALL_ERROR){
         write_string("echo: disk error when trying to truncate file, disk corruption possible\n");
         return;
       }
 
-      if (fappend(inode_n, (uint16_t *) args, dir_path_start == 2 ? 0 : dir_path_start - 3) == SYSCALL_ERROR) {
+      if (fappend(inode_fs, inode_n, (uint16_t *) args, dir_path_start == 2 ? 0 : dir_path_start - 3) == SYSCALL_ERROR) {
         write_string("echo: disk error or out of space, disk corruption possible\n");
         return;
       }
     }
 
-    else if (fappend(inode_n, (uint16_t *) args, dir_path_start == 3 ? 0 : dir_path_start - 4) == SYSCALL_ERROR) {
+    else if (fappend(inode_fs, inode_n, (uint16_t *) args, dir_path_start == 3 ? 0 : dir_path_start - 4) == SYSCALL_ERROR) {
       write_string("echo: disk error or out of space, disk corruption possible\n");
       return;
     }
 
-    if (fappend(inode_n, (uint16_t *) "\n", 1) == SYSCALL_ERROR) {
+    if (fappend(inode_fs, inode_n, (uint16_t *) "\n", 1) == SYSCALL_ERROR) {
       write_string("echo: disk error or out of space, disk corruption possible\n");
       return;
     }

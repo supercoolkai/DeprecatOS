@@ -145,7 +145,7 @@ static uint32_t sys_write_string_color(uint32_t *frame)
 
 }
 
-static uint32_t resolve_dir(const char *s, bool split_leaf_sym)
+static uint32_t resolve_dir(const char *s, bool split_leaf_sym, struct fs_info **fs)
 {  
   uint32_t i = 0;
   for (;;) {
@@ -168,7 +168,21 @@ static uint32_t resolve_dir(const char *s, bool split_leaf_sym)
     return SYSCALL_ERROR;
   }
 
+  *fs = ino_fs;
   return ino;
+}
+
+static struct fs_info *fs_from_index(uint32_t index)
+{
+  if (index >= MAX_MOUNTS)
+    return NULL;
+
+  struct fs_info *fs = &fs_entries[index];
+
+  if (fs != root_fs && fs->mountpoint == 0)
+    return NULL;
+
+  return fs;
 }
 
 static uint32_t sys_read_chunk(uint32_t *frame)
@@ -176,12 +190,13 @@ static uint32_t sys_read_chunk(uint32_t *frame)
   uint32_t ino_n = frame[4];
   struct ext2_inode ino;
   
-  if (!get_inode(root_fs, ino_n, &ino)) {
+  struct fs_info *fs = fs_from_index(frame[0]);
+
+  if (!fs || !get_inode(fs, ino_n, &ino)) {
     frame[7] = SYSCALL_ERROR;
     return (uint32_t) frame;
   }
 
-  struct fs_info *fs = root_fs;
   if ((ino.type_and_perms_lo & NO_PERMISSION_MASK) == INODE_DIR_TYPE) {
     return_mnt_root(fs, ino_n, &fs, &ino_n);
 
@@ -234,8 +249,19 @@ static uint32_t sys_read_chunk(uint32_t *frame)
 static uint32_t sys_resolve_dir(uint32_t *frame)
 {
   const char *s = (const char *) frame[4];
+  uint32_t *fs_out = (uint32_t *) frame[5];
 
-  uint32_t ino = resolve_dir(s, true);
+  if ((uint32_t) fs_out < KERNEL_CEILING || (uint32_t) fs_out > USER_SPACE_END - sizeof(uint32_t)) {
+    frame[7] = SYSCALL_ERROR;
+    return (uint32_t) frame;
+  }
+
+  struct fs_info *ino_fs;
+  uint32_t ino = resolve_dir(s, true, &ino_fs);
+
+  if (ino != SYSCALL_ERROR) {
+    *fs_out = (uint32_t) (ino_fs - fs_entries);
+  }
 
   frame[7] = ino;
 
@@ -269,7 +295,9 @@ static uint32_t sys_get_stat(uint32_t *frame)
   uint32_t ino_n = frame[4];
   struct ext2_inode ino;
   
-  if (!get_inode(root_fs, ino_n, &ino)) {
+  struct fs_info *fs = fs_from_index(frame[0]);
+
+  if (!fs || !get_inode(fs, ino_n, &ino)) {
     frame[7] = SYSCALL_ERROR;
     return (uint32_t) frame;
   }
@@ -292,12 +320,28 @@ static uint32_t sys_make_dir(uint32_t *frame)
 
   uint32_t base = frame[6];
 
+  uint32_t *fs_out = (uint32_t *) frame[5];
+
   if (base < KERNEL_CEILING || base > USER_SPACE_END - NAME_LEN) {
     frame[7] = SYSCALL_ERROR;
     return (uint32_t) frame;
   }
 
-  uint32_t inode_n = make_dir(root_fs, parent_inode_n, (const char *) base);
+  if ((uint32_t) fs_out < KERNEL_CEILING || (uint32_t) fs_out > USER_SPACE_END - sizeof(uint32_t)) {
+    frame[7] = SYSCALL_ERROR;
+    return (uint32_t) frame;
+  }
+
+  struct fs_info *fs = fs_from_index(frame[0]);
+  if (!fs) {
+    frame[7] = SYSCALL_ERROR;
+    return (uint32_t) frame;
+  }
+  struct fs_info *fs_temp;
+  uint32_t inode_n = make_dir(fs, parent_inode_n, (const char *) base, &fs_temp);
+  if (inode_n != INODE_ERROR)
+    *fs_out = (uint32_t) (fs_temp - fs_entries);
+
   frame[7] =  (inode_n == INODE_ERROR) ? SYSCALL_ERROR : inode_n; 
   return (uint32_t) frame;
 }
@@ -315,7 +359,13 @@ static uint32_t sys_remove_inode(uint32_t *frame)
 
   const char *name = (const char *) base;
 
-  frame[7] = unlink_inode(root_fs, parent_inode_n, name) ? 0 : SYSCALL_ERROR;
+  struct fs_info *fs = fs_from_index(frame[0]);
+  if (!fs) {
+    frame[7] = SYSCALL_ERROR;
+    return (uint32_t) frame;
+  }
+
+  frame[7] = unlink_inode(fs, parent_inode_n, name) ? 0 : SYSCALL_ERROR;
   return (uint32_t) frame;
 }
 
@@ -332,7 +382,13 @@ static uint32_t sys_remove_dir(uint32_t *frame)
 
   const char *name = (const char *) base;
 
-  frame[7] = unlink_dir(root_fs, parent_inode_n, name) ? 0 : SYSCALL_ERROR;
+  struct fs_info *fs = fs_from_index(frame[0]);
+  if (!fs) {
+    frame[7] = SYSCALL_ERROR;
+    return (uint32_t) frame;
+  }
+
+  frame[7] = unlink_dir(fs, parent_inode_n, name) ? 0 : SYSCALL_ERROR;
   return (uint32_t) frame;
 }
 
@@ -389,9 +445,15 @@ static uint32_t sys_replace_inode(uint32_t *frame)
     return (uint32_t) frame;
   }
 
+  struct fs_info *fs = fs_from_index(frame[0]);
+  if (!fs) {
+    frame[7] = SYSCALL_ERROR;
+    return (uint32_t) frame;
+  }
+
   struct ext2_inode throwaway;
 
-  if (replace_inode(root_fs, inode_n, buf, f_size, &throwaway) != INODE_WRITE_SUCCESS)
+  if (replace_inode(fs, inode_n, buf, f_size, &throwaway) != INODE_WRITE_SUCCESS)
     frame[7] = SYSCALL_ERROR;
   else{
     frame[7] = 0;
@@ -403,13 +465,29 @@ static uint32_t sys_make_inode(uint32_t *frame)
 {
   uint32_t parent_n = frame[4];
   uint32_t base = frame[6];
+  uint32_t *fs_out = (uint32_t *) frame[5];
 
   if (base < KERNEL_CEILING || base > USER_SPACE_END - NAME_LEN) {
     frame[7] = SYSCALL_ERROR;
     return (uint32_t) frame;
   }
 
-  uint32_t inode_n = make_file(root_fs, parent_n, (const char *) base);
+  if ((uint32_t) fs_out < KERNEL_CEILING || (uint32_t) fs_out > USER_SPACE_END - sizeof(uint32_t)) {
+    frame[7] = SYSCALL_ERROR;
+    return (uint32_t) frame;
+  }
+
+  struct fs_info *fs = fs_from_index(frame[0]);
+  if (!fs) {
+    frame[7] = SYSCALL_ERROR;
+    return (uint32_t) frame;
+  }
+
+  struct fs_info *fs_temp;
+  uint32_t inode_n = make_file(fs, parent_n, (const char *) base, &fs_temp);
+  if (inode_n != INODE_ERROR)
+    *fs_out = (uint32_t) (fs_temp - fs_entries);
+
   frame[7] =  (inode_n == INODE_ERROR) ? SYSCALL_ERROR : inode_n; 
   return (uint32_t) frame;
 }
@@ -561,7 +639,13 @@ static uint32_t sys_rename_inode(uint32_t *frame)
     i++;
   }
 
-  if (!rename_inode(root_fs, old_parent_n, old_name, new_parent_n, new_name)){
+  struct fs_info *fs = fs_from_index(frame[0]);
+  if (!fs) {
+    frame[7] = SYSCALL_ERROR;
+    return (uint32_t) frame;
+  }
+
+  if (!rename_inode(fs, old_parent_n, old_name, new_parent_n, new_name)){
     frame[7] = SYSCALL_ERROR;
     return (uint32_t) frame;
   }
@@ -586,9 +670,15 @@ static uint32_t sys_append_to_inode(uint32_t *frame)
     return (uint32_t) frame;
   }
 
+  struct fs_info *fs = fs_from_index(frame[0]);
+  if (!fs) {
+    frame[7] = SYSCALL_ERROR;
+    return (uint32_t) frame;
+  }
+
   struct ext2_inode throwaway;
 
-  if (append_to_inode(root_fs, inode_n, buf, f_size, &throwaway) != INODE_WRITE_SUCCESS)
+  if (append_to_inode(fs, inode_n, buf, f_size, &throwaway) != INODE_WRITE_SUCCESS)
     frame[7] = SYSCALL_ERROR;
   else{
     frame[7] = 0;
@@ -604,13 +694,21 @@ static uint32_t sys_link_inode(uint32_t *frame)
 
   uint32_t i = 0;
 
-  if (!inode_exists(root_fs, inode_n) || !inode_exists(root_fs, parent_n)) {
+  struct fs_info *fs = fs_from_index(frame[0]);
+  struct fs_info *parent_fs = fs_from_index(frame[1]);
+
+  if (!fs || !parent_fs || fs != parent_fs) {
+    frame[7] = SYSCALL_ERROR;
+    return (uint32_t) frame;
+  }
+
+  if (!inode_exists(fs, inode_n) || !inode_exists(parent_fs, parent_n)) {
     frame[7] = SYSCALL_ERROR;
     return (uint32_t) frame;
   }
   
   struct ext2_inode ino;
-  if (!get_inode(root_fs, inode_n, &ino)){
+  if (!get_inode(fs, inode_n, &ino)){
     frame[7] = SYSCALL_ERROR;
     return (uint32_t) frame;
   }
@@ -638,12 +736,12 @@ static uint32_t sys_link_inode(uint32_t *frame)
   }
   
   uint32_t temp;
-  if (dir_contains(root_fs, parent_n, (const char *) s, &temp)) {
+  if (dir_contains(parent_fs, parent_n, (const char *) s, &temp)) {
     frame[7] = SYSCALL_ERROR;
     return (uint32_t) frame;
   }
 
-  if (!dir_insert(root_fs, parent_n, (const char *) s, inode_n)) {
+  if (!dir_insert(parent_fs, parent_n, (const char *) s, inode_n)) {
     frame[7] = SYSCALL_ERROR;
     return (uint32_t) frame;
   }
@@ -658,7 +756,13 @@ static uint32_t sys_make_symlink(uint32_t *frame)
   const char *name = (const char *) frame[5];
   const char *target = (const char *) frame[6];
 
-  if (!inode_exists(root_fs, parent_n)){
+  struct fs_info *fs = fs_from_index(frame[0]);
+  if (!fs) {
+    frame[7] = SYSCALL_ERROR;
+    return (uint32_t) frame;
+  }
+
+  if (!inode_exists(fs, parent_n)){
     frame[7] = SYSCALL_ERROR;
     return (uint32_t) frame;
   }
@@ -685,12 +789,12 @@ static uint32_t sys_make_symlink(uint32_t *frame)
   }
  
   uint32_t temp;
-  if (dir_contains(root_fs, parent_n, (const char *) name, &temp)) {
+  if (dir_contains(fs, parent_n, (const char *) name, &temp)) {
     frame[7] = SYSCALL_ERROR;
     return (uint32_t) frame;
   }
   
-  if (!make_symlink(root_fs, parent_n, name, target)){
+  if (!make_symlink(fs, parent_n, name, target)){
     frame[7] = SYSCALL_ERROR;
     return (uint32_t) frame;
   }
@@ -702,8 +806,19 @@ static uint32_t sys_make_symlink(uint32_t *frame)
 static uint32_t sys_resolve_symlink(uint32_t *frame)
 {
   const char *s = (const char *) frame[4];
+  uint32_t *fs_out = (uint32_t *) frame[5];
 
-  uint32_t ino = resolve_dir(s, false);
+  if ((uint32_t) fs_out < KERNEL_CEILING || (uint32_t) fs_out > USER_SPACE_END - sizeof(uint32_t)) {
+    frame[7] = SYSCALL_ERROR;
+    return (uint32_t) frame;
+  }
+
+  struct fs_info *ino_fs;
+  uint32_t ino = resolve_dir(s, false, &ino_fs);
+
+  if (ino != SYSCALL_ERROR) {
+    *fs_out = (uint32_t) (ino_fs - fs_entries);
+  }
 
   frame[7] = ino;
 
@@ -715,14 +830,36 @@ static uint32_t sys_truncate_inode(uint32_t *frame)
   uint32_t inode_n = frame[4];
   uint32_t new_size = frame[6];
 
+  struct fs_info *fs = fs_from_index(frame[0]);
+  if (!fs) {
+    frame[7] = SYSCALL_ERROR;
+    return (uint32_t) frame;
+  }
+
   struct ext2_inode throwaway;
 
-  if (truncate_inode(root_fs, inode_n, new_size, &throwaway) != INODE_WRITE_SUCCESS){
+  if (truncate_inode(fs, inode_n, new_size, &throwaway) != INODE_WRITE_SUCCESS){
     frame[7] = SYSCALL_ERROR;
     return (uint32_t) frame;
   }
 
   frame[7] = 0;
+  return (uint32_t) frame;
+}
+
+static uint32_t sys_inode_is_mountpoint(uint32_t *frame)
+{
+  uint32_t inode_n = frame[6];
+
+  struct fs_info *fs = fs_from_index(frame[4]);
+  if (!fs) {
+    frame[7] = SYSCALL_ERROR;
+    return (uint32_t) frame;
+  }
+
+  uint32_t throwaway_n;
+  struct fs_info *throwaway_fs;
+  frame[7] = return_mnt_root(fs, inode_n, &throwaway_fs, &throwaway_n) ? 1 : 0;
   return (uint32_t) frame;
 }
 
@@ -760,6 +897,7 @@ static uint32_t (*syscall_table[])(uint32_t *) = {
   sys_make_symlink,
   sys_resolve_symlink,
   sys_truncate_inode,
+  sys_inode_is_mountpoint,
 };
 
 void syscall_init(void)

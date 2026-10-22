@@ -120,6 +120,8 @@
 
 #### **DRIVE_SELECT_IO_PORT** *(kernel/drivers/disk/ata.h)*
 
+#### **DRIVE_UNUSED_SIZE** *(kernel/drivers/disk/partition.h)*
+
 #### **DRQ_BIT** *(kernel/drivers/disk/ata.h)*
 
 #### **ECHO_OUT_FLAG_LEN** *(user/app/depsh/cmds/echo.c)*
@@ -177,6 +179,8 @@
 #### **FRAME_VECTOR_INDEX_EXCEPTION** *(kernel/exceptions/exceptions.h)*
 
 #### **FREE_MODE** *(kernel/fs/block/blockController.h)*
+
+#### **FS_INFO_LABEL_LEN** *(kernel/fs/block/blockController.h)*
 
 #### **GENERAL_ERROR** *(kernel/errors.h)*
 
@@ -312,9 +316,13 @@
 
 #### **MAX_H** *(etc/lib/max/max.h)*
 
+#### **MAX_MOUNTS** *(kernel/fs/block/blockController.h)*
+
 #### **MAX_POLL_REPEAT** *(kernel/drivers/disk/ata.h)*
 
 #### **MAX_SYMLINK_LEN** *(kernel/fs/ext2/directoryController.c)*
+
+#### **MBR_SIZE** *(kernel/drivers/disk/partition.h)*
 
 #### **MEM_H** *(etc/lib/mem/mem.h)*
 
@@ -323,6 +331,12 @@
 #### **MIN_H** *(etc/lib/min/min.h)*
 
 #### **MISC_PAGE_CNT** *(kernel/userland/userland.h)*
+
+#### **MOUNT_H** *(kernel/fs/mount/mount.h)*
+
+#### **MOUNT_PATH_SEED** *(kernel/fs/mount/mount.c)*
+
+#### **MOUNT_PATH_SEED_LEN** *(kernel/fs/mount/mount.c)*
 
 #### **MV_H** *(user/app/depsh/cmds/mv.h)*
 
@@ -348,6 +362,18 @@
 
 #### **PALETTE_SIZE** *(kernel/drivers/fb/fbController.h)*
 
+#### **PART_ENTRY_SIZE** *(kernel/drivers/disk/partition.h)*
+
+#### **PART_GOOD_OFFSET** *(kernel/drivers/disk/partition.h)*
+
+#### **PARTITION_H** *(kernel/drivers/disk/partition.h)*
+
+#### **PART_LBA_OFFSET** *(kernel/drivers/disk/partition.h)*
+
+#### **PART_SECTOR_COUNT_OFFSET** *(kernel/drivers/disk/partition.h)*
+
+#### **PARTS_PER_DRIVE** *(kernel/fs/block/blockController.h)*
+
 #### **PATH_LEN** *(kernel/fs/ext2/directoryController.c)*
 
 #### **PIC1_CMD** *(kernel/idt/idtController.h)*
@@ -369,8 +395,6 @@
 #### **PIT_CMD** *(kernel/drivers/timer/timerController.c)*
 
 #### **PIT_HZ** *(kernel/drivers/timer/timerController.c)*
-
-#### **PORT_IO_H** *(include/portio.h)*
 
 #### **PQUEUE_SIZE_ELEMENTS** *(kernel/process/queue/processQueue.h)*
 
@@ -470,6 +494,8 @@
 
 #### **SYS_GET_TICKS** *(user/sys/syscall.c)*
 
+#### **SYS_INODE_IS_MOUNTPOINT** *(user/sys/syscall.c)*
+
 #### **SYS_MAKE_DIR** *(user/sys/syscall.c)*
 
 #### **SYS_MAKE_INODE** *(user/sys/syscall.c)*
@@ -551,4 +577,3 @@
 #### **WRITE_EXT** *(kernel/drivers/disk/ata.h)*
 
 #### **YELLOW** *(etc/lib/colors/colors.h)*
-

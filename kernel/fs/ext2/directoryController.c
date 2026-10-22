@@ -671,7 +671,7 @@ bool dir_remove(struct fs_info *fs, uint32_t parent_inode_n, const char *name, u
   return false;
 }
 
-uint32_t make_dir(struct fs_info *fs, uint32_t parent_inode_n, const char *name)
+uint32_t make_dir(struct fs_info *fs, uint32_t parent_inode_n, const char *name, struct fs_info **fs_out)
 {
   uint32_t len = 0;
   while (len < NAME_LEN && name[len] != 0)
@@ -731,6 +731,8 @@ uint32_t make_dir(struct fs_info *fs, uint32_t parent_inode_n, const char *name)
   }
 
   kfree(buf);
+
+  *fs_out = fs;
 
   return child_n;
 }
@@ -861,7 +863,7 @@ bool unlink_dir(struct fs_info *fs, uint32_t parent_inode_n, const char *name)
   return true;
 }
 
-uint32_t make_file(struct fs_info *fs, uint32_t parent_inode_n, const char *name)
+uint32_t make_file(struct fs_info *fs, uint32_t parent_inode_n, const char *name, struct fs_info **fs_out)
 {
   uint32_t len = 0;
   while (len < NAME_LEN && name[len] != 0)
@@ -899,6 +901,7 @@ uint32_t make_file(struct fs_info *fs, uint32_t parent_inode_n, const char *name
     return INODE_ERROR;
   }
 
+  *fs_out = fs;
   return child_inode_n;
 }
 

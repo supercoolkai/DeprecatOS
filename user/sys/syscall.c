@@ -34,6 +34,7 @@
 #define SYS_MAKE_SYMLINK 31
 #define SYS_RESOLVE_SYMLINK 32
 #define SYS_TRUNCATE_INODE 33
+#define SYS_INODE_IS_MOUNTPOINT 34
 
 uint32_t write_char(char c)
 {
@@ -122,24 +123,24 @@ uint32_t write_string_color(char *c, unsigned char color)
 
   return result;
 }
-uint32_t read_chunk(uint32_t inode_n, uint32_t chunk_num, uint32_t *buf)
+uint32_t read_chunk(uint32_t fs, uint32_t inode_n, uint32_t chunk_num, uint32_t *buf)
 {
   uint32_t result;
   __asm__ volatile (
     "int $0x80"
     : "=a" (result)
-    : "a" (SYS_READ_CHUNK), "b" (inode_n), "d" (chunk_num), "c" ((uint32_t) buf): "memory"
+    : "a" (SYS_READ_CHUNK), "b" (inode_n), "d" (chunk_num), "c" ((uint32_t) buf), "D" (fs): "memory"
   );
 
   return result;
 }
-uint32_t resolve_dir(const char *c)
+uint32_t resolve_dir(const char *c, uint32_t *fs_out)
 {
   uint32_t result;
   __asm__ volatile (
     "int $0x80"
     : "=a" (result)
-    : "a" (SYS_RESOLVE_DIR), "b" ((uint32_t) c): "memory"
+    : "a" (SYS_RESOLVE_DIR), "b" ((uint32_t) c), "d" ((uint32_t) fs_out): "memory"
   );
 
   return result;
@@ -157,49 +158,49 @@ uint32_t write_string_len(const char *buf, uint32_t len)
   return result;
 }
 
-uint32_t get_stat(uint32_t inode_n, uint32_t *buf)
+uint32_t get_stat(uint32_t fs, uint32_t inode_n, uint32_t *buf)
 {
   uint32_t result;
   __asm__ volatile (
     "int $0x80"
     : "=a" (result)
-    : "a" (SYS_GET_STAT), "b" (inode_n), "c" ((uint32_t) buf): "memory"
+    : "a" (SYS_GET_STAT), "b" (inode_n), "c" ((uint32_t) buf), "D" (fs): "memory"
   );
 
   return result;
 }
 
-uint32_t mkdir(uint32_t inode_n, const char *name)
+uint32_t mkdir(uint32_t fs, uint32_t inode_n, const char *name, uint32_t *fs_out)
 {
   uint32_t result;
   __asm__ volatile (
     "int $0x80"
     : "=a" (result)
-    : "a" (SYS_MAKE_DIR), "b" (inode_n), "c" ((uint32_t) name): "memory"
+    : "a" (SYS_MAKE_DIR), "b" (inode_n), "c" ((uint32_t) name), "D" (fs), "d" ((uint32_t) fs_out): "memory"
   );
 
   return result;
 }
 
-uint32_t rm_inode(uint32_t inode_n, const char *name)
+uint32_t rm_inode(uint32_t fs, uint32_t inode_n, const char *name)
 {
   uint32_t result;
   __asm__ volatile (
     "int $0x80"
     : "=a" (result)
-    : "a" (SYS_REMOVE_INODE), "b" (inode_n), "c" ((uint32_t) name): "memory"
+    : "a" (SYS_REMOVE_INODE), "b" (inode_n), "c" ((uint32_t) name), "D" (fs): "memory"
   );
 
   return result;
 }
 
-uint32_t rm_dir(uint32_t inode_n, const char *name)
+uint32_t rm_dir(uint32_t fs, uint32_t inode_n, const char *name)
 {
   uint32_t result;
   __asm__ volatile (
     "int $0x80"
     : "=a" (result)
-    : "a" (SYS_REMOVE_DIR), "b" (inode_n), "c" ((uint32_t) name): "memory"
+    : "a" (SYS_REMOVE_DIR), "b" (inode_n), "c" ((uint32_t) name), "D" (fs): "memory"
   );
 
   return result;
@@ -241,25 +242,25 @@ uint32_t clear_screen(void)
   return result;
 }
 
-uint32_t fsave(uint32_t inode_n, uint16_t *buf, uint32_t f_size)
+uint32_t fsave(uint32_t fs, uint32_t inode_n, uint16_t *buf, uint32_t f_size)
 {
   uint32_t result;
   __asm__ volatile (
     "int $0x80"
     : "=a" (result)
-    : "a" (SYS_REPLACE_INODE), "b" (inode_n), "d" (f_size), "c" ((uint32_t) buf): "memory"
+    : "a" (SYS_REPLACE_INODE), "b" (inode_n), "d" (f_size), "c" ((uint32_t) buf), "D" (fs): "memory"
   );
 
   return result;
 }
 
-uint32_t touch(uint32_t inode_n, const char *name)
+uint32_t touch(uint32_t fs, uint32_t inode_n, const char *name, uint32_t *fs_out)
 {
   uint32_t result;
   __asm__ volatile (
     "int $0x80"
     : "=a" (result)
-    : "a" (SYS_MAKE_INODE), "b" (inode_n), "c" ((uint32_t) name): "memory"
+    : "a" (SYS_MAKE_INODE), "b" (inode_n), "c" ((uint32_t) name), "D" (fs), "d" ((uint32_t) fs_out): "memory"
   );
 
   return result;
@@ -347,73 +348,85 @@ uint32_t get_epoch(uint64_t *epoch_out)
   return result;
 }
 
-uint32_t fmove(uint32_t old_parent_n, uint32_t new_parent_n, const char *old_name, const char *new_name)
+uint32_t fmove(uint32_t fs, uint32_t old_parent_n, uint32_t new_parent_n, const char *old_name, const char *new_name)
 {
   uint32_t result;
   __asm__ volatile (
     "int $0x80"
     : "=a" (result)
-    : "a" (SYS_RENAME_INODE), "b" (old_parent_n), "d" (new_parent_n), "c" ((uint32_t) old_name), "S" ((uint32_t) new_name) : "memory"
+    : "a" (SYS_RENAME_INODE), "b" (old_parent_n), "d" (new_parent_n), "c" ((uint32_t) old_name), "S" ((uint32_t) new_name), "D" (fs) : "memory"
   );
 
   return result;
 }
 
-uint32_t fappend(uint32_t inode_n, uint16_t *buf, uint32_t f_size)
+uint32_t fappend(uint32_t fs, uint32_t inode_n, uint16_t *buf, uint32_t f_size)
 {
   uint32_t result;
   __asm__ volatile (
     "int $0x80"
     : "=a" (result)
-    : "a" (SYS_APPEND_TO_INODE), "b" (inode_n), "d" (f_size), "c" ((uint32_t) buf): "memory"
+    : "a" (SYS_APPEND_TO_INODE), "b" (inode_n), "d" (f_size), "c" ((uint32_t) buf), "D" (fs): "memory"
   );
 
   return result;
 }
 
-uint32_t lmake_hard(uint32_t inode_n, uint32_t parent_n, const char *name)
+uint32_t lmake_hard(uint32_t fs, uint32_t inode_n, uint32_t parent_fs, uint32_t parent_n, const char *name)
 {
   uint32_t result;
   __asm__ volatile (
     "int $0x80"
     : "=a" (result)
-    : "a" (SYS_MAKE_LINK), "b" (inode_n), "d" (parent_n), "c" ((uint32_t) name): "memory"
+    : "a" (SYS_MAKE_LINK), "b" (inode_n), "d" (parent_n), "c" ((uint32_t) name), "D" (fs), "S" (parent_fs): "memory"
   );
 
   return result;
 }
 
-uint32_t lmake_sym(uint32_t parent_n, const char *name, const char *target)
+uint32_t lmake_sym(uint32_t fs, uint32_t parent_n, const char *name, const char *target)
 {
   uint32_t result;
   __asm__ volatile (
     "int $0x80"
     : "=a" (result)
-    : "a" (SYS_MAKE_SYMLINK), "b" (parent_n), "d" ((uint32_t) name), "c" ((uint32_t) target): "memory"
+    : "a" (SYS_MAKE_SYMLINK), "b" (parent_n), "d" ((uint32_t) name), "c" ((uint32_t) target), "D" (fs): "memory"
   );
 
   return result;
 }
 
-uint32_t resolve_symlink(const char *c)
+uint32_t resolve_symlink(const char *c, uint32_t *fs_out)
 {
   uint32_t result;
   __asm__ volatile (
     "int $0x80"
     : "=a" (result)
-    : "a" (SYS_RESOLVE_SYMLINK), "b" ((uint32_t) c): "memory"
+    : "a" (SYS_RESOLVE_SYMLINK), "b" ((uint32_t) c), "d" ((uint32_t) fs_out): "memory"
   );
 
   return result;
 }
 
-uint32_t ftrunc(uint32_t inode_n, uint32_t new_size)
+uint32_t ftrunc(uint32_t fs, uint32_t inode_n, uint32_t new_size)
 {
   uint32_t result;
   __asm__ volatile (
     "int $0x80"
     : "=a" (result)
-    : "a" (SYS_TRUNCATE_INODE), "b" (inode_n), "c" (new_size) : "memory"
+    : "a" (SYS_TRUNCATE_INODE), "b" (inode_n), "c" (new_size), "D" (fs) : "memory"
+  );
+
+  return result;
+}
+
+uint32_t is_mountpoint(uint32_t fs, uint32_t inode_n)
+{
+  uint32_t result;
+  __asm__ volatile (
+    "int $0x80"
+    : "=a" (result)
+    : "a" (SYS_INODE_IS_MOUNTPOINT), "b" (fs), "c" (inode_n) : "memory"
   );
 
   return result;

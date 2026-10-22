@@ -21,7 +21,8 @@ static bool mkdir_recursive(char *path)
 
   char *parent = (last == 0) ? "/" : path;
 
-  uint32_t parent_n = resolve_dir((const char *) parent);
+  uint32_t parent_fs;
+  uint32_t parent_n = resolve_dir((const char *) parent, &parent_fs);
 
   if (parent_n == SYSCALL_ERROR){
     if (!mkdir_recursive(parent)) {
@@ -30,14 +31,15 @@ static bool mkdir_recursive(char *path)
     }
   }
 
-  parent_n = resolve_dir((const char *) parent);
+  parent_n = resolve_dir((const char *) parent, &parent_fs);
   path[last] = temp;
 
   if (parent_n == SYSCALL_ERROR)
     return false;
 
 
-  if (mkdir(parent_n, leaf) == SYSCALL_ERROR){
+  uint32_t throwaway_fs;
+  if (mkdir(parent_fs, parent_n, leaf, &throwaway_fs) == SYSCALL_ERROR){
     return false;
   }
 
@@ -77,7 +79,8 @@ void cmd_mkdir(char *args)
     return;
   }
 
-  if (resolve_symlink((const char *)path) != SYSCALL_ERROR){
+  uint32_t throwaway_fs;
+  if (resolve_symlink((const char *)path, &throwaway_fs) != SYSCALL_ERROR){
     write_string("mkdir: cannot create directory, already exists\n");
     return;
   }
@@ -100,7 +103,8 @@ void cmd_mkdir(char *args)
 
   char *parent = (last == 0) ? "/" : path;
 
-  uint32_t parent_n = resolve_dir((const char *) parent);
+  uint32_t parent_fs;
+  uint32_t parent_n = resolve_dir((const char *) parent, &parent_fs);
 
   if (parent_n == SYSCALL_ERROR)
   {
@@ -112,10 +116,10 @@ void cmd_mkdir(char *args)
       write_string("mkdir: failed (out of space or disk error)\n");
       return;
     }
-    parent_n = resolve_dir((const char *) parent);
+    parent_n = resolve_dir((const char *) parent, &parent_fs);
   }
 
-  if (mkdir(parent_n, leaf) == SYSCALL_ERROR) {
+  if (mkdir(parent_fs, parent_n, leaf, &throwaway_fs) == SYSCALL_ERROR) {
     write_string("mkdir: failed (out of space or disk error)\n");
     return;
   }
