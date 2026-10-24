@@ -863,6 +863,52 @@ static uint32_t sys_inode_is_mountpoint(uint32_t *frame)
   return (uint32_t) frame;
 }
 
+static uint32_t sys_mount_fs(uint32_t *frame)
+{
+  const char *label = (const char *) frame[4];
+
+  uint32_t i = 0;
+  for (;;){
+
+    if((uint32_t) label + i < KERNEL_CEILING || (uint32_t) label + i >= USER_SPACE_END){
+      frame[7] = SYSCALL_ERROR;
+      return (uint32_t) frame;
+    }
+    char c = label[i];
+    
+    if (c == 0)
+      break;
+
+    i++;
+  }
+
+  frame[7] = mount_fs(label) == false ? SYSCALL_ERROR : 0;
+  return (uint32_t) frame;
+}
+
+static uint32_t sys_umount_fs(uint32_t *frame)
+{
+  const char *label = (const char *) frame[4];
+
+  uint32_t i = 0;
+  for (;;){
+
+    if((uint32_t) label + i < KERNEL_CEILING || (uint32_t) label + i >= USER_SPACE_END){
+      frame[7] = SYSCALL_ERROR;
+      return (uint32_t) frame;
+    }
+    char c = label[i];
+    
+    if (c == 0)
+      break;
+
+    i++;
+  }
+
+  frame[7] = umount_fs(label) == false ? SYSCALL_ERROR : 0;
+  return (uint32_t) frame;
+}
+
 static uint32_t (*syscall_table[])(uint32_t *) = {
   sys_write_char,
   sys_write_string,
@@ -898,6 +944,8 @@ static uint32_t (*syscall_table[])(uint32_t *) = {
   sys_resolve_symlink,
   sys_truncate_inode,
   sys_inode_is_mountpoint,
+  sys_mount_fs,
+  sys_umount_fs,
 };
 
 void syscall_init(void)

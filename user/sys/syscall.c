@@ -35,6 +35,8 @@
 #define SYS_RESOLVE_SYMLINK 32
 #define SYS_TRUNCATE_INODE 33
 #define SYS_INODE_IS_MOUNTPOINT 34
+#define SYS_MOUNT_FS 35
+#define SYS_UMOUNT_FS 36
 
 uint32_t write_char(char c)
 {
@@ -427,6 +429,30 @@ uint32_t is_mountpoint(uint32_t fs, uint32_t inode_n)
     "int $0x80"
     : "=a" (result)
     : "a" (SYS_INODE_IS_MOUNTPOINT), "b" (fs), "c" (inode_n) : "memory"
+  );
+
+  return result;
+}
+
+uint32_t mount(const char *name)
+{
+  uint32_t result;
+  __asm__ volatile (
+    "int $0x80"
+    : "=a" (result)
+    : "a" (SYS_MOUNT_FS), "b" ((uint32_t) name) : "memory"
+  );
+
+  return result;
+}
+
+uint32_t umount(const char *name)
+{
+  uint32_t result;
+  __asm__ volatile (
+    "int $0x80"
+    : "=a" (result)
+    : "a" (SYS_UMOUNT_FS), "b" ((uint32_t) name) : "memory"
   );
 
   return result;

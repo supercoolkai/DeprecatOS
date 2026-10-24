@@ -37,5 +37,7 @@ uint32_t lmake_sym(uint32_t fs, uint32_t parent_n, const char *name, const char 
 uint32_t resolve_symlink(const char *c, uint32_t *fs_out);
 uint32_t ftrunc(uint32_t fs, uint32_t inode_n, uint32_t new_size);
 uint32_t is_mountpoint(uint32_t fs, uint32_t inode_n);
+uint32_t mount(const char *name);
+uint32_t umount(const char *name);
 
 #endif

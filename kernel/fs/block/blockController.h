@@ -37,7 +37,6 @@ struct fs_info {
   uint32_t blks_per_grp;     
   uint32_t frags_per_grp;    
   uint32_t ngroups;          
-  
   uint32_t mountpoint;
   char label[FS_INFO_LABEL_LEN];
 };

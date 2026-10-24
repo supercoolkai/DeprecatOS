@@ -16,5 +16,7 @@
 #include "app/depsh/cmds/mv.h"
 #include "app/depsh/cmds/cp.h"
 #include "app/depsh/cmds/ln.h"
+#include "app/depsh/cmds/mount.h"
+#include "app/depsh/cmds/umount.h"
 
 #endif
