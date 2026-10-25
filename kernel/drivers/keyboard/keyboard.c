@@ -1,5 +1,5 @@
 #include "drivers/keyboard/keyboard.h"
-#include "portio.h"
+#include "portio/portio.h"
 #include "drivers/serial/serialController.h"
 #include "drivers/fb/fbController.h"
 #include "rb/ringBuffer.h"

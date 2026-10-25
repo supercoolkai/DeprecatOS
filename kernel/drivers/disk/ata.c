@@ -4,7 +4,7 @@
 #include "drivers/fb/fbController.h"
 #include "exceptions/exceptions.h"
 #include <stdint.h>
-#include "portio.h"
+#include "portio/portio.h"
 #include <stdbool.h>
 #include "hex/hexPrinter.h"
 #include "errors.h"

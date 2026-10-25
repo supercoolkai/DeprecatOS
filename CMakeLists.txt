@@ -16,7 +16,6 @@ set(CMAKE_EXE_LINKER_FLAGS "-m32 -nostdlib -no-pie -static -T ${CMAKE_CURRENT_SO
 set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
 
 include_directories(
-include
 kernel
 etc/lib
 etc/kernel
