@@ -909,6 +909,27 @@ static uint32_t sys_umount_fs(uint32_t *frame)
   return (uint32_t) frame;
 }
 
+__attribute__((noreturn))
+static uint32_t sys_halt(uint32_t *frame)
+{
+  for (uint32_t i = 0 ;i < MAX_MOUNTS; i++) {
+    if (fs_entries[i].mountpoint == 0)
+      continue;
+
+    umount_fs((const char *) fs_entries[i].label);
+  }
+
+  mark_fs_state(root_fs, true);
+
+  ata_flush_drives();
+
+  fb_clear_screen();
+
+  kprintf(KPRINTF_WHITE "halt completed, safe to power off" KPRINTF_RESET);
+
+  for (;;) __asm__ volatile ("hlt");
+}
+
 static uint32_t (*syscall_table[])(uint32_t *) = {
   sys_write_char,
   sys_write_string,
@@ -946,6 +967,7 @@ static uint32_t (*syscall_table[])(uint32_t *) = {
   sys_inode_is_mountpoint,
   sys_mount_fs,
   sys_umount_fs,
+  sys_halt,
 };
 
 void syscall_init(void)

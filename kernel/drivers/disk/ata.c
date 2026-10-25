@@ -12,6 +12,8 @@
 struct ata_drive master_drive;
 struct ata_drive slave_drive;
 
+bool has_slave;
+
 static void poll(void){
   uint8_t test = inb(STATUS_PORT);
 
@@ -219,6 +221,26 @@ void ata_write48_part(uint8_t drive, uint64_t base_lba, uint64_t part_len, uint6
   ata_write48(drive, base_lba + lba, count, buf);
 }
 
+void ata_flush_drives(void)
+{ 
+  outb(DRIVE_SELECT_IO_PORT, LBA48_MASTER_DRIVE);
+  outb(COMMAND_IO_PORT, FLUSH_CACHE_CMD);
+
+  for (int k = 0; k < 4; k++)
+    wait_100_ns();
+
+  wait_bsy_clear();
+
+  if (has_slave){ 
+    outb(DRIVE_SELECT_IO_PORT, LBA48_SLAVE_DRIVE);
+    outb(COMMAND_IO_PORT, FLUSH_CACHE_CMD);
+
+    for (int k = 0; k < 4; k++)
+      wait_100_ns();
+
+    wait_bsy_clear();
+  }
+}
 
 void ata_init(void)
 {
@@ -229,7 +251,10 @@ void ata_init(void)
   ata_identify(master_drive.identify_magic);
   bool b = ata_identify(slave_drive.identify_magic);
 
+  has_slave = true;
+
   if (!b) {
+    has_slave = false;
     kprintf(KPRINTF_YELLOW "\nIdentification failed for the slave driver. Highly recommended to reboot and try again if you are sure this is not a hardware issue. Initialization has continued without.\n" KPRINTF_RESET);
   }
 

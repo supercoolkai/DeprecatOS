@@ -8,15 +8,42 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#define FS_STATE_VALID_BIT 1
+
 #define MOUNT_PATH_SEED "/mnt/"
 #define MOUNT_PATH_SEED_LEN 5
 
 static uint32_t root_slot_n;
 static char mount_path[MOUNT_PATH_SEED_LEN + FS_INFO_LABEL_LEN];
+static uint32_t superblk_pos = EXT2_SUPERBLOCK_OFFSET;
+
+void mark_fs_state(struct fs_info *fs, bool set_valid)
+{
+  struct ext2_superblock *part_superblk = fs->superblk;
+
+  if (set_valid) {
+    part_superblk->fs_state |= FS_STATE_VALID_BIT;
+  }
+  else{
+    if (!(part_superblk->fs_state & FS_STATE_VALID_BIT))
+      kprintf(KPRINTF_YELLOW "partition was not cleanly unmounted\n" KPRINTF_RESET);
+    
+    part_superblk->fs_state &= ~FS_STATE_VALID_BIT;
+  }
+
+  ata_write48_part(fs->drive->identify_magic, 
+                  fs->start_lba,
+                  fs->sector_count,
+                  superblk_pos / BYTES_PER_SECTOR,
+                  sizeof(struct ext2_superblock) / BYTES_PER_SECTOR, 
+                  fs->sprblk_buf);
+}
 
 void mount_init(void)
 {
   root_slot_n = root_fs - fs_entries;
+
+  mark_fs_state(root_fs, false);
 
   for (uint32_t i = root_slot_n + 1; i < MAX_MOUNTS; i++) {
     if (fs_entries[i].sector_count == 0)
@@ -67,6 +94,7 @@ bool return_mnt_mountpoint(struct fs_info *fs, uint32_t inode_n, struct fs_info 
   *out_inode_n = fs->mountpoint;
   return true;
 }
+
 
 bool mount_fs(const char *label)
 {
@@ -148,6 +176,8 @@ bool mount_fs(const char *label)
 
     fs_entries[i].mountpoint = mount_inode_n;
 
+    mark_fs_state(&fs_entries[i], false);
+
     return true;
   }
 
@@ -169,7 +199,10 @@ bool umount_fs(const char *label)
       return false;
     }
 
+    mark_fs_state(&fs_entries[i], true);
+
     fs_entries[i].mountpoint = 0;
+
     return true;
   }
 

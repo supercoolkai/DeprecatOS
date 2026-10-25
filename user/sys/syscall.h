@@ -39,5 +39,6 @@ uint32_t ftrunc(uint32_t fs, uint32_t inode_n, uint32_t new_size);
 uint32_t is_mountpoint(uint32_t fs, uint32_t inode_n);
 uint32_t mount(const char *name);
 uint32_t umount(const char *name);
+uint32_t halt(void);
 
 #endif

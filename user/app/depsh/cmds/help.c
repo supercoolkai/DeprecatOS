@@ -40,5 +40,7 @@ void cmd_help(char *args)
                "Must provide the flag -r in order to copy directories, no matter whether or not "
                "it contains subdirectories.\n"
                "ln [-s] [original_file ...] [new_link_path ...]: Creates a hard link to a file. "
-               "If flag [-s] is passed, creates a symbolic link instead.\n");
+               "If flag [-s] is passed, creates a symbolic link instead.\n"
+               "halt: umounts all partitions and halts the system. highly recommended you "
+               "do it before shutting down\n");
 }
