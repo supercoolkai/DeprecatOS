@@ -44,18 +44,6 @@ void mount_init(void)
   root_slot_n = root_fs - fs_entries;
 
   mark_fs_state(root_fs, false);
-
-  for (uint32_t i = root_slot_n + 1; i < MAX_MOUNTS; i++) {
-    if (fs_entries[i].sector_count == 0)
-      continue;
-
-    struct ext2_superblock *part_superblk = fs_entries[i].superblk;
-
-    for (uint32_t j = 0; j < 16; j++) {
-      fs_entries[i].label[j] = (char) part_superblk->vol_name[j];
-    }
-    fs_entries[i].label[FS_INFO_LABEL_LEN - 1] = '\0';
-  }
 }
 
 

@@ -16,8 +16,12 @@
 #include "max/max.h"
 #include "drivers/disk/partition.h"
 #include "kprintf/kprintf.h"
+#include "streq/streq.h"
 #include <stdint.h>
 #include <stdbool.h>
+
+#define INCOMPAT_FEATURES_SUPPORT_BYTE 0x2
+#define RO_FEATURES_SUPPORT_BYTE 0x3
 
 static uint16_t sectors_per_blk = BLOCK_SIZE / BYTES_PER_SECTOR;
 static uint32_t superblk_pos = EXT2_SUPERBLOCK_OFFSET;
@@ -126,7 +130,7 @@ static bool fill_partition_entry(uint8_t drive_magic, uint32_t part)
   if (!(mbr->partition_magic_1 == 0x55 && mbr->partition_magic_2 == 0xAA)){
     if (drive_magic == ATA_MASTER)
       panic("KERNEL PANIC: master drive has a bad MBR signature");
-    kprintf(KPRINTF_YELLOW "WARNING: slave drive bad" KPRINTF_RESET);
+    kprintf(KPRINTF_YELLOW "WARNING: slave drive has a bad MBR signature\n" KPRINTF_RESET);
     kfree(mbr);
     return false;
   }
@@ -136,10 +140,11 @@ static bool fill_partition_entry(uint8_t drive_magic, uint32_t part)
   
   if (part_good == 0x05 || part_good == 0x0F){
     if (drive_magic == ATA_MASTER)
-      panic("KERNEL PANIC: master drive has an extended partition");
-    kprintf(KPRINTF_YELLOW "WARNING: slave drive bad" KPRINTF_RESET);
+      kprintf(KPRINTF_YELLOW "WARNING: master drive has an extended partition, skipped\n" KPRINTF_RESET);
+    else
+      kprintf(KPRINTF_YELLOW "WARNING: slave drive has an extended partition, skipped\n" KPRINTF_RESET);
     kfree(mbr);
-    return false;
+    return true;
   }
 
   if (part_good != 0x83){
@@ -162,11 +167,12 @@ static bool fill_partition_entry(uint8_t drive_magic, uint32_t part)
   
   if (fs_entries[part].sector_count == 0 || fs_entries[part].start_lba + fs_entries[part].sector_count > drive.lba_sector_count){
     if (drive_magic == ATA_MASTER)
-      panic("KERNEL PANIC: master drive partition is out of bounds");
-    kprintf(KPRINTF_YELLOW "WARNING: slave drive bad" KPRINTF_RESET);
+      kprintf(KPRINTF_YELLOW "WARNING: master drive partition is out of bounds, skipped\n" KPRINTF_RESET);
+    else
+      kprintf(KPRINTF_YELLOW "WARNING: slave drive partition is out of bounds, skipped\n" KPRINTF_RESET);
     fs_entries[part].sector_count = 0;
     kfree(mbr);
-    return false;
+    return true;
   }
 
   ata_read48_part(fs_entries[part].drive->identify_magic,
@@ -180,12 +186,29 @@ static bool fill_partition_entry(uint8_t drive_magic, uint32_t part)
 
   if (!(fs_entries[part].superblk->ext2_signature == 0xEF53 && (1024 << fs_entries[part].superblk->block_size_adjusted) == 4096)){
     if (drive_magic == ATA_MASTER)
-      panic("KERNEL PANIC: master drive partition is not ext2 with 4K blocks");
-    kprintf(KPRINTF_YELLOW "WARNING: slave drive bad" KPRINTF_RESET);
+      kprintf(KPRINTF_YELLOW "WARNING: master drive partition is not ext2 with 4K blocks, skipped\n" KPRINTF_RESET);
+    else
+      kprintf(KPRINTF_YELLOW "WARNING: slave drive partition is not ext2 with 4K blocks, skipped\n" KPRINTF_RESET);
     fs_entries[part].sector_count = 0;
     fs_entries[part].superblk = NULL;
     kfree(mbr);
-    return false;
+    return true;
+  }
+
+  if (fs_entries[part].superblk->req_features_present & ~INCOMPAT_FEATURES_SUPPORT_BYTE) {
+    kprintf(KPRINTF_YELLOW "WARNING: partition uses incompatible features, skipped\n" KPRINTF_RESET);
+    fs_entries[part].sector_count = 0;
+    fs_entries[part].superblk = NULL;
+    kfree(mbr);
+    return true;
+  }
+
+  if (fs_entries[part].superblk->features_unsupport_ro & ~RO_FEATURES_SUPPORT_BYTE) {
+    kprintf(KPRINTF_YELLOW "WARNING: partition uses features this kernel cannot write, skipped\n" KPRINTF_RESET);
+    fs_entries[part].sector_count = 0;
+    fs_entries[part].superblk = NULL;
+    kfree(mbr);
+    return true;
   }
 
   ata_read48_part(fs_entries[part].drive->identify_magic,
@@ -207,6 +230,11 @@ static bool fill_partition_entry(uint8_t drive_magic, uint32_t part)
     fs_entries[part].blks_per_grp - 1) / 
     fs_entries[part].blks_per_grp;
 
+  for (uint32_t j = 0; j < 16; j++) {
+    fs_entries[part].label[j] = (char) fs_entries[part].superblk->vol_name[j];
+  }
+  fs_entries[part].label[FS_INFO_LABEL_LEN - 1] = '\0';
+
   kfree(mbr);
   return true;
 }
@@ -222,13 +250,14 @@ void block_init(void)
   }
 
   uint32_t root_part;
-  for (root_part = 0; root_part < PARTS_PER_DRIVE; root_part++) {
-    if (fs_entries[root_part].sector_count != 0)
+  for (root_part = 0; root_part < MAX_MOUNTS; root_part++) {
+    if (fs_entries[root_part].sector_count != 0 && 
+      streq(fs_entries[root_part].label, "deprecatOS"))
       break;
   }
 
-  if (root_part == PARTS_PER_DRIVE) {
-    panic("KERNEL PANIC: bad drive");
+  if (root_part == MAX_MOUNTS) {
+    panic("KERNEL PANIC: bad drives");
   }
 
   root_fs = &fs_entries[root_part];
