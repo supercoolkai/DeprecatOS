@@ -12,5 +12,7 @@ qemu-system-x86_64 \
   -display gtk,zoom-to-fit=on \
   -drive file=disk.img,format=raw,if=ide,index=0 \
   -drive file=slave.img,format=raw,if=ide,index=1 \
-  -cdrom deprecatos.iso \
+  -device ahci,id=ahci \
+  -drive if=none,id=cd,file=deprecatos.iso,media=cdrom \
+  -device ide-cd,drive=cd,bus=ahci.0 \
   -serial stdio
