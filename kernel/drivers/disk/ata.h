@@ -7,17 +7,19 @@
 #define ATA_MASTER 0xA0
 #define ATA_SLAVE 0xB0
 #define MAX_POLL_REPEAT 100000000
-#define DRIVE_SELECT_IO_PORT 0x1F6
-#define SECTOR_COUNT_PORT 0x1F2
-#define LBA_LO_PORT 0x1F3
-#define LBA_MID_PORT 0x1F4
-#define LBA_HI_PORT 0x1F5
-#define COMMAND_IO_PORT 0x1F7
-#define STATUS_PORT COMMAND_IO_PORT
-#define DATA_PORT 0x1F0
-#define ALT_STATUS_PORT 0x3F6
-#define ERR_PORT 0x1F1
-#define DEVICE_CONTROL_PORT ALT_STATUS_PORT
+#define DRIVE_SELECT_IO_OFF 0x06
+#define SECTOR_COUNT_OFF 0x02
+#define LBA_LO_OFF 0x03
+#define LBA_MID_OFF 0x04
+#define LBA_HI_OFF 0x05
+#define COMMAND_IO_OFF 0x07
+#define STATUS_OFF COMMAND_IO_OFF
+#define DATA_OFF 0x00
+#define ERR_OFF 0x01
+
+// NOTE: these offsets are added to control base, not cmd base
+#define ALT_STATUS_OFF 0x02
+#define DEVICE_CONTROL_OFF ALT_STATUS_OFF
 
 #define BSY_BIT (1 << 7)
 #define DRQ_BIT (1 << 3)
@@ -48,6 +50,7 @@
 #define LBA_SECTOR_COUNT_HI_IND 103
 
 struct ata_drive {
+  bool is_secondary;
   bool supports_read48;
   uint8_t identify_magic;
   uint64_t lba_sector_count;
@@ -59,7 +62,7 @@ extern struct ata_drive master_drive;
 extern struct ata_drive slave_drive;
 extern bool has_slave;
 
-bool ata_identify(uint8_t drive);
+bool ata_identify(uint8_t drive, bool *is_secondary);
 void ata_read48(uint8_t drive, uint64_t lba, uint16_t count, uint16_t *buf);
 void ata_write48(uint8_t drive, uint64_t lba, uint16_t count, uint16_t *buf);
 void ata_read48_part(uint8_t drive, uint64_t base_lba, uint64_t part_len, uint64_t lba, uint16_t count, uint16_t *buf);

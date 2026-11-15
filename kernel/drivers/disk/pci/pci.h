@@ -1,0 +1,38 @@
+#ifndef PCI_H
+#define PCI_H
+
+#include <stdint.h>
+
+#define PCI_ENABLE_BIT (1u << 31)
+#define PCI_IO_PORT 0xCF8
+#define PCI_DATA_PORT 0xCFC
+#define PCI_DEVICES_PER_BUS 32
+#define PCI_FUNCTIONS_PER_DEVICE 8
+#define PCI_VENDOR_CHECK_OFFSET 0
+#define PCI_NONEXISTENT_FUNCTION 0xFFFF
+#define PCI_CLASS_OFFSET 0x08
+#define PCI_CLASS_BYTE 3
+#define PCI_SUBCLASS_BYTE 2
+#define PCI_HEADER_TYPE_BYTE_OFFSET 0x0C
+#define PCI_HEADER_TYPE_BYTE 2
+#define PCI_DEVICE_MULTIFUNCTION_BIT (1 << 7)
+#define PCI_HEADER_TYPE_BRIDGE 1
+#define PCI_SECONDARY_BUS_N_OFFSET 0x18
+#define PCI_SECONDARY_BUS_N_BYTE 1
+#define PCI_PROG_IF_BYTE 1
+#define PCI_PRIMARY_NATIVE_BIT 1
+#define PCI_SECONDARY_NATIVE_BIT (1 << 2)
+
+#define PCI_PRIMARY_COMMAND_BAR 0x10
+#define PCI_PRIMARY_CONTROL_BAR 0x14
+#define PCI_SECONDARY_COMMAND_BAR 0x18
+#define PCI_SECONDARY_CONTROL_BAR 0x1C
+
+#define LEGACY_PRIMARY_COMMAND 0x1F0
+#define LEGACY_PRIMARY_CONTROL 0x3F4
+#define LEGACY_SECONDARY_COMMAND 0x170
+#define LEGACY_SECONDARY_CONTROL 0x374
+
+void pci_get_bases(uint16_t *primary_command_out, uint16_t *primary_control_out, uint16_t *secondary_command_out, uint16_t *secondary_control_out);
+
+#endif
