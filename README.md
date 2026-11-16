@@ -46,8 +46,6 @@ All `#define` macros are shown in `docs/definedTerms.md`
 ## **warnings:**
 the *cat/ls/cd* shell command may throw off the timer by a few milliseconds.
 
-don't actually run this on real hardware: the ata driver does raw PIO sector writes with no partition awareness (for now). it CAN harm your machine until further notice.
-
 *mkdisk.sh* destroys disk.img, so whenever u run it it wipes all your changes from inside the OS 
 
 this is a **hobby OS**, expect crashes, incomplete features, and broken changes w/o notice
@@ -61,11 +59,18 @@ this is a **hobby OS**, expect crashes, incomplete features, and broken changes 
 - qemu-system-x86_64
 - e2fsprogs (with mke2fs -d support)
 
-## how to setup filesystem
+## how to setup filesystem on a VM
 the filesystem (updated with *mkdish.sh*) uses a directory called `disk_root` as its root directory. since it's not in this git repository, you must create it yourself using:
 `mkdir -p disk_root` 
 while in the project's main directory. then, you can add files of your choice onto it. afterwards, finally run:
 `./mkdisk.sh` and `./rebuild.sh`
+
+## how to run on real hardware
+create an ext2 filesystem on any partition and label it "deprecatOS". it is case sensitive so be careful. then, boot from the iso on legacy or whatever 
+
+u also have to use ATA/IDE mode on BIOS disk options
+
+no, AHCI and RAID don't work
 
 ## btw:
 `firmware/` contains OVMF UEFI firmware from [TianoCore EDK2](https://github.com/tianocore/edk2), licensed under BSD-2-Clause-Patent.

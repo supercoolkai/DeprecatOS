@@ -83,7 +83,6 @@ static bool ata_identify_secondary(uint8_t drive)
     if (drive == ATA_MASTER) {
       panic("\nKERNEL PANIC: NO SECONDARY OR PRIMARY MASTER DRIVE");
     }
-    kprintf(KPRINTF_RED "\nWARNING: NO SECONDARY OR PRIMARY SLAVE DRIVE!!");
     return false;
   }
   if (identity == 0xFF) {
@@ -91,7 +90,6 @@ static bool ata_identify_secondary(uint8_t drive)
       panic("\nKERNEL PANIC: FLOATING BUS ON BOTH MASTER DRIVES");
     }
 
-    kprintf(KPRINTF_RED "\nWARNING: FLOATING BUS ON BOTH SLAVE DRIVES" KPRINTF_RESET);
     return false;
   }
   
@@ -103,7 +101,6 @@ static bool ata_identify_secondary(uint8_t drive)
       panic("KERNEL PANIC: INCOMPATIBLE HARDWARE ON BOTH MASTER DRIVES");
     }
 
-    kprintf(KPRINTF_RED "\nWARNING: INCOMPATBILE HARDWARE ON BOTH SLAVE DRIVES" KPRINTF_RESET);
     return false;
   }
 
@@ -337,7 +334,6 @@ void ata_init(void)
 
   if (!b) {
     has_slave = false;
-    kprintf(KPRINTF_YELLOW "\nIdentification failed for the slave driver. Highly recommended to reboot and try again if you are sure this is not a hardware issue. Initialization has continued without.\n" KPRINTF_RESET);
   }
 
   outb(primary_ctrl_base + DEVICE_CONTROL_OFF, NIEN_BIT);
