@@ -104,6 +104,18 @@ static bool ata_identify_secondary(uint8_t drive)
     return false;
   }
 
+  uint8_t test = inb(secondary_cmd_base + STATUS_OFF);
+
+  if (test & ERR_BIT) {
+    if (drive == ATA_MASTER){
+      uint32_t err = (uint32_t) inb(secondary_cmd_base + ERR_OFF);
+      print_hex(err, RED);
+      panic("KERNEL PANIC: IDENTIFY ABORTED ON MASTER");
+    }
+    
+    return false;
+  }
+
   poll(true);
 
   // simple output
@@ -151,6 +163,13 @@ bool ata_identify(uint8_t drive, bool *is_secondary) {
 
   // check for incompatible hardware (ATAPI/SATA)
   if (inb(primary_cmd_base + LBA_MID_OFF) != 0 || inb(primary_cmd_base + LBA_HI_OFF) != 0) {
+    *is_secondary = true;
+    return ata_identify_secondary(drive);
+  }
+
+  uint8_t test = inb(primary_cmd_base + STATUS_OFF);
+
+  if (test & ERR_BIT) {
     *is_secondary = true;
     return ata_identify_secondary(drive);
   }
