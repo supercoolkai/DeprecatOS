@@ -381,7 +381,6 @@ void ata_init(void)
     panic("KERNEL PANIC: INCOMPATBILE HARDWARE, NO 48-BIT PIO SUPPORT");
   
   if (b && !slave_drive.supports_read48){
-    kprintf(KPRINTF_YELLOW "\nSlave drive does not support read48, unusable." KPRINTF_RESET);
     slave_drive.lba_sector_count = 0;
   }
 }
