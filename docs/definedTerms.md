@@ -4,7 +4,7 @@
 
 #### **ALLOC_MODE** *(kernel/fs/block/blockController.h)*
 
-#### **ALT_STATUS_PORT** *(kernel/drivers/disk/ata.h)*
+#### **ALT_STATUS_OFF** *(kernel/drivers/disk/ata.h)*
 
 #### **APPCTL_H** *(user/app/appCtl.h)*
 
@@ -50,7 +50,7 @@
 
 #### **COM1** *(kernel/drivers/serial/serialController.c)*
 
-#### **COMMAND_IO_PORT** *(kernel/drivers/disk/ata.h)*
+#### **COMMAND_IO_OFF** *(kernel/drivers/disk/ata.h)*
 
 #### **CP_H** *(user/app/depsh/cmds/cp.h)*
 
@@ -78,7 +78,7 @@
 
 #### **DARK_GRAY** *(etc/lib/colors/colors.h)*
 
-#### **DATA_PORT** *(kernel/drivers/disk/ata.h)*
+#### **DATA_OFF** *(kernel/drivers/disk/ata.h)*
 
 #### **DATE_H** *(user/app/depsh/cmds/date.h)*
 
@@ -108,7 +108,7 @@
 
 #### **DEPSH_H** *(user/app/depsh/depsh.h)*
 
-#### **DEVICE_CONTROL_PORT** *(kernel/drivers/disk/ata.h)*
+#### **DEVICE_CONTROL_OFF** *(kernel/drivers/disk/ata.h)*
 
 #### **DF_BIT** *(kernel/drivers/disk/ata.h)*
 
@@ -118,7 +118,7 @@
 
 #### **DIRECTORYENTRY_H** *(kernel/fs/ext2/directoryEntry.h)*
 
-#### **DRIVE_SELECT_IO_PORT** *(kernel/drivers/disk/ata.h)*
+#### **DRIVE_SELECT_IO_OFF** *(kernel/drivers/disk/ata.h)*
 
 #### **DRIVE_UNUSED_SIZE** *(kernel/drivers/disk/partition.h)*
 
@@ -138,9 +138,9 @@
 
 #### **ERR_BIT** *(kernel/drivers/disk/ata.h)*
 
-#### **ERRORS_H** *(kernel/errors.h)*
+#### **ERR_OFF** *(kernel/drivers/disk/ata.h)*
 
-#### **ERR_PORT** *(kernel/drivers/disk/ata.h)*
+#### **ERRORS_H** *(kernel/errors.h)*
 
 #### **ESC_PREFIX** *(etc/kernel/kprintf/kprintf.h)*
 
@@ -153,6 +153,8 @@
 #### **FBCONTROLLER_H** *(kernel/drivers/fb/fbController.h)*
 
 #### **FIRST_IRQ_STUB_VECTOR** *(kernel/idt/idtController.h)*
+
+#### **FLUSH_CACHE_CMD** *(kernel/drivers/disk/ata.h)*
 
 #### **FLUSH_EXT_CMD** *(kernel/drivers/disk/ata.h)*
 
@@ -182,6 +184,8 @@
 
 #### **FS_INFO_LABEL_LEN** *(kernel/fs/block/blockController.h)*
 
+#### **FS_STATE_VALID_BIT** *(kernel/fs/mount/mount.c)*
+
 #### **GENERAL_ERROR** *(kernel/errors.h)*
 
 #### **GLYPH_HEIGHT** *(kernel/drivers/fb/fbController.h)*
@@ -191,6 +195,8 @@
 #### **GRAY** *(etc/lib/colors/colors.h)*
 
 #### **GREEN** *(etc/lib/colors/colors.h)*
+
+#### **HALT_H** *(user/app/depsh/cmds/halt.h)*
 
 #### **HEAP_END_MIN** *(kernel/memory/heap/kernelHeap.h)*
 
@@ -209,6 +215,8 @@
 #### **IDT_CONTROLLER_H** *(kernel/idt/idtController.h)*
 
 #### **IDT_ENTRY_AMT** *(kernel/idt/idtController.c)*
+
+#### **INCOMPAT_FEATURES_SUPPORT_BYTE** *(kernel/fs/block/blockController.c)*
 
 #### **INDIRECT_PTR_LAYERS** *(kernel/fs/block/blockController.h)*
 
@@ -276,11 +284,11 @@
 
 #### **LBA48_SLAVE_DRIVE** *(kernel/drivers/disk/ata.h)*
 
-#### **LBA_HI_PORT** *(kernel/drivers/disk/ata.h)*
+#### **LBA_HI_OFF** *(kernel/drivers/disk/ata.h)*
 
-#### **LBA_LO_PORT** *(kernel/drivers/disk/ata.h)*
+#### **LBA_LO_OFF** *(kernel/drivers/disk/ata.h)*
 
-#### **LBA_MID_PORT** *(kernel/drivers/disk/ata.h)*
+#### **LBA_MID_OFF** *(kernel/drivers/disk/ata.h)*
 
 #### **LBA_SECTOR_COUNT_HI_IND** *(kernel/drivers/disk/ata.h)*
 
@@ -289,6 +297,14 @@
 #### **LBA_SECTOR_COUNT_MID_HI_IND** *(kernel/drivers/disk/ata.h)*
 
 #### **LBA_SECTOR_COUNT_MID_LO_IND** *(kernel/drivers/disk/ata.h)*
+
+#### **LEGACY_PRIMARY_COMMAND** *(kernel/drivers/disk/pci/pci.h)*
+
+#### **LEGACY_PRIMARY_CONTROL** *(kernel/drivers/disk/pci/pci.h)*
+
+#### **LEGACY_SECONDARY_COMMAND** *(kernel/drivers/disk/pci/pci.h)*
+
+#### **LEGACY_SECONDARY_CONTROL** *(kernel/drivers/disk/pci/pci.h)*
 
 #### **LIGHT_BLUE** *(etc/lib/colors/colors.h)*
 
@@ -331,6 +347,8 @@
 #### **MIN_H** *(etc/lib/min/min.h)*
 
 #### **MISC_PAGE_CNT** *(kernel/userland/userland.h)*
+
+#### **MOUNT_CMD_H** *(user/app/depsh/cmds/mount.h)*
 
 #### **MOUNT_H** *(kernel/fs/mount/mount.h)*
 
@@ -376,6 +394,54 @@
 
 #### **PATH_LEN** *(kernel/fs/ext2/directoryController.c)*
 
+#### **PCI_CLASS_BYTE** *(kernel/drivers/disk/pci/pci.h)*
+
+#### **PCI_CLASS_OFFSET** *(kernel/drivers/disk/pci/pci.h)*
+
+#### **PCI_DATA_PORT** *(kernel/drivers/disk/pci/pci.h)*
+
+#### **PCI_DEVICE_MULTIFUNCTION_BIT** *(kernel/drivers/disk/pci/pci.h)*
+
+#### **PCI_DEVICES_PER_BUS** *(kernel/drivers/disk/pci/pci.h)*
+
+#### **PCI_ENABLE_BIT** *(kernel/drivers/disk/pci/pci.h)*
+
+#### **PCI_FUNCTIONS_PER_DEVICE** *(kernel/drivers/disk/pci/pci.h)*
+
+#### **PCI_HEADER_TYPE_BRIDGE** *(kernel/drivers/disk/pci/pci.h)*
+
+#### **PCI_HEADER_TYPE_BYTE** *(kernel/drivers/disk/pci/pci.h)*
+
+#### **PCI_HEADER_TYPE_BYTE_OFFSET** *(kernel/drivers/disk/pci/pci.h)*
+
+#### **PCI_H** *(kernel/drivers/disk/pci/pci.h)*
+
+#### **PCI_IO_PORT** *(kernel/drivers/disk/pci/pci.h)*
+
+#### **PCI_NONEXISTENT_FUNCTION** *(kernel/drivers/disk/pci/pci.h)*
+
+#### **PCI_PRIMARY_COMMAND_BAR** *(kernel/drivers/disk/pci/pci.h)*
+
+#### **PCI_PRIMARY_CONTROL_BAR** *(kernel/drivers/disk/pci/pci.h)*
+
+#### **PCI_PRIMARY_NATIVE_BIT** *(kernel/drivers/disk/pci/pci.h)*
+
+#### **PCI_PROG_IF_BYTE** *(kernel/drivers/disk/pci/pci.h)*
+
+#### **PCI_SECONDARY_BUS_N_BYTE** *(kernel/drivers/disk/pci/pci.h)*
+
+#### **PCI_SECONDARY_BUS_N_OFFSET** *(kernel/drivers/disk/pci/pci.h)*
+
+#### **PCI_SECONDARY_COMMAND_BAR** *(kernel/drivers/disk/pci/pci.h)*
+
+#### **PCI_SECONDARY_CONTROL_BAR** *(kernel/drivers/disk/pci/pci.h)*
+
+#### **PCI_SECONDARY_NATIVE_BIT** *(kernel/drivers/disk/pci/pci.h)*
+
+#### **PCI_SUBCLASS_BYTE** *(kernel/drivers/disk/pci/pci.h)*
+
+#### **PCI_VENDOR_CHECK_OFFSET** *(kernel/drivers/disk/pci/pci.h)*
+
 #### **PIC1_CMD** *(kernel/idt/idtController.h)*
 
 #### **PIC1_DATA** *(kernel/idt/idtController.h)*
@@ -396,6 +462,8 @@
 
 #### **PIT_HZ** *(kernel/drivers/timer/timerController.c)*
 
+#### **PORT_IO_H** *(etc/kernel/portio/portio.h)*
+
 #### **PQUEUE_SIZE_ELEMENTS** *(kernel/process/queue/processQueue.h)*
 
 #### **PROCESSQUEUE_H** *(kernel/process/queue/processQueue.h)*
@@ -409,6 +477,8 @@
 #### **RELEASE_YEAR** *(kernel/drivers/timer/timerController.c)*
 
 #### **RINGBUFFER_H** *(etc/lib/rb/ringBuffer.h)*
+
+#### **RO_FEATURES_SUPPORT_BYTE** *(kernel/fs/block/blockController.c)*
 
 #### **ROOT_INODE_N** *(kernel/fs/ext2/directoryController.h)*
 
@@ -446,7 +516,7 @@
 
 #### **SCHEDULER_H** *(kernel/process/scheduler/scheduler.h)*
 
-#### **SECTOR_COUNT_PORT** *(kernel/drivers/disk/ata.h)*
+#### **SECTOR_COUNT_OFF** *(kernel/drivers/disk/ata.h)*
 
 #### **SEGMENTS_H** *(kernel/gdt/segments.h)*
 
@@ -458,7 +528,9 @@
 
 #### **STACK_SIZE** *(kernel/process/scheduler/scheduler.h)*
 
-#### **STATUS_PORT** *(kernel/drivers/disk/ata.h)*
+#### **STATUS_OFF** *(kernel/drivers/disk/ata.h)*
+
+#### **STRCAT_H** *(etc/lib/strcat/strcat.h)*
 
 #### **STREQ_H** *(etc/lib/streq/streq.h)*
 
@@ -494,6 +566,8 @@
 
 #### **SYS_GET_TICKS** *(user/sys/syscall.c)*
 
+#### **SYS_HALT** *(user/sys/syscall.c)*
+
 #### **SYS_INODE_IS_MOUNTPOINT** *(user/sys/syscall.c)*
 
 #### **SYS_MAKE_DIR** *(user/sys/syscall.c)*
@@ -503,6 +577,8 @@
 #### **SYS_MAKE_LINK** *(user/sys/syscall.c)*
 
 #### **SYS_MAKE_SYMLINK** *(user/sys/syscall.c)*
+
+#### **SYS_MOUNT_FS** *(user/sys/syscall.c)*
 
 #### **SYS_READ_CHAR** *(user/sys/syscall.c)*
 
@@ -527,6 +603,8 @@
 #### **SYS_SET_SCROLLBACK** *(user/sys/syscall.c)*
 
 #### **SYS_TRUNCATE_INODE** *(user/sys/syscall.c)*
+
+#### **SYS_UMOUNT_FS** *(user/sys/syscall.c)*
 
 #### **SYS_WRITE_CHAR_COLOR** *(user/sys/syscall.c)*
 
@@ -557,6 +635,8 @@
 #### **TSS_GDT_ENTRY_IND** *(kernel/gdt/tssController.h)*
 
 #### **UART_CLOCK_HZ** *(kernel/drivers/serial/serialController.c)*
+
+#### **UMOUNT_CMD_H** *(user/app/depsh/cmds/umount.h)*
 
 #### **USER_CODE_SEGMENT_SEL** *(kernel/gdt/segments.h)*
 

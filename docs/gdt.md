@@ -3,7 +3,7 @@
 ## data structure tables / related information
 
 ### selectors
-src: `src/boot.s`, `src/gdt/tssController.c`
+src: `kernel/boot.S`, `kernel/gdt/tssController.c`
 
 a selector is just `(index << 3) | RPL`, ring 3 selectors have `RPL=3`
 
@@ -20,7 +20,7 @@ a selector is just `(index << 3) | RPL`, ring 3 selectors have `RPL=3`
 ---
 
 ### TSS (tssInfo)
-src: `src/gdt/tssController.h`: `tssInfo`, 104 bytes (asserted)
+src: `kernel/gdt/tssController.h`: `tssInfo`, 104 bytes (asserted)
 
 only ring-0 stack fields and are live/useful, all other fields are filler for hitting the 104-byte hardware layout. for each context switch `esp0` is changed to the next task's kernel stack top.
 
@@ -35,7 +35,7 @@ only ring-0 stack fields and are live/useful, all other fields are filler for hi
 ---
 
 ### GDT entry format
-src: `src/gdt/tssController.c`: `struct gdt_entry`, `packed`, 8 bytes
+src: `kernel/gdt/tssController.c`: `struct gdt_entry`, `packed`, 8 bytes
 
 the table below describes a GDT entry:
 
@@ -52,7 +52,7 @@ the table below describes a GDT entry:
 
 ### GDT overview
 
-src: `src/boot.s` (entries 0–4, static), `src/gdt/tssController.c` (entry 5, filled at runtime)
+src: `kernel/boot.S` (entries 0–4, static), `kernel/gdt/tssController.c` (entry 5, filled at runtime)
 
 for each boilerplate entry filled by either `boot.s` or `tssController.c`:
  - `base` = 0
@@ -90,7 +90,7 @@ the global information for the tss. can be modified using `tss_set_esp()`
 
 ## structs
 
-### `tssInfo` in `src/gdt/tssController.h`
+### `tssInfo` in `kernel/gdt/tssController.h`
 information for task state segments (tss), fields being: 
  - `uint32_t link`: filler
  - `uint32_t esp0`: the stack pointers used to load the stack when a privilege change happens from lower->higher levels
@@ -98,7 +98,7 @@ information for task state segments (tss), fields being:
  - `uint32_t filler[22]`: words 3 -> 24 being reserved inclusive
  - `uint32_t IOBitmapOffset`: the offset to the entry in the IOPB
 
-### `gdt_entry` in `src/gdt/tssController.c`:
+### `gdt_entry` in `kernel/gdt/tssController.c`:
 an entry in the global descriptor table, containing fields:
  - `uint16_t limit`: tells the maximum addressable unit 
  - `uint16_t baseBits`: the linear address of where the segment begins

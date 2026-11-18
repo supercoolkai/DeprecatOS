@@ -16,7 +16,7 @@
 
 ## structs
 
-### `MBIInfo` in `src/memory/mmap/memoryMap.h`
+### `MBIInfo` in `kernel/memory/mmap/memoryMap.h`
 contains overall info for the mmap, such as:
  - `uint32_t flags`: permissions and misc info about the mmap 
  - `uint32_t mmap_addr`: address of where the mmap is located
@@ -28,10 +28,10 @@ additionally contains framebuffer information like:
  - `uint32_t framebuffer_width`: the width of the framebuffer in bits or "pixels"
  - `uint32_t framebuffer_height`: the height of the framebuffer in bits or "pixels"
 
-### `MemoryMapEntry` in `src/memory/mmap/memoryMap.h`
+### `MemoryMapEntry` in `kernel/memory/mmap/memoryMap.h`
 a basic entry for the mmap, used in `mmap_walk()` to represent a piece of memory representing a uint32_t, char, etc.
 
-### `BlockHeader` in `src/memory/heap/kernelHeap.c`
+### `BlockHeader` in `kernel/memory/heap/kernelHeap.c`
 a header representing a block (a dynamic amount of allocated memory), the fields being:
  - `uint32_t size`: the size of allocated memory (excluding the BlockHeader struct size)
  - `uint32_t is_free`: a "bool" representing whether or not it is free. 1 = free, 0 = used

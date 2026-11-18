@@ -4,7 +4,7 @@
 
 ### heap block header
 
-src: `src/memory/heap/kernelHeap.c`  `BlockHeader` (8 bytes, not asserted)
+src: `kernel/memory/heap/kernelHeap.c`  `BlockHeader` (8 bytes, not asserted)
 
 bump/first-fit allocator each block is `[BlockHeader][payload]`. `kmalloc` rounds request up to a multiple of 4 and splits when the remainder exceeds a header.
 

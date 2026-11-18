@@ -1,7 +1,7 @@
 # Frame Buffer 
 
 ## FBChar struct format
-src `src/drivers/fb/fbController.h`
+src `kernel/drivers/fb/fbController.h`
 
 one text cell with color and text bundled
 
@@ -14,7 +14,7 @@ one text cell with color and text bundled
 
 ## color palette format
 
-src: `src/drivers/fb/fbController.h`
+src: `kernel/drivers/fb/fbController.h`
 
 | name | value |
 |---|---|
@@ -38,7 +38,7 @@ src: `src/drivers/fb/fbController.h`
 ## global variables
 
 #### `extern uint8_t font8x16[]`: 
-the font bitmap from `src/drivers/disk/fb/font8x16.bin`, as the name says 8x16 bits per character.
+the font bitmap from `kernel/drivers/fb/font8x16.bin`, as the name says 8x16 bits per character.
 
 #### `static const uint32_t palette[16]`:
 a palette of 16 colors (taken from VGA) used mostly in `draw_char()`.

@@ -1,18 +1,30 @@
 # Block Controller
 
+## fs_info struct format
+src `kernel/fs/block/blockController.h`
+
+a struct which describes an ext2 filesystem (basically like `ata_drive`, but for valid partitions rather than entire drives)
+
+| offset | field | type |
+| --- | --- | --- |
+| 0 | `bgdt_buf` | `uint16_t[WORDS_PER_BLK]` |
+| 1 | `sprblk_buf` | `uint16_t[sizeof(struct ext2_superblock) / 2]` |
+| 2 | `drive` | `struct ata_drive *` |
+| 3 | `superblk` | `struct ext2_superblock *` |
+| 4 | `bgdt` | `struct ext2_block_group_descriptor *` |
+| 5 |`start_lba` | `uint64_t` |
+| 6 | `sector_count` | `uint64_t` |
+| 7 | `inode_size` | `uint32_t` |
+| 8 | `inodes_per_grp` | `uint32_t` |
+| 9 | `blks_per_grp` | `uint32_t` |
+| 10 | `frags_per_grp` | `uint32_t` |
+| 11 | `ngroups` | `uint32_t` |
+| 12 | `mountpoint` | `uint32_t` |
+| 13 | `label` | `char[FS_INFO_LABEL_LEN]` |
+
+--- 
+
 ## global variables
-#### `static struct ext2_superblock *superblk`:
-a pointer to the superblock (bytes 1024 -> 2047 of block 0)
-
-#### `static uint16_t sprblk_buf[sizeof(struct ext2_superblock) / 2]`:
-a temporary buffer for setting superblk
-
-#### `static uint16_t bgdt_buf[WORDS_PER_BLK]`:
-a temporary buffer for setting bgdt
-
-#### `static struct ext2_block_group_descriptor *bgdt`:
-a pointer to the block group descriptor table (bytes 0 -> 1023 of block 1)
-
 #### `static uint16_t sectors_per_blk`:
 how many sectors there are per block
 
@@ -22,89 +34,74 @@ the position of the superblock in block 0
 #### `static uint32_t bgdt_blk_n`:
 which block number the bgdt is in
 
-#### `static uint16_t buf[WORDS_PER_BLK]`:
-a buffer used in `get_inode()` to read a block in order to retrieve an inode
+#### `static uint32_t first_inode_n`:
+the first valid inode number, used to turn an inode number into its group number
 
-#### `static uint32_t inode_size`:
-the superblock's `inode_size` field
+#### `struct fs_info fs_entries[MAX_MOUNTS]`:
+the table of every partition found on the master and slave drives, filled by `fill_partition_entry()` in `block_init()`. `PARTS_PER_DRIVE` slots per drive, an entry with `sector_count` of 0 is unused
 
-#### `static uint32_t inodes_per_grp`:
-the superblock's `inodes_per_group` field
-
-#### `static uint32_t blks_per_grp`:
-the superblock's `blocks_per_group` field
-
-#### `static uint32_t frags_per_grp`:
-the superblock's `frags_per_group` field
-
-#### `static uint32_t ngroups`:
-the number of groups there are going to be in the bgdt
-
-#### `static uint16_t indirect_buf[3][WORDS_PER_BLK]`:
-like `buf`, but for the `indir_read_block()` function instead
-
-#### `statc uint16_t *out_cursor`:
-a variable used in `indir_read_block()` to advance where the block being read will be deposited into on `indirect_buf`
-
-#### `static uint32_t blocks_left`:
-a variable used in `indir_read_block()` and set in `read_inode()` to know how many blocks there are left to read
+#### `struct fs_info *root_fs`:
+a pointer into `fs_entries` at the partition labeled `deprecatOS`, panics in `block_init()` if none is found
 
 
 ## overview
-controller of the blocks in the filesystem, currently only supports read functions. has `read_block()` which is non-recursive and `indir_read_block()` which is recursive. also gets/retrieves inodes through the `get/read_inode()` functions. now it supports `write_inode()` and `delete_inode()`, which use the `write_block()` and `indir_free_block()` functions.
+controller of the blocks in the filesystem, every function takes the `fs_info` of the partition it's working on. has `read_block()` which is non-recursive and `indir_read_block()` which is recursive. also gets/retrieves inodes through the `get/read_inode()` functions. supports `write_inode()` and `delete_inode()`, which use the `write_block()` and `indir_free_block()` functions, plus the in-place edits `replace_inode()`, `append_to_inode()`, `insert_in_inode()` and `truncate_inode()`. also finds every partition on both drives in `block_init()` and picks `root_fs` out of them.
 
 ## function analysis
 
-### `void set_block_controller_bgdt(struct ext2_block_group_descriptor *new_bgdt)`
-sets `bgdt` to `new_bgdt` in order to maintain sync between all files using `bgdt`
+### `void read_block(struct fs_info *fs, uint32_t block_n, uint16_t *buf)`
+reads a full block to `buf` using `ata_read48_part()` from the ata driver in `kernel/drivers/disk/ata.h`. uses the drive from the given `fs`
 
-### `void set_block_controller_superblk(struct ext2_superblock *new_superblk)`
-sets `superblk` to `new_superblk` in order to maintain sync between all files using `superblk`
+### `void write_block(struct fs_info *fs, uint32_t block_n, uint16_t *buf)`
+writes a full block from `buf` using `ata_write48_part()` from the ata driver in `kernel/drivers/disk/ata.h`. uses the drive from the given `fs`
 
-### `void read_block(uint32_t block_n, uint16_t *buf)`
-reads a full block into `buf` using `ata_read48()` from the ata driver in `src/drivers/disk/ata.h`
-
-### `static void indir_read_block(uint32_t block_n, int layer)`
+### `static void indir_read_block(struct fs_info *fs, uint16_t **out_cursor, uint32_t *blocks_left, uint32_t block_n, int layer, uint16_t (*indirect_buf)[WORDS_PER_BLK])`
 the recursive version of `read_block()`, used to read inodes which are larger than 48 KiB large. compatible with inodes anywhere under 4 TiB
 
+### `static void indir_free_block(struct fs_info *fs, uint32_t block_n, uint32_t layer, uint32_t (*indirect_buf)[BIT_32_PER_BLK])`
+the recursive version of the bitmap function `free_block()`, used to free inodes which are larger than 48 KiB large. compatible with inodes anywhere under 4 TiB
+
+### `static bool fill_partition_entry(uint8_t drive_magic, uint32_t part)`
+fills an `fs_info` entry and puts it into the array `fs_entries` at index `part`
+
 ### `void block_init(void)`
-sets up numerous global variables alongside the `superblk` and `bgdt` variables.
+sets up the array `fs_entries` and also the `root_fs` variable
 
-### `bool get_inode(uint32_t inode_n, struct ext2_inode *out)`
-gets the real `ext2_inode` struct from the unique `inode_n` representing it. returns a bool based off of success in this operation.
+### `bool get_inode(struct fs_info *fs, uint32_t inode_n, struct ext2_inode *out)`
+gets the real `ext2_inode` struct from the unique `inode_n` representing it and the `fs` it's in. returns a bool based off of success in this operation.
 
-### `bool set_inode(uint32_t inode_n, struct ext2_inode *in)`
-like `put_inode()`, but instead it redirects the given `inode_n` point to the given inode `in`
-
-### `static void read_inode(struct ext2_inode *inode, uint16_t *out)`
-calls the `indir_read_block()` function to read an inode typically returned from `get_inode()` into the buffer `out`. do note that it completely trusts in `indir_read_block()` to work properly and does not return/warn anything if something goes wrong, only panics if the block is out of range.
+### `bool set_inode(struct fs_info *fs, uint32_t inode_n, struct ext2_inode *in)`
+like `put_inode()`, but instead it redirects the given `inode_n` to point to the given inode `in`
 
 ### `static void zero_block_buf(uint32_t *buf)`
 zeroes the given array at `buf`. must be exactly `BIT_32_PER_BLK` in size, because it must be some form of a block buffer.
 
-### `bool delete_inode(uint32_t inode_n)`
-frees all the blocks at the inode at `inode_n` and saves it to disk. do note that this does not unlink it, it only deletes the data inside of it.
+### `bool delete_inode(struct fs_info *fs, uint32_t inode_n)`
+frees all the blocks at the inode at `inode_n` and filesystem `fs` and saves it to disk. do note that this does not unlink it, it only deletes the data inside of it.
 
-### `uint32_t mint_inode(uint32_t f_size, uint32_t type, struct ext2_inode *out)`
-creates a blank inode with its `size_lo` being `f_size`, its `type_and_perms_lo` being `type`, and sets up all other relevant fields. then, sets `*out` to point to the new inode and returns its number.
+### `uint32_t mint_inode(struct fs_info *fs, uint32_t f_size, uint32_t type, struct ext2_inode *out)`
+creates a blank inode in filesystem `fs` with its `size_lo` being `f_size`, its `type_and_perms_lo` being `type`, and sets up all other relevant fields. then, sets `*out` to point to the new inode and returns its number.
 
-### `void write_inode(uint16_t *buf, uint32_t f_size, bool is_dir, struct ext2_inode *out)`
-a function similar to `indir_read_block()` but it writes an inode from scratch, with data `buf`. iterative because too complicated to do recursive (maybe i was too lazy idk. either way its fine). first, calls `mint_inode` with the given parameters. uses `f_size` as `size_lo`, so `f_size` MUST match `buf`'s size. returns the inode number of the created inode, and returns the actual inode as a pointer to `out`.
+### `uint32_t write_inode(struct fs_info *fs, uint16_t *buf, struct ext2_inode *inode)`
+a function similar to `indir_read_block()` but it writes the data blocks of an already minted inode from scratch, with data `buf` into filesystem `fs`. iterative because too complicated to do recursive (maybe i was too lazy idk. either way its fine). zeroes all of `inode`'s block pointers then allocates and fills blocks until `inode->size_lo` bytes are written, so `size_lo` MUST match `buf`'s size. returns `INODE_WRITE_SUCCESS`, or `BLOCK_ERROR` after freeing what it allocated if a block allocation fails. called by `put_inode()` after `mint_inode()`.
 
-### `uint32_t replace_inode(uint32_t inode_n, uint16_t *buf, uint32_t f_size, struct ext2_inode *out)`
-replaces the given `inode_n`'s contents with the contents inside `buf`
+### `uint32_t replace_inode(struct fs_info *fs, uint32_t inode_n, uint16_t *buf, uint32_t f_size, struct ext2_inode *out)`
+replaces the given `fs`'s `inode_n`'s contents with the contents inside `buf`
 
-### `static uint32_t map_file_block(struct ext2_inode *inode, uint32_t file_blk_idx, uint32_t mode, uint32_t *disk_blk_out, uint32_t *alloc_cnt, struct pointer_table_record *pointer_table, uint32_t *table_cursor)`
-a really really naive function (which probably should be iterative), which looks up the given `file_blk_idx` in the inode `inode`. it essentially searches the inode's block pointers for it, and if it doesnt exist, two things can happen: if `mode` is `LOOKUP_MODE` or `FREE_MODE`, then it returns `EMPTY_BLOCK`. if `mode` is `ALLOC_MODE`, it allocates a new block and points the block pointer to it, increments `alloc_cnt` if it exists, (and also adds the current entry to `pointer_table` if it's a block pointer,) then continues on with the function. if `mode` is `FREE_MODE` then it unlinks the block pointer.
+### `uint32_t map_file_block(struct fs_info *fs, struct ext2_inode *inode, uint32_t file_blk_idx, uint32_t mode, uint32_t *disk_blk_out, uint32_t *alloc_cnt)`
+a really really naive function (which probably should be iterative), which looks up the given `file_blk_idx` in the inode `inode` in filesystem `fs`. it essentially searches the inode's block pointers for it, and if it doesnt exist, two things can happen: if `mode` is `LOOKUP_MODE` or `FREE_MODE`, then it returns `EMPTY_BLOCK`. if `mode` is `ALLOC_MODE`, it allocates a new block and points the block pointer to it, increments `alloc_cnt` if it exists, then continues on with the function. if `mode` is `FREE_MODE` then it unlinks the block pointer.
 
-### `uint32_t append_to_inode(uint32_t inode_n, uint16_t *buf, uint32_t f_size, struct ext2_inode *out)`
-appends the given `buf` to the end of the inode at `inode_n`, and updates relevant inode fields (`last_mod_time`, `last_access_time`, `disk_sectors`, `size_lo`). afterwards it returns the inode at `inode_n`
+### `uint32_t append_to_inode(struct fs_info *fs, uint32_t inode_n, uint16_t *buf, uint32_t f_size, struct ext2_inode *out)`
+appends the given `buf` to the end of the inode at `inode_n` and filesystem `fs`, and updates relevant inode fields (`last_mod_time`, `last_access_time`, `disk_sectors`, `size_lo`). afterwards it returns the inode at `inode_n`
 
-### `static void unwind_insert(uint32_t inode_n, struct ext2_inode *inode, uint32_t *unwind_buf, uint32_t unwind_cursor, uint32_t free_cnt, struct pointer_table_record *pointer_table, uint32_t table_cursor)`
+### `void unwind_insert(struct fs_info *fs, uint32_t inode_n, struct ext2_inode *inode, uint32_t *unwind_buf, uint32_t unwind_cursor, uint32_t free_cnt, uint32_t minted_cnt)`
 a free function for `insert_in_inode()`, first frees all data blocks then frees all pointer blocks which were created in the insert.
 
-### `uint32_t insert_in_inode(uint32_t inode_n, uint16_t *buf, uint32_t f_size, uint32_t offset, struct ext2_inode *out)`
+### `uint32_t insert_in_inode(struct fs_info *fs, uint32_t inode_n, uint16_t *buf, uint32_t f_size, uint32_t offset, struct ext2_inode *out)`
 like `append_to_inode()`, but it allows you to insert data in an arbitrary location. calls `unwind_insert()` upon failure and returns the inode at `inode_n`, also updates relevant inode fields (`last_mod_time`, `last_access_time`, `disk_sectors`, `size_lo`)
 
-### `void put_inode(uint16_t *buf, uint32_t f_size, bool is_dir, struct ext2_inode *out)`
+### `uint32_t put_inode(struct fs_info *fs, uint16_t *buf, uint32_t f_size, bool is_dir, struct ext2_inode *out)`
 a wrapper of `write_inode()` which wires it into the `bgdt`.
+
+### `uint32_t truncate_inode(struct fs_info *fs, uint32_t inode_n, uint32_t new_size, struct ext2_inode *out)`
+sets the given `fs`'s `inode_n`'s size to `new_size`. cannot increase size 

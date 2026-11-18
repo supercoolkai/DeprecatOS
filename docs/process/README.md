@@ -1,7 +1,7 @@
 # Process manager
 
 ## structs
-### `Process` in `src/process/processQueue.h`:
+### `Process` in `kernel/process/queue/processQueue.h`:
 represents one process, the fields of which being: 
  - `uint32_t esp`: the esp of the process 
  - `uint32_t stack_addr`:  the stack address of the process

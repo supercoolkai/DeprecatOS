@@ -1,7 +1,7 @@
 # Ring Buffer
 
 ## ringBuffer struct format
-src `src/util/rb/ringBuffer.h`
+src `etc/lib/rb/ringBuffer.h`
 
 FIFO queue struct for keyboard scancode I/O
 

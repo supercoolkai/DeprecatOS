@@ -2,7 +2,7 @@
 
 ## syscall number -> syscall map
 
-src: `user/shell/sys/syscall.c` (`int 0x80`, number in EAX). 
+src: `user/sys/syscall.c` (`int 0x80`, number in EAX). 
 
 | # | name | args (registers) | returns |
 |---|---|---|---|

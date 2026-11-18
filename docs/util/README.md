@@ -1,7 +1,7 @@
 # Util
 
 ## structs
-### `ringBuffer` in `src/util/rb/ringBuffer.h`:
+### `ringBuffer` in `etc/lib/rb/ringBuffer.h`:
 a struct representing a ring buffer, used mainly in `ringBuffer`, the fields being:
  - `volatile unsigned char queue[256]`: the queue of 256 `unsigned char`s 
  - `volatile unsigned char head`: the "head" of the `ringBuffer`, the number of elements placed, looping from 0-255

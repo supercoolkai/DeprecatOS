@@ -3,11 +3,17 @@
 
 ## structs
 
-### `FBChar` in `src/drivers/fb/fbController.h`:
+### `FBChar` in `kernel/drivers/fb/fbController.h`:
 primitive framebuffer character pairing a char with a color
 
+### `ata_drive` in `kernel/drivers/disk/ata.h`:
+contains necessary info about an ata drive
+
+### `pci_triple` in `kernel/drivers/disk/pci/pci.c`
+a triple representing a pci config, used mostly in `read_pci_config()`
+
 ## enums
-### `KeyCode` in `src/drivers/keyboard/keyboard.h`:
+### `KeyCode` in `kernel/drivers/keyboard/keyboard.h`:
 primitive key enum, contains all keys on standard keyboard.
 
 ## overview
@@ -17,7 +23,7 @@ a bucket of software which communicates directly to the hardware
 a driver to write and receive characters from serial port `COM1`
 
 ### `fbController`
-a primitive framebuffer with rows and columns adapting with screen resolution, uses the font bitmap included in `src/drivers/fb/font8x16.bin`
+a primitive framebuffer with rows and columns adapting with screen resolution, uses the font bitmap included in `kernel/drivers/fb/font8x16.bin`
 
 ### `keyboard`
 a driver which maps keyboard input with the corresponding keycode, adding it to the ringbuffer

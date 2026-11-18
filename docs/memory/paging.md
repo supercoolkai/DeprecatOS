@@ -1,7 +1,7 @@
 # Paging
 
 ## data structure tables / related information
-src: `src/memory/paging/paging.h`, `src/memory/heap/kernelHeap.c`, `src/userland/userland.h`
+src: `kernel/memory/paging/paging.h`, `kernel/memory/heap/kernelHeap.c`, `kernel/userland/userland.h`
 
 ### flag bits:
 **page-entry flag bits** (passed to `map_kernel_page`):

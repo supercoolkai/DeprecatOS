@@ -4,7 +4,7 @@
 
 ### "forged" task stack frame
 
-src: `src/process/scheduler/scheduler.c` (`create_process` / `create_user_process`), consumed by `src/boot.s` `irq0_stub`
+src: `kernel/process/scheduler/scheduler.c` (`create_process` / `create_user_process`), consumed by `kernel/boot.S` `irq0_stub`
 
 for each new brand new task, there must be an interrupt stack. so, to force the system to accept it, we "forge" a stack to look exactly like one from an interrupt, so that the ASM switch code's `popa; iret` "resumes" it into `entry`. let `frame[]` be our forged stack frame. `p->esp` points at `frame[0]`. there are two types of these frames:
  - kernel frame: 44 bytes (11 dwords)

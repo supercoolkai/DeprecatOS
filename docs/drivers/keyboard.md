@@ -21,7 +21,7 @@ handles the keyboard IRQ (irq1) and converts the inputted scancode into a custom
 
 ## function analysis
 ### `void keyboard_init(void)`
-calls `rb_init()` on `g_rb` to link it to `src/util/rb/ringBuffer.c`'s `ringBuffer`.
+calls `rb_init()` on `g_rb` to link it to `etc/lib/rb/ringBuffer.c`'s `ringBuffer`.
 
 ### `KeyCode scancode_to_keycode(unsigned char scancode)`
 matches a scancode to its `KeyCode`. returns a `Keycode` enum corresponding to the key.

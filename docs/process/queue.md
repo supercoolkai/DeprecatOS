@@ -3,7 +3,7 @@
 ## data structure tables / related information
 
 ### process
-src: `src/process/queue/processQueue.h`: `Process`, 12 bytes
+src: `kernel/process/queue/processQueue.h`: `Process`, 12 bytes
 
 a table of the struct:
 

@@ -4,21 +4,21 @@
 
 ### IDT entry format
 
-src: `src/idt/idtController.c`: `struct idt_entry`, `packed`, 8 bytes
+src: `kernel/idt/idtController.c`: `struct idt_entry`, `packed`, 8 bytes
 
 a tabular representation of the explanation in the **structs** section:
 
 | Off | Field | Type | Notes |
 |---|---|---|---|
 | 0 | `offset_low` | `uint16_t` | handler address bits 15:0 |
-| 2 | `selector` | `uint16_t` | code selector, always `0x08` (defined as `KERNEL_CODE_SEGMENT_SEL` in `src/gdt/segments.h`) |
+| 2 | `selector` | `uint16_t` | code selector, always `0x08` (defined as `KERNEL_CODE_SEGMENT_SEL` in `kernel/gdt/segments.h`) |
 | 4 | `zero` | `uint8_t` | always 0 |
 | 5 | `type_attr` | `uint8_t` | gate type + DPL + present (table below) |
 | 6 | `offset_high` | `uint16_t` | handler address bits 31:16 |
 
 ### IDT gate types & layout
 
-src: `src/idt/idtController.c`, `src/userland/syscall/syscallController.h`
+src: `kernel/idt/idtController.c`, `kernel/userland/syscall/syscallController.h`
 
 `type_attr` byte decode:
 
@@ -44,7 +44,7 @@ a pointer to the idt's address, loaded into the IDTR at the end of `idt_init()`
 
 ## structs
 
-### `idt_entry` in `src/idt/idtController.c`:
+### `idt_entry` in `kernel/idt/idtController.c`:
 describes an interrupt descriptor entry (much like `gdt_entry` in the gdt) fields being:
  - `uint16_t offset_low`: the low 16 bits of the offset
  - `uint16_t selector`: the code segment selector for the gdt
@@ -52,7 +52,7 @@ describes an interrupt descriptor entry (much like `gdt_entry` in the gdt) field
  - `uint8_t type_attr`: the section which defines the idt_entry type, like interrupt gate, trap gate, etc.
  - `uint16_t offset_high`: the high 16 bits of the offset
 
-### `idt_ptr` in `src/idt/idtController.c`:
+### `idt_ptr` in `kernel/idt/idtController.c`:
 describes an idt pointer used to announce where the IDT is. two fields:
  - `uint16_t limit`: the size of the table in bytes
  - `uint32_t base`: the address of the first entry

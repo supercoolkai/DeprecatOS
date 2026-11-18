@@ -4,7 +4,7 @@
 
 ### MBInfo struct format
 
-src: `src/memory/mmap/memoryMap.h`.
+src: `kernel/memory/mmap/memoryMap.h`.
 
 multiboot 1 info structure based off what GRUB hands. only fields currently read are framebuffer and mmap, add fields to the end of the struct if reading something else from it cuz this struct only has what the kernel currently needs, not everything the mmap hands
 
@@ -39,7 +39,7 @@ multiboot 1 info structure based off what GRUB hands. only fields currently read
 
 ### MemoryMapEntry struct format
 
-src: `src/memory/mmap/memoryMap.h`.
+src: `kernel/memory/mmap/memoryMap.h`.
 
 24 bytes, one entry per region at `mmap_addr`. `size` excludes the size of itself, so stride to the next entry is actually `base_of_entry + size + 4`
 

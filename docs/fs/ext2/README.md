@@ -4,7 +4,7 @@
 
 ### superblock format
 
-src: `src/fs/ext2/superblock.h`: asserted as 1024 bytes, `packed`. on disk always at byte offset 1024, regardless of fs block size.
+src: `kernel/fs/ext2/superblock.h`: asserted as 1024 bytes, `packed`. on disk always at byte offset 1024, regardless of fs block size.
 
 base fields are off 0-83, extended fields are offset 84+
 
@@ -61,7 +61,7 @@ leave in file cuz it needs these to compile and/or run properly:
 
 ### block group descriptor format
 
-src: `src/fs/ext2/blockGroupDescriptor.h`: asserted as 32 bytes, `packed`. `BLOCK_SIZE` hardcoded `4096`.
+src: `kernel/fs/ext2/blockGroupDescriptor.h`: asserted as 32 bytes, `packed`. `BLOCK_SIZE` hardcoded `4096`.
 
 | off | field | type | notes |
 |---|---|---|---|
@@ -79,7 +79,7 @@ src: `src/fs/ext2/blockGroupDescriptor.h`: asserted as 32 bytes, `packed`. `BLOC
 
 ### inode format
 
-src: `src/fs/ext2/inode.h` asserted as 128 bytes, `packed`. `INODE_BLK_PTR_AMT = 12`.
+src: `kernel/fs/ext2/inode.h` asserted as 128 bytes, `packed`. `INODE_BLK_PTR_AMT = 12`.
 
 | off | field | type | notes |
 |---|---|---|---|
@@ -117,7 +117,7 @@ leave in file cuz it needs these to compile and/or run properly:
 
 ### directory entry format
 
-src: `src/fs/ext2/directoryEntry.h`: `packed`. header asserted as 8 bytes, `name[]` is flexible len
+src: `kernel/fs/ext2/directoryEntry.h`: `packed`. header asserted as 8 bytes, `name[]` is flexible len
 
 | off | field | type | notes |
 |---|---|---|---|
@@ -139,16 +139,16 @@ src: `src/fs/ext2/directoryEntry.h`: `packed`. header asserted as 8 bytes, `name
 
 ## structs
 
-### `ext2_block_group_descriptor` in `src/fs/ext2/blockGroupDescriptor.h`:
+### `ext2_block_group_descriptor` in `kernel/fs/ext2/blockGroupDescriptor.h`:
   contains general information, including the bitmap addresses, the address where the inodes start, the unallocated block count, the unallocated inode count, and the directory count.
 
-### `ext2_inode` in `src/fs/ext2/inode.h`:
+### `ext2_inode` in `kernel/fs/ext2/inode.h`:
   essentially a file, has a block pointers which point to different blocks containing the data that the inode contains. including indirect block pointers it can be up to 4 TiB per inode. each inode has a unique "id" (commonly referred to as inode_n)
 
-### `ext2_directory_entry` in `src/fs/ext2/directoryEntry.h`: 
+### `ext2_directory_entry` in `kernel/fs/ext2/directoryEntry.h`: 
 a wrapper for the ext2_inode struct, containing an inode_n, the size of that inode, the length of its name (the hi byte can sometimes be the type as well), and its name. 
 
-### `ext2_superblock` in `src/fs/ext2/superblock.h`: 
+### `ext2_superblock` in `kernel/fs/ext2/superblock.h`: 
 bytes 1023 - 2047 of block 0. contains general information about the filesystem, including inode count, block count, blocks per group, inodes per group, etc.
 
 ## overview
