@@ -11,7 +11,7 @@ a collection of information about an ata drive
 | 1 | `supports_read48` | `bool` |
 | 2 | `identify_magic` | `uint8_t` |
 | 3 | `lba_sector_count` | `uint64_t` |
-| 4 | `identify_values` | `uint16_t[IDENTIFY_VALUES_LENGTH]` |
+| 4 | `identify_values` | `uint16_t[IDENTIFY_VALUE_LENGTH]` |
 
 ---
 
@@ -20,12 +20,12 @@ based off of the `#define`s and information in `kernel/drivers/disk/ata.h` and `
 
 | off | port name | read or write |
 | --- | --- | --- |
-| 0 | data port | read |
+| 0 | data port | read and write |
 | 1 | error port | read |
-| 2 | sector count port | read |
-| 3 | lba lo port | read |
-| 4 | lba mid port | read |
-| 5 | lba hi port | read |
+| 2 | sector count port | write |
+| 3 | lba lo port | write |
+| 4 | lba mid port | write (read during identify) |
+| 5 | lba hi port | write (read during identify) |
 | 6 | drive select port | write |
 | 7 | command port | write |
 | 7 | status port | read |
@@ -43,13 +43,17 @@ based off of the `#define`s and information in `kernel/drivers/disk/ata.h` and `
 ---
 
 ## **global variables**
-#### `static uint16_t identify_values[256]`: 
-a table containing all the values returned from `ata_identify`
+#### `struct ata_drive master_drive`:
+the master drive's `ata_drive` struct, filled in by `ata_init()`
 
-#### `static bool supports_read48`:
-a bool value containing the value of whether or not the hardware supports `ata_read/write48` 
-#### `static uint64_t lba_sector_count`:
-a count of the amount of sectors and valid LBAs there are. used for bounds checks
+#### `struct ata_drive slave_drive`:
+the slave drive's `ata_drive` struct, only meaningful if `has_slave` is `true`
+
+#### `bool has_slave`:
+whether `ata_identify` succeeded on the slave drive during `ata_init()`
+
+#### `uint16_t primary_cmd_base`, `uint16_t primary_ctrl_base`, `uint16_t secondary_cmd_base`, `uint16_t secondary_ctrl_base`:
+the four port bases handed out by `pci_get_bases()`, every port offset in the tables above is added to one of these
 
 ## overview
 direct read and write capabilities for ATA ports (PIO currently, move to DMA soon)
@@ -68,10 +72,10 @@ basically `poll()` but it only waits for BSY not DRQ
 self explanatory, waits 100 nanoseconds
 
 ### `static bool ata_identify_secondary(uint8_t drive)`
-on drive `drive`, readies the ports and makes sure that the hardware is compatible with the ATA driver. also returns the 256 uint16_t values returned from the data port and puts it into global table `identify_values`. for every port uses `secondary_cmd_base` rather than `primary_cmd_base`. on any error it either stays silent on slave or panics on master
+on drive `drive`, readies the ports and makes sure that the hardware is compatible with the ATA driver. also stores the 256 uint16_t values returned from the data port into the `identify_values` field of whichever `ata_drive` struct `drive` belongs to (`master_drive` or `slave_drive`). for every port uses `secondary_cmd_base` rather than `primary_cmd_base`. on any error it either stays silent on slave or panics on master
 
 ### `bool ata_identify(uint8_t drive, bool *is_secondary)`
-on drive `drive`, readies the ports and makes sure that the hardware is compatible with the ATA driver. also returns the 256 uint16_t values returned from the data port and puts it into global table `identify_values`. for every port uses `primary_cmd_base` rather than `secondary_cmd_base`. on any error it tries the secondary version using `ata_identify_secondary()` and turns `*is_secondary` to `true`
+on drive `drive`, readies the ports and makes sure that the hardware is compatible with the ATA driver. also stores the 256 uint16_t values returned from the data port into the `identify_values` field of whichever `ata_drive` struct `drive` belongs to (`master_drive` or `slave_drive`). for every port uses `primary_cmd_base` rather than `secondary_cmd_base`. on any error it tries the secondary version using `ata_identify_secondary()` and turns `*is_secondary` to `true`
 
 ### `void ata_read48(uint8_t drive, uint64_t lba, uint16_t count, uint16_t *buf)`
 reads `count` sectors from drive `drive` and LBA `lba` returns these values to `buf`

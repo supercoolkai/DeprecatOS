@@ -19,7 +19,7 @@ a dedicated allocator for the block/inode bitmap. currently supports freeing and
 allocates a bit in the `fs`'s inode bitmap, and returns the inode number of the entry. decrements the `superblk`'s `unalloc_inodes` count as well as the `bgdt[group_n]`'s `unalloc_inode_cnt`
 
 
-### `uint32_t alloc_block(void)`
+### `uint32_t alloc_block(struct fs_info *fs)`
 like `alloc_inode()` but for blocks instead of inodes. allocates a bit in the `fs`'s block bitmap, and then returns the block number of the entry. decrements the `superblk`'s `unalloc_blocks` count as well as the `bgdt[group_n]`'s `unalloc_block_cnt`
 
 ### `bool free_inode(struct fs_info *fs, uint32_t inode_n)`

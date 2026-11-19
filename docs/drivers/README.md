@@ -12,6 +12,9 @@ contains necessary info about an ata drive
 ### `pci_triple` in `kernel/drivers/disk/pci/pci.c`
 a triple representing a pci config, used mostly in `read_pci_config()`
 
+### `drive_mbr` in `kernel/drivers/disk/partition.h`
+mimics the MBR drive entry format
+
 ## enums
 ### `KeyCode` in `kernel/drivers/keyboard/keyboard.h`:
 primitive key enum, contains all keys on standard keyboard.

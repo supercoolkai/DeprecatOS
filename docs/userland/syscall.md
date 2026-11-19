@@ -6,18 +6,45 @@ src: `user/sys/syscall.c` (`int 0x80`, number in EAX).
 
 | # | name | args (registers) | returns |
 |---|---|---|---|
-| 1 | `SYS_WRITE_CHAR` | ebx = char | |
-| 2 | `SYS_WRITE_STR` | ebx = str | |
-| 3 | `SYS_GET_TICKS` | | eax = ticks |
+| 1 | `SYS_WRITE_CHAR` | ebx = char | eax = 0 |
+| 2 | `SYS_WRITE_STR` | ebx = str | eax = 0 / error |
+| 3 | `SYS_GET_TICKS` | ebx = `uint64_t *` tick_out | eax = 0 / error, ticks written to `*tick_out` |
 | 4 | `SYS_EXIT` | | (no return) |
-| 5 | `SYS_READ_CHAR` | | eax = char |
-| 6 | `SYS_YIELD` | | |
-| 7 | `SYS_WRITE_CHAR_COLOR` | ebx = char, ecx = color | |
-| 8 | `SYS_WRITE_STR_COLOR` | ebx = str, ecx = color | |
-| 9 | `SYS_READ_CHUNK` | ebx = inode, edx = chunk#, ecx = buf | eax = bytes (0 = past EOF, `0xFFFFFFFF` = error) |
-| 10 | `SYS_RESOLVE_DIR` | ebx = path | eax = inode / status |
-| 11 | `SYS_WRITE_STR_LEN` | ebx = buf, ecx = len | |
-| 12 | `SYS_GET_STAT` | ebx = inode, ecx = buf (128 B) | eax bool → `0xFFFFFFFF` on fail |
+| 5 | `SYS_READ_CHAR` | | eax = char, `SENTINEL` if none |
+| 6 | `SYS_YIELD` | | eax = 0 |
+| 7 | `SYS_WRITE_CHAR_COLOR` | ebx = char, ecx = color | eax = 0 |
+| 8 | `SYS_WRITE_STR_COLOR` | ebx = str, ecx = color | eax = 0 / error |
+| 9 | `SYS_READ_CHUNK` | edi = fs, ebx = inode, edx = chunk#, ecx = buf | eax = bytes (0 = past EOF) / error |
+| 10 | `SYS_RESOLVE_DIR` | ebx = path, edx = `uint32_t *` fs_out | eax = inode / error, fs index written to `*fs_out` |
+| 11 | `SYS_WRITE_STR_LEN` | ebx = buf, ecx = len | eax = 0 / error |
+| 12 | `SYS_GET_STAT` | edi = fs, ebx = inode, ecx = buf (128 B) | eax = 0 / error |
+| 13 | `SYS_MAKE_DIR` | edi = fs, ebx = parent inode, ecx = name, edx = `uint32_t *` fs_out | eax = new inode / error |
+| 14 | `SYS_REMOVE_INODE` | edi = fs, ebx = parent inode, ecx = name | eax = 0 / error |
+| 15 | `SYS_REMOVE_DIR` | edi = fs, ebx = parent inode, ecx = name | eax = 0 / error |
+| 16 | `SYS_GET_SCREEN_DIMS` | ebx = `uint32_t *` row_out, ecx = `uint32_t *` col_out | eax = 0 / error |
+| 17 | `SYS_SET_CURSOR` | ebx = row, ecx = col | eax = 0 / error |
+| 18 | `SYS_CLEAR_SCREEN` | | eax = 0 |
+| 19 | `SYS_REPLACE_INODE` | edi = fs, ebx = inode, ecx = buf, edx = f_size | eax = 0 / error |
+| 20 | `SYS_MAKE_INODE` | edi = fs, ebx = parent inode, ecx = name, edx = `uint32_t *` fs_out | eax = new inode / error |
+| 21 | `SYS_SET_CURSOR_NO_UPD` | ebx = row, ecx = col | eax = 0 / error |
+| 22 | `SYS_WRITE_CHAR_NO_UPD` | ebx = char | eax = 0 |
+| 23 | `SYS_WRITE_STR_NO_UPD` | ebx = str | eax = 0 / error |
+| 24 | `SYS_WRITE_STR_LEN_NO_UPD` | ebx = buf, ecx = len | eax = 0 / error |
+| 25 | `SYS_SET_SCROLLBACK` | ebx = bool | eax = 0 |
+| 26 | `SYS_GET_CURSOR` | ebx = `uint32_t *` row_out, ecx = `uint32_t *` col_out | eax = 0 / error |
+| 27 | `SYS_GET_EPOCH` | ebx = `uint64_t *` epoch_out | eax = 0 / error |
+| 28 | `SYS_RENAME_INODE` | edi = fs, ebx = old parent inode, ecx = old name, edx = new parent inode, esi = new name | eax = 0 / error |
+| 29 | `SYS_APPEND_TO_INODE` | edi = fs, ebx = inode, ecx = buf, edx = f_size | eax = 0 / error |
+| 30 | `SYS_MAKE_LINK` | edi = fs, ebx = inode, esi = parent fs, edx = parent inode, ecx = name | eax = 0 / error |
+| 31 | `SYS_MAKE_SYMLINK` | edi = fs, ebx = parent inode, edx = name, ecx = target | eax = 0 / error |
+| 32 | `SYS_RESOLVE_SYMLINK` | ebx = path, edx = `uint32_t *` fs_out | eax = inode / error, fs index written to `*fs_out` |
+| 33 | `SYS_TRUNCATE_INODE` | edi = fs, ebx = inode, ecx = new size | eax = 0 / error |
+| 34 | `SYS_INODE_IS_MOUNTPOINT` | ebx = fs, ecx = inode | eax = 1 / 0 / error |
+| 35 | `SYS_MOUNT_FS` | ebx = label | eax = 0 / error |
+| 36 | `SYS_UMOUNT_FS` | ebx = label | eax = 0 / error |
+| 37 | `SYS_HALT` | | (no return) |
+
+"error" is `SYSCALL_ERROR` (`0xFFFFFFFF`, `kernel/errors.h`). "fs" is an index into `fs_entries`, turned into a `struct fs_info *` by `fs_from_index()`. the handler side sees the registers as a pushad frame: `frame[0]` = edi, `[1]` = esi, `[2]` = ebp, `[3]` = esp, `[4]` = ebx, `[5]` = edx, `[6]` = ecx, `[7]` = eax. the userland wrappers (`user/sys/syscall.c`) are `write_char` ... `halt` in the same order as the table.
 
 > `SYS_EXIT` is hardcoded as `.set SYS_EXIT, 4` in `user/shell/crt0.S`
 
