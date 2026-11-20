@@ -87,7 +87,7 @@ returns the current tick using `timer_get_ticks`
 kills the current process, panics if no other processes on the pqueue (see `docs/process/processQueue.md`)
 
 ### `sys_read_char(void)`
-returns the current char from the rb (see `docs/util/ringBuffer.md`), if none then return **SENTINEL**
+returns the current char from the rb (see `docs/etc/lib/ringBuffer.md`), if none then return **SENTINEL**
 
 ### `sys_yield(void)`
 if there is a current process, push current process onto the back of the pqueue then pop the old one
@@ -95,10 +95,10 @@ if there is a current process, push current process onto the back of the pqueue 
 ### `sys_write_char_color(char c, unsigned char color)`
 write a given char from register `ebx` onto both serial and framebuffer with the given color from `ecx`
 
-### `sys_write_string_color(char *s, unsigned char color`
+### `sys_write_string_color(char *s, unsigned char color)`
 write a given string from register `ebx` (in the form of a pointer) onto both serial and framebuffer with the given color from `ecx`
 
-### `sys_read_chunk(uint32_t inode_n, uint32_t chunk_n, uint32_t *buf)`
+### `sys_read_chunk(uint32_t fs, uint32_t inode_n, uint32_t chunk_n, uint32_t *buf)`
 reads a 1 block chunk using the inode's correct indirect/direct block pointer (determined with chunk_n). returns the block data to buf
 
 ### `sys_resolve_dir(const char *s)`
@@ -107,5 +107,80 @@ attempts to resolve the given path using `resolve_dir()`, and returns the inode 
 ### `sys_write_string_len(uint32_t base, uint32_t len)`
 if base is a pointer to a const char *, write parameter **len** characters from the string.
 
-### `sys_get_stat(uint32_t ino_n, uint32_t *buf)`
-returns the given inode_n's corresponding `struct ext2_inode` to *buf. 
+### `sys_get_stat(uint32_t fs, uint32_t ino_n, uint32_t *buf)`
+returns the given inode_n's corresponding `struct ext2_inode` to `*buf`. 
+
+### `sys_make_dir(uint32_t fs, uint32_t inode_n, const char *name, uint32_t *fs_out)`
+makes a new empty directory using `make_dir()`
+
+### `sys_remove_inode(uint32_t fs, uint32_t inode_n, const char *name)`
+attempts to remove a given inode using `unlink_inode()`
+
+### `sys_remove_dir(uint32_t fs, uint32_t inode_n, const char *name)`
+attempts to remove a given directory using `unlink_dir()`
+
+### `sys_get_screen_dims(uint32_t *row_out, uint32_t *col_out)`
+hands the screen dimensions using `fb_get_screen_dims()`
+
+### `sys_set_cursor(uint32_t row, uint32_t col)`
+sets the current cursor to the given coordinates if in bounds using `fb_set_cursor()`
+
+### `sys_clear_screen(void)`
+clears the screen using `fb_clear_screen()`
+
+### `sys_replace_inode(uint32_t fs, uint32_t inode_n, uint16_t *buf, uint32_t f_size)`
+replaces the contents of an inode with the given `*buf`'s contents, using `replace_inode()`
+
+### `sys_make_inode(uint32_t fs, uint32_t inode_n, const char *name, uint32_t *fs_out)`
+makes a new empty file using `make_file()`
+
+### `sys_set_cursor_no_upd(uint32_t row, uint32_t col)`
+sets the current cursor to the given cursor if in bounds using `fb_set_cursor_no_upd()`, doesn't move the cursor on screen
+
+### `sys_write_char_no_upd(char c)`
+writes a given char using `serial_write_char()` and `fb_draw_char_no_upd()`, doesn't update the cursor
+
+### `sys_write_string_no_upd(char *c)`
+writes a given string by repeatedly using `serial_write_char()` and `fb_draw_char_no_upd()`, doesn't update the cursor
+
+### `sys_write_string_len_no_upd(const char *buf, uint32_t len)`
+writes the first `len` characters from a given string by repeatedly using `serial_write_char()` and `fb_draw_char_no_upd()`, doesn't update the cursor
+
+### `sys_set_scrollback(bool v)`
+sets the framebuffer's scrollback to a given `bool` value using `fb_set_scrollback()`
+
+### `sys_get_cursor(uint32_t *row, uint32_t *col)`
+hands the current framebuffer cursor's coordinates back using `fb_get_cursor()`
+
+### `sys_get_epoch(uint64_t *epoch_out)`
+hands back the current epoch using `timer_get_epoch()`
+
+### `sys_rename_inode(uint32_t fs, uint32_t old_parent_n, uint32_t new_parent_n, const char *old_name, const char *new_name)`
+renames/moves a given inode to a `new_parent_n` using `rename_inode()`
+
+### `sys_append_to_inode(uint32_t fs, uint32_t inode_n, uint16_t *buf, uint32_t f_size)`
+appends a given `buf` to a given `inode_n` using `append_to_inode()`
+
+### `sys_link_inode(uint32_t fs, uint32_t inode_n, uint32_t parent_fs, uint32_t parent_n, const char *name)`
+make a new hard link to a given `inode_n`
+
+### `sys_make_symlink(uint32_t fs, uint32_t parent_n, const char *name, const char *target)`
+makes a new symbolic link to a given `target`
+
+### `sys_resolve_symlink(const char *c, uint32_t *fs_out)`
+resolves a symlink to its actual target (if possible) using `resolve_dir()`
+
+### `sys_truncate_inode(uint32_t fs, uint32_t inode_n, uint32_t new_size)`
+truncates an `inode_n` to a `new_size` using `truncate_inode()`
+
+### `sys_inode_is_mountpoint(uint32_t fs, uint32_t inode_n)`
+returns whether an `inode_n` is a mountpoint using `return_mnt_root()`
+
+### `sys_mount_fs(const char *name)`
+mounts a given filesystem to its mountpoint using `mount_fs()`
+
+### `sys_umount_fs(const char *name)`
+umounts a given mounted filesystem using `umount_fs()`
+
+### `sys_halt(void)`
+follows the halt sequence by umounting every mounted filesystem with `umount_fs()`, marking the root_fs as usable with `mark_fs_state()`, then flushing all drives with `ata_flush_drives()`

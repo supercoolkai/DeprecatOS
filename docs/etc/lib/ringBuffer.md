@@ -27,6 +27,6 @@ if `rb` is 1 behind full, return `false`. otherwise, turn `queue[head]` to `c` a
 ### `bool rb_pop(ringBuffer *rb, unsigned char *out)`
 if the `ringBuffer` isn't already empty, outputs the character at `tail` to `out` and increments `tail`.
 
-### `bool rb_peek(const ringBufer *rb, unsigned char *out)`
+### `bool rb_peek(const ringBuffer *rb, unsigned char *out)`
 like `rb_pop()` but it does not increment `tail`.
 
