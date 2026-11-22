@@ -8,12 +8,12 @@ just a class mimicing the MBR drive entry format.
 | off | field | type |
 | --- | --- | --- |
 | 0 | `unused` | `uint8_t[446]` |
-| 1 | `part_entry_1` | `uint8_t[16]` |
-| 2 | `part_entry_2` | `uint8_t[16]` |
-| 3 | `part_entry_3` | `uint8_t[16]` |
-| 4 | `part_entry_4` | `uint8_t[16]` |
-| 5 | `partition_magic_1` | `uint8_t` |
-| 6 | `partition_magic_2` | `uint8_t` |
+| 446 | `part_entry_1` | `uint8_t[16]` |
+| 462 | `part_entry_2` | `uint8_t[16]` |
+| 478 | `part_entry_3` | `uint8_t[16]` |
+| 494 | `part_entry_4` | `uint8_t[16]` |
+| 510 | `partition_magic_1` | `uint8_t` |
+| 511 | `partition_magic_2` | `uint8_t` |
 
  > Btw you would think this would be padded but it's not because it doesnt really matter
 

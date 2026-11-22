@@ -10,8 +10,8 @@ a collection of information about an ata drive
 | 0 | `is_secondary` | `bool` |
 | 1 | `supports_read48` | `bool` |
 | 2 | `identify_magic` | `uint8_t` |
-| 3 | `lba_sector_count` | `uint64_t` |
-| 4 | `identify_values` | `uint16_t[IDENTIFY_VALUE_LENGTH]` |
+| 4 | `lba_sector_count` | `uint64_t` |
+| 12 | `identify_values` | `uint16_t[IDENTIFY_VALUE_LENGTH]` |
 
 ---
 

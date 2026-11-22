@@ -62,8 +62,11 @@ a table of syscalls which can be called through entering a syscall's index in th
 
 ## function analysis (excludes syscalls)
 
-### `static uint32_t resolve_dir(const char *s)`
-attempts to lookup the given path using `lookup_path()` and returns the given inode_n if it succeeds.
+### `static uint32_t resolve_dir(const char *s, bool split_leaf_sym, struct fs_info **fs)`
+bounds-checks the string against the user range, then looks the path up from `root_fs` using `lookup_path()`. on success returns the inode number and writes the filesystem that owns it to `*fs`, otherwise `SYSCALL_ERROR`. `split_leaf_sym` is passed through as `lookup_path()`'s `follow_leaf_link`, so `true` follows a trailing symlink and `false` returns the link's own inode.
+
+### `static struct fs_info *fs_from_index(uint32_t index)`
+turns a userland fs index into a `struct fs_info *`. returns `NULL` if the index is `>= MAX_MOUNTS`, or if the slot is not `root_fs` and has no mountpoint (nothing mounted there).
 
 ### `void syscall_init(void)`
 sets up the IDT gate at `SYSCALL_VECTOR_NUMBER` with attribute bytes `0xEE` (present, ring 3, type interrupt gate), and stub `syscall_stub`
@@ -84,7 +87,7 @@ write a given string from register `ebx` (in the form of a pointer) onto both se
 returns the current tick using `timer_get_ticks`
 
 ### `sys_exit_curr(void)`
-kills the current process, panics if no other processes on the pqueue (see `docs/process/processQueue.md`)
+kills the current process, panics if no other processes on the pqueue (see `docs/process/queue.md`)
 
 ### `sys_read_char(void)`
 returns the current char from the rb (see `docs/etc/lib/ringBuffer.md`), if none then return **SENTINEL**
@@ -101,8 +104,8 @@ write a given string from register `ebx` (in the form of a pointer) onto both se
 ### `sys_read_chunk(uint32_t fs, uint32_t inode_n, uint32_t chunk_n, uint32_t *buf)`
 reads a 1 block chunk using the inode's correct indirect/direct block pointer (determined with chunk_n). returns the block data to buf
 
-### `sys_resolve_dir(const char *s)`
-attempts to resolve the given path using `resolve_dir()`, and returns the inode number given.
+### `sys_resolve_dir(const char *c, uint32_t *fs_out)`
+attempts to resolve the given path using `resolve_dir()` (following a trailing symlink), returns the inode number and writes the index of the filesystem that owns it to `*fs_out`.
 
 ### `sys_write_string_len(uint32_t base, uint32_t len)`
 if base is a pointer to a const char *, write parameter **len** characters from the string.
@@ -168,7 +171,7 @@ make a new hard link to a given `inode_n`
 makes a new symbolic link to a given `target`
 
 ### `sys_resolve_symlink(const char *c, uint32_t *fs_out)`
-resolves a symlink to its actual target (if possible) using `resolve_dir()`
+resolves the given path using `resolve_dir()` WITHOUT following a trailing symlink, so if the last component is a symlink it returns the link's own inode (everything before it is still followed). writes the owning fs index to `*fs_out`
 
 ### `sys_truncate_inode(uint32_t fs, uint32_t inode_n, uint32_t new_size)`
 truncates an `inode_n` to a `new_size` using `truncate_inode()`

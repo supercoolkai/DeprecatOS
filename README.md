@@ -1,13 +1,13 @@
 Hello!! this is my current passion project, DeprecatOS. 
 
-Any documentation about any specific features are in docs/
+Any documentation about any specific features are in docs/ (index at `docs/README.md`)
 
 All `#define` macros are shown in `docs/definedTerms.md`
 
 ## overview
 
 ### boot & core
-- x86-32 kernel, boot via GRUB multiboot from an ISO. built for QEMU, never tested on real hardware.
+- x86-32 kernel, boot via GRUB multiboot from an ISO. runs on QEMU and on real hardware (see "how to run on real hardware" below).
 - exception handling with kernel panic
 
 ### memory management
@@ -22,8 +22,7 @@ All `#define` macros are shown in `docs/definedTerms.md`
 - syscall interface
 
 ### filesystem
-- read-only ext2 support
-- RW ext2 support in-progress
+- RW ext2 support
 
 ### drivers
 - ATA disk driver (PIO for now, DMA soon trust me)
@@ -36,12 +35,12 @@ All `#define` macros are shown in `docs/definedTerms.md`
 - IDT management 
 
 ### shell
-- standalone shell with crt0 and syscall stubs (for full command list see docs/userland/syscall.md)
+- standalone shell with crt0 and syscall stubs (for full command list see docs/userland/user/app/depsh.md)
 
-### util
+### util (see docs/etc/kernel/README.md and docs/etc/lib/README.md)
 - ring buffer
 - hex printer
-- kwrite (primitive version)
+- kprintf
 
 ## **warnings:**
 the *cat/ls/cd* shell command may throw off the timer by a few milliseconds.

@@ -35,4 +35,10 @@ a driver which maps keyboard input with the corresponding keycode, adding it to 
 a global timer which uses the `irq0_stub` interrupt to increment the tick counter every millisecond
 
 ### `ata`
-a direct IO driver with the ATA port (if compatible, currently the only option). currently PIO but moving to DMA soon 
+a direct IO driver with the ATA port (if compatible, currently the only option). currently PIO but moving to DMA soon
+
+### `pci`
+a pci config space reader, used by the ata driver to find the primary and secondary channel bases
+
+### `partition`
+reads the MBR partition table of a drive, used exclusively by `blockController.c` to fill `fs_entries` 

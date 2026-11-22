@@ -8,19 +8,19 @@ a struct which describes an ext2 filesystem (basically like `ata_drive`, but for
 | offset | field | type |
 | --- | --- | --- |
 | 0 | `bgdt_buf` | `uint16_t[WORDS_PER_BLK]` |
-| 1 | `sprblk_buf` | `uint16_t[sizeof(struct ext2_superblock) / 2]` |
-| 2 | `drive` | `struct ata_drive *` |
-| 3 | `superblk` | `struct ext2_superblock *` |
-| 4 | `bgdt` | `struct ext2_block_group_descriptor *` |
-| 5 |`start_lba` | `uint64_t` |
-| 6 | `sector_count` | `uint64_t` |
-| 7 | `inode_size` | `uint32_t` |
-| 8 | `inodes_per_grp` | `uint32_t` |
-| 9 | `blks_per_grp` | `uint32_t` |
-| 10 | `frags_per_grp` | `uint32_t` |
-| 11 | `ngroups` | `uint32_t` |
-| 12 | `mountpoint` | `uint32_t` |
-| 13 | `label` | `char[FS_INFO_LABEL_LEN]` |
+| 4096 | `sprblk_buf` | `uint16_t[sizeof(struct ext2_superblock) / 2]` |
+| 5120 | `drive` | `struct ata_drive *` |
+| 5124 | `superblk` | `struct ext2_superblock *` |
+| 5128 | `bgdt` | `struct ext2_block_group_descriptor *` |
+| 5132 | `start_lba` | `uint64_t` |
+| 5140 | `sector_count` | `uint64_t` |
+| 5148 | `inode_size` | `uint32_t` |
+| 5152 | `inodes_per_grp` | `uint32_t` |
+| 5156 | `blks_per_grp` | `uint32_t` |
+| 5160 | `frags_per_grp` | `uint32_t` |
+| 5164 | `ngroups` | `uint32_t` |
+| 5168 | `mountpoint` | `uint32_t` |
+| 5172 | `label` | `char[FS_INFO_LABEL_LEN]` |
 
 --- 
 
