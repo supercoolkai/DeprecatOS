@@ -68,6 +68,7 @@ static bool ata_identify_secondary(uint8_t drive)
   // settle
   for (int i = 0; i < 4; i++)
     wait_100_ns(true);
+  inb(secondary_cmd_base + STATUS_OFF);
 
   // zero sectorcount and all lba ports
   outb(secondary_cmd_base + SECTOR_COUNT_OFF, 0);
@@ -139,6 +140,7 @@ bool ata_identify(uint8_t drive, bool *is_secondary) {
   // settle
   for (int i = 0; i < 4; i++)
     wait_100_ns(false);
+  inb(primary_cmd_base + STATUS_OFF);
 
   // zero sectorcount and all lba ports
   outb(primary_cmd_base + SECTOR_COUNT_OFF, 0);

@@ -102,14 +102,11 @@ static void indir_free_block(struct fs_info *fs, uint32_t block_n, uint32_t laye
 
 static bool fill_partition_entry(uint8_t drive_magic, uint32_t part)
 {
-  struct ata_drive drive;
   struct ata_drive *drive_ptr;
   if (drive_magic == ATA_MASTER){
-    drive = master_drive;
     drive_ptr = &master_drive;
   }
   else if (drive_magic == ATA_SLAVE){
-    drive = slave_drive;
     drive_ptr = &slave_drive;
   }
   else
@@ -119,7 +116,7 @@ static bool fill_partition_entry(uint8_t drive_magic, uint32_t part)
   uint8_t *part_entry;
   uint32_t mbr_part_n = part % PARTS_PER_DRIVE;
 
-  mbr = read_mbr(drive);
+  mbr = read_mbr(drive_ptr);
 
   if (mbr == NULL){
     if (drive_magic == ATA_MASTER)
@@ -165,7 +162,7 @@ static bool fill_partition_entry(uint8_t drive_magic, uint32_t part)
     ((uint32_t)*(part_entry + PART_SECTOR_COUNT_OFFSET + 2)) << 16 |
     ((uint32_t)*(part_entry + PART_SECTOR_COUNT_OFFSET + 3)) << 24;
   
-  if (fs_entries[part].sector_count == 0 || fs_entries[part].start_lba + fs_entries[part].sector_count > drive.lba_sector_count){
+  if (fs_entries[part].sector_count == 0 || fs_entries[part].start_lba + fs_entries[part].sector_count > drive_ptr->lba_sector_count){
     if (drive_magic == ATA_MASTER)
       kprintf(KPRINTF_YELLOW "WARNING: master drive partition is out of bounds, skipped\n" KPRINTF_RESET);
     else

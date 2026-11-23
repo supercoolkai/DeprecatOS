@@ -23,6 +23,6 @@ struct drive_mbr{
   uint8_t partition_magic_2;
 };
 
-struct drive_mbr *read_mbr(struct ata_drive drive);
+struct drive_mbr *read_mbr(struct ata_drive *drive);
 
 #endif
