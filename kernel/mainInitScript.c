@@ -17,6 +17,7 @@
 #include "fs/block/blockController.h"
 #include "fs/ext2/bitmapController.h"
 #include "kprintf/kprintf.h"
+#include "fs/skeleton/skeleton.h"
 
 void mainInitScript(MBIInfo *info)
 {
@@ -71,6 +72,10 @@ void mainInitScript(MBIInfo *info)
 
   kprintf(KPRINTF_GREEN "* " KPRINTF_RESET KPRINTF_WHITE "Initializing the mount handler...           ");
   mount_init();
+  kprintf(KPRINTF_WHITE "[ " KPRINTF_RESET KPRINTF_GREEN "OK" KPRINTF_RESET KPRINTF_WHITE " ]\n");
+
+  kprintf(KPRINTF_GREEN "* " KPRINTF_RESET KPRINTF_WHITE "Initializing the skeleton creator...         ");
+  skeleton_init();
   kprintf(KPRINTF_WHITE "[ " KPRINTF_RESET KPRINTF_GREEN "OK" KPRINTF_RESET KPRINTF_WHITE " ]\n");
 
   kprintf(KPRINTF_GREEN "* " KPRINTF_RESET KPRINTF_WHITE "Initializing the GDT and TSS controller...  ");
