@@ -74,7 +74,7 @@ void mainInitScript(MBIInfo *info)
   mount_init();
   kprintf(KPRINTF_WHITE "[ " KPRINTF_RESET KPRINTF_GREEN "OK" KPRINTF_RESET KPRINTF_WHITE " ]\n");
 
-  kprintf(KPRINTF_GREEN "* " KPRINTF_RESET KPRINTF_WHITE "Initializing the skeleton creator...         ");
+  kprintf(KPRINTF_GREEN "* " KPRINTF_RESET KPRINTF_WHITE "Initializing the skeleton creator...        ");
   skeleton_init();
   kprintf(KPRINTF_WHITE "[ " KPRINTF_RESET KPRINTF_GREEN "OK" KPRINTF_RESET KPRINTF_WHITE " ]\n");
 

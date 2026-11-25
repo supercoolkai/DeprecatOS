@@ -38,6 +38,7 @@
 #define SYS_MOUNT_FS 35
 #define SYS_UMOUNT_FS 36
 #define SYS_HALT 37
+#define SYS_GET_FS_STAT 38
 
 uint32_t write_char(char c)
 {
@@ -466,6 +467,18 @@ uint32_t halt(void)
     "int $0x80"
     : "=a" (result)
     : "a" (SYS_HALT)
+  );
+
+  return result;
+}
+
+uint32_t get_fs_stat(uint32_t fs, struct fs_row *fs_out)
+{
+  uint32_t result;
+  __asm__ volatile (
+    "int $0x80"
+    : "=a" (result)
+    : "a" (SYS_GET_FS_STAT), "b" (fs), "c" ((uint32_t) fs_out) : "memory"
   );
 
   return result;

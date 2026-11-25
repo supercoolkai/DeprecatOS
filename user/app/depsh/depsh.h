@@ -19,5 +19,6 @@
 #include "app/depsh/cmds/mount.h"
 #include "app/depsh/cmds/umount.h"
 #include "app/depsh/cmds/halt.h"
+#include "app/depsh/cmds/lsblk.h"
 
 #endif

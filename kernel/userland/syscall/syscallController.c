@@ -930,6 +930,40 @@ static uint32_t sys_halt(uint32_t *frame)
   for (;;) __asm__ volatile ("hlt");
 }
 
+static uint32_t sys_get_fs_stat(uint32_t *frame)
+{
+  uint32_t fs_idx = frame[4];
+  struct fs_row *fs_out = (struct fs_row *) frame[6];
+
+  if(fs_idx >= MAX_MOUNTS || (uint32_t) fs_out < KERNEL_CEILING || (uint32_t) fs_out >= USER_SPACE_END - sizeof(struct fs_row)){
+    frame[7] = SYSCALL_ERROR;
+    return (uint32_t) frame;
+  }
+
+  fs_out->sector_count = 0;
+  fs_out->mountpoint = 0;
+  fs_out->drive_identify = 0;
+  
+  for (uint32_t i = 0; i < 17; i++)
+    fs_out->label[i] = 0;
+
+  if (fs_entries[fs_idx].sector_count) {
+    fs_out->sector_count = fs_entries[fs_idx].sector_count;
+    fs_out->mountpoint = fs_entries[fs_idx].mountpoint;
+    fs_out->drive_identify = fs_entries[fs_idx].drive->identify_magic;
+    
+    for (uint32_t i = 0; i < 17; i++) {
+      fs_out->label[i] = fs_entries[fs_idx].label[i];
+    }
+
+    if (&fs_entries[fs_idx] == root_fs)
+      fs_out->mountpoint = ROOT_INODE_N;
+  }
+
+  frame[7] = 0;
+  return (uint32_t) frame;
+}
+
 static uint32_t (*syscall_table[])(uint32_t *) = {
   sys_write_char,
   sys_write_string,
@@ -968,6 +1002,7 @@ static uint32_t (*syscall_table[])(uint32_t *) = {
   sys_mount_fs,
   sys_umount_fs,
   sys_halt,
+  sys_get_fs_stat,
 };
 
 void syscall_init(void)

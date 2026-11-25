@@ -40,5 +40,6 @@ uint32_t is_mountpoint(uint32_t fs, uint32_t inode_n);
 uint32_t mount(const char *name);
 uint32_t umount(const char *name);
 uint32_t halt(void);
+uint32_t get_fs_stat(uint32_t fs, struct fs_row *fs_out);
 
 #endif

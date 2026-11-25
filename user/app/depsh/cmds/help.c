@@ -42,5 +42,8 @@ void cmd_help(char *args)
                "ln [-s] [original_file ...] [new_link_path ...]: Creates a hard link to a file. "
                "If flag [-s] is passed, creates a symbolic link instead.\n"
                "halt: umounts all partitions and halts the system. highly recommended you "
-               "do it before shutting down\n");
+               "do it before shutting down\n"
+               "lsblk: lists all drives and all valid (mountable) partitions under those drives, "
+               "includes major information like size and label (which is supposed to be what you name"
+               "its mountpoint dir)\n");
 }

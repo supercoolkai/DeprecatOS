@@ -25,6 +25,7 @@ App apps[] = {
   {"mount", cmd_mount},
   {"umount", cmd_umount},
   {"halt", cmd_halt},
+  {"lsblk", cmd_lsblk},
 };
 
 uint32_t app_cnt = sizeof(apps) / sizeof(apps[0]);
