@@ -3,6 +3,7 @@
 #define PAGE_PRESENT 1
 #define PAGE_RW (1 << 1)
 #define PAGE_USER (1 << 2)
+#define PAGE_GROWABLE (1 << 9)
 #define KERNEL_CEILING 0x40000000
 
 #include <stdint.h>

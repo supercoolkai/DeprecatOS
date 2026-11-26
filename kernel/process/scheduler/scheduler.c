@@ -9,6 +9,7 @@
 #include "userland/userland.h"
 #include "drivers/serial/serialController.h"
 #include "gdt/segments.h"
+#include "memory/boundaries/boundaries.h"
 #include "errors.h"
 #include <stddef.h>
 
@@ -38,14 +39,19 @@ uint32_t schedule(uint32_t esp)
 static Process *create_proc_no_forgery(void)
 {
   Process *p = kmalloc(sizeof(Process));
-
+  
   if (!p)
     return NULL;
-  
+
   uint32_t stackAlloc = (uint32_t) kmalloc(STACK_SIZE);
 
   if(!stackAlloc)
     return NULL;
+
+  // zero all rows that not used yet
+  for (uint32_t i = 0; i < MAX_ROWS; i++) {
+    p->user_mem_rows[i] = (struct region_row) {0, 0, 0};
+  }
 
   p->malloc_addr = stackAlloc;
 
@@ -78,7 +84,7 @@ void create_process(void (*entry)(void))
   pqueue_push(p);
 }
 
-void create_user_process(uint32_t entry, uint32_t user_stack_top)
+void create_user_process(uint32_t entry, uint32_t user_stack_top, struct region_row *rows)
 {
   Process *p = create_proc_no_forgery();
 
@@ -86,6 +92,10 @@ void create_user_process(uint32_t entry, uint32_t user_stack_top)
     return;
  
   p->esp = p->malloc_addr + STACK_SIZE - USER_FRAME_SIZE;
+  
+  for (uint32_t i = 0; i < MAX_ROWS; i++) {
+    p->user_mem_rows[i] = rows[i];
+  }
 
   uint32_t *frame = (uint32_t *)p->esp;
   

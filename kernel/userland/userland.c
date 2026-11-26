@@ -5,6 +5,7 @@
 #include "process/scheduler/scheduler.h"
 #include "colors/colors.h"
 #include "drivers/serial/serialController.h"
+#include "memory/boundaries/boundaries.h"
 #include <stdint.h>
 
 static uint32_t frames[MISC_PAGE_CNT];
@@ -73,7 +74,22 @@ void userland_init(void)
 
   kprintf(KPRINTF_GREEN "* " KPRINTF_RESET KPRINTF_WHITE "Welcome to " KPRINTF_RESET 
           KPRINTF_CYAN "DeprecatOS (Indev 0.01)!\n" KPRINTF_RESET);
-  create_user_process(CODE_ADDR, STACK_ADDR + 0x1000);
+
+  struct region_row rows[MAX_ROWS];
+
+  // zero all rows that not used yet
+  for (uint32_t i = 0; i < MAX_ROWS; i++) {
+    rows[i] = (struct region_row) {0, 0, 0};
+  }
+
+  rows[0] = (struct region_row) {CODE_ADDR, // image row
+    STACK_ADDR,
+    PAGE_PRESENT | PAGE_RW | PAGE_USER};
+  rows[1] = (struct region_row) {STACK_ADDR, // stack row
+    STACK_ADDR + 0x1000,
+    PAGE_PRESENT | PAGE_RW | PAGE_USER};
+
+  create_user_process(CODE_ADDR, STACK_ADDR + 0x1000, rows);
 }
 
 void userland_teardown(void)

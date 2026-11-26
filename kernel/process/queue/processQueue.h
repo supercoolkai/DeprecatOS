@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include "memory/boundaries/boundaries.h"
 
 #define PQUEUE_SIZE_ELEMENTS 256
 
@@ -10,6 +11,8 @@ typedef struct {
   uint32_t esp;
   uint32_t stack_addr;
   uint32_t malloc_addr;
+
+  struct region_row user_mem_rows[MAX_ROWS];
 } Process;
 
 void pqueue_init(void);
