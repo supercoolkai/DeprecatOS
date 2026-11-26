@@ -145,3 +145,8 @@ uint32_t kill_current(void)
 
   return current->esp;
 }
+
+struct region_row *get_current_rows(void)
+{
+  return current->user_mem_rows;
+}

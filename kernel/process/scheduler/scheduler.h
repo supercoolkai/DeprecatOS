@@ -24,6 +24,8 @@ void scheduler_init(void);
 void create_process(void (*entry)(void));
 void create_user_process(uint32_t entry, uint32_t user_stack_top, struct region_row *rows);
 uint32_t kill_current(void);
+struct region_row *get_current_rows(void);
+
 #endif
 
 #endif

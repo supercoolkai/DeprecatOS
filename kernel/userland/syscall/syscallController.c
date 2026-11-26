@@ -32,13 +32,14 @@ static uint32_t sys_write_char(uint32_t *frame)
 
 static uint32_t sys_write_string(uint32_t *frame)
 {
+  struct region_row *rows = get_current_rows();
   char *s = (char *) frame[4];
   
   uint32_t i = 0;
 
   for (;;){
 
-    if((uint32_t) s + i < KERNEL_CEILING || (uint32_t) s + i >= USER_SPACE_END){
+    if(!check_in_bounds(rows, (uint32_t) s + i, 1)){
       frame[7] = SYSCALL_ERROR;
       return (uint32_t) frame;
     }
@@ -58,8 +59,9 @@ static uint32_t sys_write_string(uint32_t *frame)
 
 static uint32_t sys_get_ticks(uint32_t *frame)
 {
+  struct region_row *rows = get_current_rows();
   uint64_t *tick_out = (uint64_t *) frame[4];
-  if ((uint32_t) tick_out < KERNEL_CEILING || (uint32_t) tick_out > USER_SPACE_END - sizeof(uint64_t)) {
+  if (!check_in_bounds(rows, (uint32_t) tick_out, sizeof(uint64_t))) {
     frame[7] = SYSCALL_ERROR;
     return (uint32_t) frame;
   }
@@ -119,6 +121,7 @@ static uint32_t sys_write_char_color(uint32_t *frame)
 
 static uint32_t sys_write_string_color(uint32_t *frame)
 {
+  struct region_row *rows = get_current_rows();
   char *s = (char *) frame[4];
   unsigned char color = (unsigned char) frame[6];
   
@@ -126,7 +129,7 @@ static uint32_t sys_write_string_color(uint32_t *frame)
 
   for (;;){
 
-    if((uint32_t) s + i < KERNEL_CEILING || (uint32_t) s + i >= USER_SPACE_END){
+    if(!check_in_bounds(rows, (uint32_t) s + i, 1)){
       frame[7] = SYSCALL_ERROR;
       return (uint32_t) frame;
     }
@@ -147,9 +150,10 @@ static uint32_t sys_write_string_color(uint32_t *frame)
 
 static uint32_t resolve_dir(const char *s, bool split_leaf_sym, struct fs_info **fs)
 {  
+  struct region_row *rows = get_current_rows();
   uint32_t i = 0;
   for (;;) {
-    if ((uint32_t) s + i < KERNEL_CEILING || (uint32_t) s + i >= USER_SPACE_END)
+    if (!check_in_bounds(rows, (uint32_t) s + i, 1))
       return SYSCALL_ERROR;
 
     char c = s[i];
@@ -187,6 +191,7 @@ static struct fs_info *fs_from_index(uint32_t index)
 
 static uint32_t sys_read_chunk(uint32_t *frame)
 {
+  struct region_row *rows = get_current_rows();
   uint32_t ino_n = frame[4];
   struct ext2_inode ino;
   
@@ -209,7 +214,7 @@ static uint32_t sys_read_chunk(uint32_t *frame)
   uint32_t n = frame[5];
   uint32_t *buf = (uint32_t *) frame[6];
 
-  if ((uint32_t) buf < KERNEL_CEILING || (uint32_t) buf > USER_SPACE_END - BLOCK_SIZE){
+  if (!check_in_bounds(rows, (uint32_t) buf, BLOCK_SIZE)){
     frame[7] = SYSCALL_ERROR;
     return (uint32_t) frame;
   }
@@ -248,10 +253,11 @@ static uint32_t sys_read_chunk(uint32_t *frame)
 
 static uint32_t sys_resolve_dir(uint32_t *frame)
 {
+  struct region_row *rows = get_current_rows();
   const char *s = (const char *) frame[4];
   uint32_t *fs_out = (uint32_t *) frame[5];
 
-  if ((uint32_t) fs_out < KERNEL_CEILING || (uint32_t) fs_out > USER_SPACE_END - sizeof(uint32_t)) {
+  if (!check_in_bounds(rows, (uint32_t) fs_out, sizeof(uint32_t))) {
     frame[7] = SYSCALL_ERROR;
     return (uint32_t) frame;
   }
@@ -270,11 +276,12 @@ static uint32_t sys_resolve_dir(uint32_t *frame)
 
 static uint32_t sys_write_string_len(uint32_t *frame)
 {
+  struct region_row *rows = get_current_rows();
   uint32_t base = frame[4];
   const char *s = (const char *) base;
   uint32_t len = frame[6];
   
-  if (len > USER_SPACE_END - KERNEL_CEILING || base < KERNEL_CEILING || base > USER_SPACE_END - len) {
+  if (!check_in_bounds(rows, base, len)) {
     frame[7] = SYSCALL_ERROR;
     return (uint32_t) frame;
   }
@@ -292,6 +299,7 @@ static uint32_t sys_write_string_len(uint32_t *frame)
 
 static uint32_t sys_get_stat(uint32_t *frame)
 {
+  struct region_row *rows = get_current_rows();
   uint32_t ino_n = frame[4];
   struct ext2_inode ino;
   
@@ -304,7 +312,7 @@ static uint32_t sys_get_stat(uint32_t *frame)
 
   uint32_t *buf = (uint32_t *) frame[6];
 
-  if ((uint32_t) buf < KERNEL_CEILING || (uint32_t) buf > USER_SPACE_END - sizeof(struct ext2_inode)){
+  if (!check_in_bounds(rows, (uint32_t) buf, sizeof(struct ext2_inode))){
     frame[7] = SYSCALL_ERROR;
     return (uint32_t) frame;
   }
@@ -316,18 +324,19 @@ static uint32_t sys_get_stat(uint32_t *frame)
 
 static uint32_t sys_make_dir(uint32_t *frame)
 {
+  struct region_row *rows = get_current_rows();
   uint32_t parent_inode_n = frame[4];
 
   uint32_t base = frame[6];
 
   uint32_t *fs_out = (uint32_t *) frame[5];
 
-  if (base < KERNEL_CEILING || base > USER_SPACE_END - NAME_LEN) {
+  if (!check_in_bounds(rows, base, NAME_LEN)) {
     frame[7] = SYSCALL_ERROR;
     return (uint32_t) frame;
   }
 
-  if ((uint32_t) fs_out < KERNEL_CEILING || (uint32_t) fs_out > USER_SPACE_END - sizeof(uint32_t)) {
+  if (!check_in_bounds(rows, (uint32_t) fs_out, sizeof(uint32_t))) {
     frame[7] = SYSCALL_ERROR;
     return (uint32_t) frame;
   }
@@ -348,11 +357,12 @@ static uint32_t sys_make_dir(uint32_t *frame)
 
 static uint32_t sys_remove_inode(uint32_t *frame)
 {
+  struct region_row *rows = get_current_rows();
   uint32_t parent_inode_n = frame[4];
 
   uint32_t base = frame[6];
 
-  if (base < KERNEL_CEILING || base > USER_SPACE_END - NAME_LEN) {
+  if (!check_in_bounds(rows, base, NAME_LEN)) {
     frame[7] = SYSCALL_ERROR;
     return (uint32_t) frame;
   }
@@ -371,11 +381,12 @@ static uint32_t sys_remove_inode(uint32_t *frame)
 
 static uint32_t sys_remove_dir(uint32_t *frame)
 {
+  struct region_row *rows = get_current_rows();
   uint32_t parent_inode_n = frame[4];
 
   uint32_t base = frame[6];
 
-  if (base < KERNEL_CEILING || base > USER_SPACE_END - NAME_LEN) {
+  if (!check_in_bounds(rows, base, NAME_LEN)) {
     frame[7] = SYSCALL_ERROR;
     return (uint32_t) frame;
   }
@@ -394,15 +405,16 @@ static uint32_t sys_remove_dir(uint32_t *frame)
 
 static uint32_t sys_get_screen_dims(uint32_t *frame)
 {
+  struct region_row *rows = get_current_rows();
   uint32_t *row_out = (uint32_t *) frame[4];
   uint32_t *col_out = (uint32_t *) frame[6];
   
-  if ((uint32_t) row_out < KERNEL_CEILING || (uint32_t) row_out > USER_SPACE_END - sizeof(uint32_t)) {
+  if (!check_in_bounds(rows, (uint32_t) row_out, sizeof(uint32_t))) {
     frame[7] = SYSCALL_ERROR;
     return (uint32_t) frame;
   }
   
-  if ((uint32_t) col_out < KERNEL_CEILING || (uint32_t) col_out > USER_SPACE_END - sizeof(uint32_t)) {
+  if (!check_in_bounds(rows, (uint32_t) col_out, sizeof(uint32_t))) {
     frame[7] = SYSCALL_ERROR;
     return (uint32_t) frame;
   }
@@ -436,11 +448,12 @@ static uint32_t sys_clear_screen(uint32_t *frame)
 
 static uint32_t sys_replace_inode(uint32_t *frame)
 {
+  struct region_row *rows = get_current_rows();
   uint32_t inode_n = frame[4];
   uint16_t *buf = (uint16_t *) frame[6];
   uint32_t f_size = frame[5];
   
-  if (f_size > USER_SPACE_END - KERNEL_CEILING || (uint32_t) buf < KERNEL_CEILING || (uint32_t) buf > USER_SPACE_END - f_size) {
+  if (!check_in_bounds(rows, (uint32_t) buf, f_size)) {
     frame[7] = SYSCALL_ERROR;
     return (uint32_t) frame;
   }
@@ -463,16 +476,17 @@ static uint32_t sys_replace_inode(uint32_t *frame)
 
 static uint32_t sys_make_inode(uint32_t *frame)
 {
+  struct region_row *rows = get_current_rows();
   uint32_t parent_n = frame[4];
   uint32_t base = frame[6];
   uint32_t *fs_out = (uint32_t *) frame[5];
 
-  if (base < KERNEL_CEILING || base > USER_SPACE_END - NAME_LEN) {
+  if (!check_in_bounds(rows, base, NAME_LEN)) {
     frame[7] = SYSCALL_ERROR;
     return (uint32_t) frame;
   }
 
-  if ((uint32_t) fs_out < KERNEL_CEILING || (uint32_t) fs_out > USER_SPACE_END - sizeof(uint32_t)) {
+  if (!check_in_bounds(rows, (uint32_t) fs_out, sizeof(uint32_t))) {
     frame[7] = SYSCALL_ERROR;
     return (uint32_t) frame;
   }
@@ -517,13 +531,14 @@ static uint32_t sys_write_char_no_upd(uint32_t *frame)
 
 static uint32_t sys_write_string_no_upd(uint32_t *frame)
 {
+  struct region_row *rows = get_current_rows();
   char *s = (char *) frame[4];
 
   uint32_t i = 0;
 
   for (;;){
 
-    if((uint32_t) s + i < KERNEL_CEILING || (uint32_t) s + i >= USER_SPACE_END){
+    if(!check_in_bounds(rows, (uint32_t) s + i, 1)){
       frame[7] = SYSCALL_ERROR;
       return (uint32_t) frame;
     }
@@ -543,11 +558,12 @@ static uint32_t sys_write_string_no_upd(uint32_t *frame)
 
 static uint32_t sys_write_string_len_no_upd(uint32_t *frame)
 {
+  struct region_row *rows = get_current_rows();
   uint32_t base = frame[4];
   const char *s = (const char *) base;
   uint32_t len = frame[6];
 
-  if (len > USER_SPACE_END - KERNEL_CEILING || base < KERNEL_CEILING || base > USER_SPACE_END - len) {
+  if (!check_in_bounds(rows, base, len)) {
     frame[7] = SYSCALL_ERROR;
     return (uint32_t) frame;
   }
@@ -575,15 +591,16 @@ static uint32_t sys_set_scrollback(uint32_t *frame)
 
 static uint32_t sys_get_cursor(uint32_t *frame)
 {
+  struct region_row *rows = get_current_rows();
   uint32_t *row_out = (uint32_t *) frame[4];
   uint32_t *col_out = (uint32_t *) frame[6];
   
-  if ((uint32_t) row_out < KERNEL_CEILING || (uint32_t) row_out > USER_SPACE_END - sizeof(uint32_t)) {
+  if (!check_in_bounds(rows, (uint32_t) row_out, sizeof(uint32_t))) {
     frame[7] = SYSCALL_ERROR;
     return (uint32_t) frame;
   }
   
-  if ((uint32_t) col_out < KERNEL_CEILING || (uint32_t) col_out > USER_SPACE_END - sizeof(uint32_t)) {
+  if (!check_in_bounds(rows, (uint32_t) col_out, sizeof(uint32_t))) {
     frame[7] = SYSCALL_ERROR;
     return (uint32_t) frame;
   }
@@ -596,8 +613,9 @@ static uint32_t sys_get_cursor(uint32_t *frame)
 
 static uint32_t sys_get_epoch(uint32_t *frame)
 {
+  struct region_row *rows = get_current_rows();
   uint64_t *epoch_out = (uint64_t *) frame[4];
-  if ((uint32_t) epoch_out < KERNEL_CEILING || (uint32_t) epoch_out > USER_SPACE_END - sizeof(uint64_t)) {
+  if (!check_in_bounds(rows, (uint32_t) epoch_out, sizeof(uint64_t))) {
     frame[7] = SYSCALL_ERROR;
     return (uint32_t) frame;
   }
@@ -610,6 +628,7 @@ static uint32_t sys_get_epoch(uint32_t *frame)
 
 static uint32_t sys_rename_inode(uint32_t *frame)
 {
+  struct region_row *rows = get_current_rows();
   uint32_t old_parent_n = frame[4];
   uint32_t new_parent_n = frame[5];
   
@@ -622,7 +641,7 @@ static uint32_t sys_rename_inode(uint32_t *frame)
   bool new_finished = false;
 
   for (;;) {
-    if((uint32_t) old_name + i < KERNEL_CEILING || (uint32_t) old_name + i >= USER_SPACE_END || (uint32_t) new_name + i < KERNEL_CEILING || (uint32_t) new_name + i >= USER_SPACE_END){
+    if(!check_in_bounds(rows, (uint32_t) old_name + i, 1) || !check_in_bounds(rows, (uint32_t) new_name + i, 1)){
       frame[7] = SYSCALL_ERROR;
       return (uint32_t) frame;
     }
@@ -656,11 +675,12 @@ static uint32_t sys_rename_inode(uint32_t *frame)
 
 static uint32_t sys_append_to_inode(uint32_t *frame)
 {
+  struct region_row *rows = get_current_rows();
   uint32_t inode_n = frame[4];
   uint16_t *buf = (uint16_t *) frame[6];
   uint32_t f_size = frame[5];
   
-  if (f_size > USER_SPACE_END - KERNEL_CEILING || (uint32_t) buf < KERNEL_CEILING || (uint32_t) buf > USER_SPACE_END - f_size) {
+  if (!check_in_bounds(rows, (uint32_t) buf, f_size)) {
     frame[7] = SYSCALL_ERROR;
     return (uint32_t) frame;
   }
@@ -688,6 +708,7 @@ static uint32_t sys_append_to_inode(uint32_t *frame)
 
 static uint32_t sys_link_inode(uint32_t *frame)
 {
+  struct region_row *rows = get_current_rows();
   uint32_t inode_n = frame[4];
   uint32_t parent_n = frame[5];
   char *s = (char *) frame[6];
@@ -719,7 +740,7 @@ static uint32_t sys_link_inode(uint32_t *frame)
   }
 
   for (;;){
-    if((uint32_t) s + i < KERNEL_CEILING || (uint32_t) s + i >= USER_SPACE_END){
+    if(!check_in_bounds(rows, (uint32_t) s + i, 1)){
       frame[7] = SYSCALL_ERROR;
       return (uint32_t) frame;
     }
@@ -752,6 +773,7 @@ static uint32_t sys_link_inode(uint32_t *frame)
 
 static uint32_t sys_make_symlink(uint32_t *frame)
 {
+  struct region_row *rows = get_current_rows();
   uint32_t parent_n = frame[4];
   const char *name = (const char *) frame[5];
   const char *target = (const char *) frame[6];
@@ -771,7 +793,7 @@ static uint32_t sys_make_symlink(uint32_t *frame)
   bool target_finished = false;
   uint32_t i = 0;
   for (;;) {
-    if((uint32_t) name + i < KERNEL_CEILING || (uint32_t) name + i >= USER_SPACE_END || (uint32_t) target + i < KERNEL_CEILING || (uint32_t) target + i >= USER_SPACE_END){
+    if(!check_in_bounds(rows, (uint32_t) name + i, 1) || !check_in_bounds(rows, (uint32_t) target + i, 1)){
       frame[7] = SYSCALL_ERROR;
       return (uint32_t) frame;
     }
@@ -805,10 +827,11 @@ static uint32_t sys_make_symlink(uint32_t *frame)
 
 static uint32_t sys_resolve_symlink(uint32_t *frame)
 {
+  struct region_row *rows = get_current_rows();
   const char *s = (const char *) frame[4];
   uint32_t *fs_out = (uint32_t *) frame[5];
 
-  if ((uint32_t) fs_out < KERNEL_CEILING || (uint32_t) fs_out > USER_SPACE_END - sizeof(uint32_t)) {
+  if (!check_in_bounds(rows, (uint32_t) fs_out, sizeof(uint32_t))) {
     frame[7] = SYSCALL_ERROR;
     return (uint32_t) frame;
   }
@@ -865,12 +888,13 @@ static uint32_t sys_inode_is_mountpoint(uint32_t *frame)
 
 static uint32_t sys_mount_fs(uint32_t *frame)
 {
+  struct region_row *rows = get_current_rows();
   const char *label = (const char *) frame[4];
 
   uint32_t i = 0;
   for (;;){
 
-    if((uint32_t) label + i < KERNEL_CEILING || (uint32_t) label + i >= USER_SPACE_END){
+    if(!check_in_bounds(rows, (uint32_t) label + i, 1)){
       frame[7] = SYSCALL_ERROR;
       return (uint32_t) frame;
     }
@@ -888,12 +912,13 @@ static uint32_t sys_mount_fs(uint32_t *frame)
 
 static uint32_t sys_umount_fs(uint32_t *frame)
 {
+  struct region_row *rows = get_current_rows();
   const char *label = (const char *) frame[4];
 
   uint32_t i = 0;
   for (;;){
 
-    if((uint32_t) label + i < KERNEL_CEILING || (uint32_t) label + i >= USER_SPACE_END){
+    if(!check_in_bounds(rows, (uint32_t) label + i, 1)){
       frame[7] = SYSCALL_ERROR;
       return (uint32_t) frame;
     }
@@ -932,10 +957,11 @@ static uint32_t sys_halt(uint32_t *frame)
 
 static uint32_t sys_get_fs_stat(uint32_t *frame)
 {
+  struct region_row *rows = get_current_rows();
   uint32_t fs_idx = frame[4];
   struct fs_row *fs_out = (struct fs_row *) frame[6];
 
-  if(fs_idx >= MAX_MOUNTS || (uint32_t) fs_out < KERNEL_CEILING || (uint32_t) fs_out >= USER_SPACE_END - sizeof(struct fs_row)){
+  if(fs_idx >= MAX_MOUNTS || !check_in_bounds(rows, (uint32_t) fs_out, sizeof(struct fs_row))){
     frame[7] = SYSCALL_ERROR;
     return (uint32_t) frame;
   }
