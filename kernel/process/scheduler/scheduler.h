@@ -7,14 +7,14 @@
 #include "memory/boundaries/boundaries.h"
 #endif
 
-#define KERNEL_FRAME_SIZE 44
-#define USER_FRAME_SIZE 52
+#define KERNEL_FRAME_SIZE 52
+#define USER_FRAME_SIZE 60
 
-#define FRAME_EIP_INDEX 8
-#define FRAME_CS_INDEX 9
-#define FRAME_EFLAGS_INDEX 10
-#define FRAME_USER_ESP_INDEX 11
-#define FRAME_SS_INDEX 12
+#define FRAME_EIP_INDEX 10
+#define FRAME_CS_INDEX 11
+#define FRAME_EFLAGS_INDEX 12
+#define FRAME_USER_ESP_INDEX 13
+#define FRAME_SS_INDEX 14
 
 #define INTERRUPT_AND_RESERVED_EFLAGS 0x202
 

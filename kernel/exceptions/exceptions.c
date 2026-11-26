@@ -8,6 +8,8 @@
 #include "hex/hexPrinter.h"
 #include "memory/paging/paging.h"
 #include "process/scheduler/scheduler.h"
+#include "memory/boundaries/boundaries.h"
+#include "memory/frameAlloc/frameAllocator.h"
 
 static const char *exc_names[32] = 
 {
@@ -139,7 +141,7 @@ uint32_t exception_handler(uint32_t esp)
     kprintf(KPRINTF_RED "\n" KPRINTF_RESET);
 
     if (vector == PAGE_FAULT_VECTOR) {
-      kprintf(KPRINTF_RED "CR2: " KPRINTF_RESET);
+      kprintf(KPRINTF_RED "CR2 (kernel-GB): " KPRINTF_RESET);
 
       serial_write_char(read_cr2());
       print_hex(read_cr2(), RED);
@@ -154,19 +156,51 @@ uint32_t exception_handler(uint32_t esp)
   if((frame[FRAME_CS_INDEX_EXCEPTION] & 3) == 3) {
     uint32_t vector = frame[FRAME_VECTOR_INDEX_EXCEPTION];
     uint32_t error_code = frame[FRAME_ERROR_CODE_INDEX_EXCEPTION];
+    
+    if (vector == PAGE_FAULT_VECTOR) {
+      uint32_t fault_addr = read_cr2();
+
+      struct region_row *rows = get_current_rows();
+      uint32_t row_n = MAX_ROWS;
+      for (uint32_t r = 0; r < MAX_ROWS; r++) {
+        if (rows[r].addr_lo <= fault_addr && rows[r].addr_hi > fault_addr) {
+          row_n = r;
+          break;
+        }
+      }
+
+      if (row_n < MAX_ROWS){
+        if (rows[row_n].flags & PAGE_GROWABLE){
+          uint32_t phys = alloc_frame();
+          if (!phys){ // if this happens probably got a bigger fish to fry
+            kprintf(KPRINTF_YELLOW "IN ROW " KPRINTF_RESET);
+            print_hex(row_n, YELLOW);
+            kprintf(KPRINTF_YELLOW ", ");
+          }
+          else{ 
+            uint32_t virt = fault_addr - (fault_addr % PAGE_SIZE);
+            map_kernel_page(virt, phys, rows[row_n].flags);
+
+            return esp;
+          }
+        }
+        else{
+          kprintf(KPRINTF_YELLOW "IN ROW " KPRINTF_RESET);
+          print_hex(row_n, YELLOW);
+          kprintf(KPRINTF_YELLOW ", ");
+        }
+      }
+    }
   
     serial_write_string(exc_names[vector]);
     fb_draw_string(exc_names[vector], YELLOW);
 
-    kprintf(KPRINTF_YELLOW ", ERROR CODE: " KPRINTF_RESET);
+    kprintf(KPRINTF_YELLOW "\nERROR CODE: " KPRINTF_RESET);
 
     print_hex(error_code, YELLOW);
 
-    kprintf(KPRINTF_YELLOW "\n" KPRINTF_RESET);
+    kprintf(KPRINTF_YELLOW "\nPROCESS KILLED\n" KPRINTF_RESET);
 
-    kprintf(KPRINTF_YELLOW "PROCESS KILLED" KPRINTF_RESET);
-
-    kprintf(KPRINTF_YELLOW "\n" KPRINTF_RESET);
 
   }
   return kill_current();

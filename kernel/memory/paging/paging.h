@@ -5,6 +5,7 @@
 #define PAGE_USER (1 << 2)
 #define PAGE_GROWABLE (1 << 9)
 #define KERNEL_CEILING 0x40000000
+#define PAGE_SIZE 4096
 
 #include <stdint.h>
 #include "memory/mmap/memoryMap.h"

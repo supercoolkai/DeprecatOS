@@ -11,6 +11,8 @@
 .set DISPLAY_WIDTH, 1024
 .set DISPLAY_HEIGHT, 768
 .set DISPLAY_DEPTH, 32
+.set RANDOM_FILLER, 0x67676767
+.set FILLER_SIZE, 8
 
 .section .multiboot, "a", @progbits
 .align 4
@@ -93,27 +95,36 @@ hang:
 
 .global irq0_stub
 irq0_stub:
+    push $RANDOM_FILLER # so that exceptions look the same
+    push $RANDOM_FILLER
     pusha
     push %esp
     call timer_irq_handler
     movl %eax, %esp
     popa
+    addl $FILLER_SIZE, %esp
     iret
 
 .global irq1_stub
 irq1_stub:
+    push $RANDOM_FILLER # so that exceptions look the same
+    push $RANDOM_FILLER
     pusha
     call keyboard_irq_handler
     popa
+    addl $FILLER_SIZE, %esp
     iret
 
 .global syscall_stub
 syscall_stub:
+    push $RANDOM_FILLER # so that exceptions look the same
+    push $RANDOM_FILLER
     pusha
     push %esp
     call syscall_handler
     movl %eax, %esp
     popa
+    addl $FILLER_SIZE, %esp
     iret
 
 .global default_isr_stub
@@ -132,6 +143,7 @@ exc\n:
   call exception_handler
   movl %eax, %esp
   popa
+  addl $FILLER_SIZE, %esp # Yea exceptions get the filler removal too
   iret
 .endm
 
@@ -144,6 +156,7 @@ exc\n:
   call exception_handler
   movl %eax, %esp
   popa
+  addl $FILLER_SIZE, %esp # Yea exceptions get the filler removal too
   iret
 .endm
 

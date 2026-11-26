@@ -74,7 +74,7 @@ void create_process(void (*entry)(void))
   // purpose registers, but cuz
   // its a brand new process it has no history 
   // so everything should be zeroed
-  for (int i = 0; i < 8; i ++)
+  for (int i = 0; i < 10; i ++)
     frame[i] = 0;
   
   frame[FRAME_EIP_INDEX] = (uint32_t) entry;
@@ -104,7 +104,7 @@ void create_user_process(uint32_t entry, uint32_t user_stack_top, struct region_
   // purpose registers, but cuz
   // its a brand new process it has no history 
   // so everything should be zeroed
-  for (int i = 0; i < 8; i ++)
+  for (int i = 0; i < 10; i ++)
     frame[i] = 0;
   
   frame[FRAME_EIP_INDEX] = entry;
