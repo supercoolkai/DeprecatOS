@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include "memory/heap/kernelHeap.h"
 #include "memory/paging/paging.h"
+#include "memory/boundaries/boundaries.h"
 #include "memory/frameAlloc/frameAllocator.h"
 #include <stddef.h>
 
@@ -50,7 +51,7 @@ void *kmalloc(uint32_t size)
   
   uint32_t frameAlloc = 0;
 
-  if(heap_end < KERNEL_CEILING - 0x1000)
+  if(heap_end < kernel_ceiling - 0x1000)
     frameAlloc = alloc_frame();
 
   if(frameAlloc != 0)
@@ -60,7 +61,7 @@ void *kmalloc(uint32_t size)
 
     heap_end += growth;
 
-    for (uint32_t i = old_heap_end; i <= heap_end - 0x1000 && i <= KERNEL_CEILING - 0x1000; i += 0x1000){
+    for (uint32_t i = old_heap_end; i <= heap_end - 0x1000 && i <= kernel_ceiling - 0x1000; i += 0x1000){
       map_kernel_page(i, frameAlloc, PAGE_PRESENT | PAGE_RW);
       frameAlloc = alloc_frame();
       if(frameAlloc == 0){
@@ -70,8 +71,8 @@ void *kmalloc(uint32_t size)
       }
     }
 
-    if(heap_end > KERNEL_CEILING){
-      heap_end = KERNEL_CEILING;
+    if(heap_end > kernel_ceiling){
+      heap_end = kernel_ceiling;
     }
 
     if (frameAlloc != 0) {

@@ -5,6 +5,7 @@
 #include "memory/heap/kernelHeap.h"
 #include "colors/colors.h"
 #include "mem/mem.h"
+#include "memory/boundaries/boundaries.h"
 
 #define HISTORY_LINES 256
 
@@ -77,15 +78,23 @@ void fb_init(MBIInfo *info)
   }
   
   // identity mapping
-  uint32_t start = info->framebuffer_addrLo & ~0xFFFu;
-  uint32_t end_no_round = info->framebuffer_addrLo + info->framebuffer_pitch * info->framebuffer_height;
-  uint32_t end = (end_no_round + 0xFFF) & ~0xFFFu;
+  uint32_t phys_start = info->framebuffer_addrLo & ~0xFFFu;
+  uint32_t phys_end_no_round = info->framebuffer_addrLo + info->framebuffer_pitch * info->framebuffer_height;
+  uint32_t phys_end = (phys_end_no_round + 0xFFF) & ~0xFFFu;
 
-  for (uint32_t i = start; i < end; i += 0x1000){
-    map_kernel_page(i, i, PAGE_PRESENT | PAGE_RW);
+  uint32_t size = phys_end - phys_start;
+  uint32_t virt_end = KERNEL_END;
+  uint32_t virt_start = virt_end - size;
+
+  kernel_ceiling = virt_start;
+
+  uint32_t j = phys_start;
+  for (uint32_t i = virt_start; i < virt_end; i += 0x1000){
+    map_kernel_page(i, j, PAGE_PRESENT | PAGE_RW);
+    j+=0x1000;
   }
 
-  base = info->framebuffer_addrLo;
+  base = virt_start + (info->framebuffer_addrLo & 0xFFF);
   pitch = info->framebuffer_pitch;
   width = info->framebuffer_width;
   height = info->framebuffer_height;

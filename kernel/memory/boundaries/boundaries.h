@@ -9,6 +9,8 @@
 
 #define MAX_ROWS 8
 
+extern uint32_t kernel_ceiling;
+
 struct region_row
 {
   uint64_t addr_lo; // inclusive
