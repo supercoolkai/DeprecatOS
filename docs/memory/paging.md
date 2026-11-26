@@ -11,6 +11,7 @@ src: `kernel/memory/paging/paging.h`, `kernel/memory/heap/kernelHeap.c`, `kernel
 | `PAGE_PRESENT` | `0x1` | entry is valid |
 | `PAGE_RW` | `0x2` | writable |
 | `PAGE_USER` | `0x4` | ring-3 accessible |
+| `PAGE_GROWABLE` | `0x200` | OS-defined (but here it means its growable upon demand)|
 
 ### PDE (page descriptor entry) format:
 
@@ -27,6 +28,14 @@ src: `kernel/memory/paging/paging.h`, `kernel/memory/heap/kernelHeap.c`, `kernel
 | 8 | global |
 | 9–11 | available for OS |
 | 12–31 | physical frame address (4 KiB-aligned) |
+
+### 32-bit virt address format:
+
+| bits | field | width meaning |
+| --- | --- | --- |
+| 31 -> 22 | page directory index | 1024 entries per dir |
+| 21 -> 12 | page table index | 1024 entries per table |
+| 11 -> 0 | offset inside the page | 4 KiB page |
 
 ## global variables
 #### `static uint32_t *kernel_dir`:
