@@ -6,6 +6,7 @@
 #include "hex/hexPrinter.h"
 #include "colors/colors.h"
 #include "memory/heap/kernelHeap.h"
+#include "exceptions/exceptions.h"
 #include "cpu/cpu.h"
 
 static uint32_t *kernel_dir;
@@ -205,7 +206,18 @@ void paging_init(MBIInfo *info)
     mmap_walk(info, track_ram_top);
 
     for (int i = 0; i < (PDPT_SIZE / sizeof(uint64_t)); i++) {
-      kernel_pdpt[i] = 0;
+      uint64_t addr = alloc_frame().addr;
+  
+      if (addr >= HEAP_START || !addr)
+        panic("KERNEL PANIC: initializing paging (PAE path, directories initialization) went wrong");
+      
+      uint64_t *dir = (uint64_t *)((uint32_t) addr);
+
+      for(int j = 0; j < 512; j++){
+        dir[j] = 0;
+      }
+
+      kernel_pdpt[i] = (uint64_t)((uint32_t) dir) | PAGE_PRESENT;
     }
 
     for (uint32_t a = 0x1000; a < ram_top; a+=0x1000) {
