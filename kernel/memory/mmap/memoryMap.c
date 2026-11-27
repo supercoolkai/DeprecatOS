@@ -41,18 +41,13 @@ void mmap_walk(const MBIInfo *info, void (*fn)(uint64_t base, uint64_t len, uint
   for (uint32_t i = info->mmap_addr; i < info->mmap_addr + info-> mmap_length; i += entry->size+4){
     entry = (MemoryMapEntry *)i;
     
-    if (entry->baseHi != 0)
-      continue;
+    uint64_t base = ((uint64_t) entry->baseLo) |
+      (((uint64_t)entry->baseHi) << 32);
 
-    uint32_t len = entry->lenLo;
+    uint64_t len = ((uint64_t) entry-> lenLo) |
+      (((uint64_t) entry->lenHi) << 32);
 
-    if (entry->lenHi != 0 || entry->baseLo + len < entry->baseLo) {
-      // not to be confused with a generic error like in syscalls,
-      // completely unrelated 32-bit max-address range calc
-      len = 0xFFFFFFFF - entry->baseLo + 1; 
-    }
-
-    fn(entry->baseLo, len, entry->type);
+    fn(base, len, entry->type);
   }
 }
 
