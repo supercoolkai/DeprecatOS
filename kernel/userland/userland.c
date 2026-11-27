@@ -8,18 +8,18 @@
 #include "memory/boundaries/boundaries.h"
 #include <stdint.h>
 
-static uint32_t frames[MISC_PAGE_CNT];
+static phys_addr_t frames[MISC_PAGE_CNT];
 
 static void map_misc_pages(void)
 {
   for (int i = 0; i < MISC_PAGE_CNT; i++) {
-    uint32_t curr_frame = alloc_frame();
+    phys_addr_t curr_frame = alloc_frame();
 
-    if (!curr_frame){
+    if (!curr_frame.addr){
       kprintf(KPRINTF_YELLOW "alloc_frame() failed in a map_misc_pages()'s misc frame init!\n" KPRINTF_RESET);
       for (int j = 0; j < i; j++) {
         free_frame(frames[j]);
-        frames[j] = 0;
+        frames[j].addr = 0;
       }
 
       return;
@@ -36,18 +36,18 @@ static void map_misc_pages(void)
 
 void userland_init(void)
 {
-  uint32_t code_frame = alloc_frame();
-  uint32_t stack_frame = alloc_frame();
+  phys_addr_t code_frame = alloc_frame();
+  phys_addr_t stack_frame = alloc_frame();
 
-  if (!code_frame){
+  if (!code_frame.addr){
     kprintf(KPRINTF_YELLOW "alloc_frame() failed in userland_init()'s code frame init!\n" KPRINTF_RESET);
-    if (stack_frame != 0)
+    if (stack_frame.addr != 0)
       free_frame(stack_frame);
 
     return;
   }
 
-  if (!stack_frame){
+  if (!stack_frame.addr){
     kprintf(KPRINTF_YELLOW "alloc_frame() failed in userland_init()'s stack frame init!\n" KPRINTF_RESET);
     free_frame(code_frame);
     return;
@@ -94,17 +94,17 @@ void userland_init(void)
 
 void userland_teardown(void)
 {
-  uint32_t code_phys = unmap_kernel_page(CODE_ADDR);
-  uint32_t stack_phys = unmap_kernel_page(STACK_ADDR);
+  phys_addr_t code_phys = unmap_kernel_page(CODE_ADDR);
+  phys_addr_t stack_phys = unmap_kernel_page(STACK_ADDR);
 
-  if (code_phys != 0)
+  if (code_phys.addr != 0)
     free_frame(code_phys);
 
-  if (stack_phys != 0)
+  if (stack_phys.addr != 0)
     free_frame(stack_phys);
 
   for (int j = 0; j < MISC_PAGE_CNT; j++) {
-    if (frames[j] == 0) 
+    if (frames[j].addr == 0)
       continue;
     uint32_t addr = CODE_ADDR + 0x1000 * (j + 1);
     unmap_kernel_page(addr);

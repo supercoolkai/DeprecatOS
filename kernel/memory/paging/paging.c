@@ -10,10 +10,10 @@
 static uint32_t *kernel_dir;
 static uint32_t ram_top;
 
-static void track_ram_top(uint32_t base, uint32_t len, uint32_t type)
+static void track_ram_top(uint64_t base, uint64_t len, uint32_t type)
 {
   if (type != 1) return;
-  uint32_t top = base + len;
+  uint64_t top = base + len;
   if (top < base) top = 0xFFFFFFFF;
   if (top > HEAP_START) top = HEAP_START;
   if (top > ram_top || ram_top > HEAP_START){
@@ -21,21 +21,23 @@ static void track_ram_top(uint32_t base, uint32_t len, uint32_t type)
   }
 }
 
-static void map_page(uint32_t *dir, uint32_t virt, uint32_t phys, uint32_t flags)
+static void map_page(uint32_t *dir, uint32_t virt, phys_addr_t phys, uint32_t flags)
 {
   uint32_t di = virt >> 22;
 
   if(!(dir[di] & PAGE_PRESENT)) {
-    uint32_t table_addr = alloc_frame();
+    phys_addr_t table_frame = alloc_frame();
 
-    if (table_addr >= HEAP_START || table_addr == 0) {
-      if (table_addr != 0) free_frame(table_addr);
+    if (table_frame.addr >= HEAP_START || table_frame.addr == 0) {
+      if (table_frame.addr != 0) free_frame(table_frame);
       kprintf(KPRINTF_RED "map_page: FAILED TO MAP PAGE, MEMORY OUT OF RANGE, TABLE ADDR  = " KPRINTF_RESET);
-      print_hex(table_addr, RED);
+      print_hex((uint32_t)(table_frame.addr >> 32), RED);
+      print_hex((uint32_t)table_frame.addr, RED);
       kprintf(KPRINTF_RED "\n" KPRINTF_RESET);
       return;
     }
-    
+
+    uint32_t table_addr = (uint32_t)table_frame.addr;
     uint32_t *table = (uint32_t *)table_addr;
 
     for(int i = 0; i < 1024; i++){
@@ -58,38 +60,38 @@ static void map_page(uint32_t *dir, uint32_t virt, uint32_t phys, uint32_t flags
   
   uint32_t *table = (uint32_t *)(dir[di] & ~0xFFFu);
 
-  table[(virt >> 12) & 0x3FF] = phys | flags;
+  table[(virt >> 12) & 0x3FF] = (uint32_t)phys.addr | flags;
 }
 
-void map_kernel_page(uint32_t virt, uint32_t phys, uint32_t flags)
+void map_kernel_page(uint32_t virt, phys_addr_t phys, uint32_t flags)
 {
   map_page(kernel_dir, virt, phys, flags);
 }
 
-uint32_t unmap_kernel_page(uint32_t virt)
+phys_addr_t unmap_kernel_page(uint32_t virt)
 {
   uint32_t di = virt >> 22;
 
   if(!(kernel_dir[di] & PAGE_PRESENT))
-    return 0;
+    return (phys_addr_t){0};
 
   uint32_t *table = (uint32_t *)(kernel_dir[di] & ~0xFFFu);
   uint32_t ti = (virt >> 12) & 0x3FF;
 
   if(!(table[ti] & PAGE_PRESENT))
-    return 0;
+    return (phys_addr_t){0};
 
   uint32_t phys = table[ti] & ~0xFFFu;
   table[ti] = 0;
 
   __asm__ volatile ("invlpg (%0)" :: "r"(virt) : "memory");
 
-  return phys;
+  return (phys_addr_t){phys};
 }
 
 void paging_init(MBIInfo *info)
 {
-  kernel_dir = (uint32_t *) alloc_frame();
+  kernel_dir = (uint32_t *)(uint32_t)alloc_frame().addr;
 
   mmap_walk(info, track_ram_top);
 
@@ -98,7 +100,7 @@ void paging_init(MBIInfo *info)
   }
 
   for(uint32_t a = 0x1000; a < ram_top; a += 0x1000) {
-    map_page(kernel_dir, a, a, PAGE_PRESENT | PAGE_RW);
+    map_page(kernel_dir, a, (phys_addr_t){a}, PAGE_PRESENT | PAGE_RW);
   }
 
   paging_enable((uint32_t) kernel_dir);

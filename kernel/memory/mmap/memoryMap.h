@@ -47,6 +47,6 @@ typedef struct
 } MemoryMapEntry;
 
 void mmap_print(const MBIInfo *info);
-void mmap_walk(const MBIInfo *info, void (*fn)(uint32_t base, uint32_t len, uint32_t type));
+void mmap_walk(const MBIInfo *info, void (*fn)(uint64_t base, uint64_t len, uint32_t type));
 
 #endif

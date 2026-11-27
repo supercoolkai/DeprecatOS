@@ -171,8 +171,8 @@ uint32_t exception_handler(uint32_t esp)
 
       if (row_n < MAX_ROWS){
         if (rows[row_n].flags & PAGE_GROWABLE){
-          uint32_t phys = alloc_frame();
-          if (!phys){ // if this happens probably got a bigger fish to fry
+          phys_addr_t phys = alloc_frame();
+          if (!phys.addr){ // if this happens probably got a bigger fish to fry
             kprintf(KPRINTF_YELLOW "IN ROW " KPRINTF_RESET);
             print_hex(row_n, YELLOW);
             kprintf(KPRINTF_YELLOW ", ");

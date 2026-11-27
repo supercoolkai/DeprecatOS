@@ -49,12 +49,12 @@ void *kmalloc(uint32_t size)
     }
   }
   
-  uint32_t frameAlloc = 0;
+  phys_addr_t frameAlloc = {0};
 
   if(heap_end < kernel_ceiling - 0x1000)
     frameAlloc = alloc_frame();
 
-  if(frameAlloc != 0)
+  if(frameAlloc.addr != 0)
   {
     uint32_t growth = heap_end - heap_start;
     uint32_t old_heap_end = heap_end;
@@ -64,7 +64,7 @@ void *kmalloc(uint32_t size)
     for (uint32_t i = old_heap_end; i <= heap_end - 0x1000 && i <= kernel_ceiling - 0x1000; i += 0x1000){
       map_kernel_page(i, frameAlloc, PAGE_PRESENT | PAGE_RW);
       frameAlloc = alloc_frame();
-      if(frameAlloc == 0){
+      if(frameAlloc.addr == 0){
         heap_end = i + 0x1000;
         
         break;
@@ -75,7 +75,7 @@ void *kmalloc(uint32_t size)
       heap_end = kernel_ceiling;
     }
 
-    if (frameAlloc != 0) {
+    if (frameAlloc.addr != 0) {
       free_frame(frameAlloc);
     }
 

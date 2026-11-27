@@ -7,7 +7,7 @@
 
 
 
-static void print_entry(uint32_t base, uint32_t len, uint32_t type)
+static void print_entry(uint64_t base, uint64_t len, uint32_t type)
 {
   kprintf(KPRINTF_GREEN "base: " KPRINTF_RESET);
   print_hex(base, GREEN);
@@ -29,7 +29,7 @@ void mmap_print(const MBIInfo *info)
 }
 
 
-void mmap_walk(const MBIInfo *info, void (*fn)(uint32_t base, uint32_t len, uint32_t type))
+void mmap_walk(const MBIInfo *info, void (*fn)(uint64_t base, uint64_t len, uint32_t type))
 {
   if ((info->flags & (1 << 6)) == 0){
     kprintf(KPRINTF_YELLOW "Bad flags" KPRINTF_RESET);
