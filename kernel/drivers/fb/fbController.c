@@ -83,7 +83,7 @@ void fb_init(MBIInfo *info)
   uint32_t phys_end = (phys_end_no_round + 0xFFF) & ~0xFFFu;
 
   uint32_t size = phys_end - phys_start;
-  uint32_t virt_end = KERNEL_END;
+  uint32_t virt_end = kernel_ceiling;
   uint32_t virt_start = virt_end - size;
 
   kernel_ceiling = virt_start;

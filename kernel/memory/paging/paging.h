@@ -8,6 +8,11 @@
 #define PDPT_SIZE 32
 #define PDPT_ENTRY_OFFSET 30 // for virt
 
+#define PDPT_SELF_POINT_BASE 508
+#define PDPT_SELF_POINT_AMT 4
+
+#define KERNEL_DIR_SELF_POINT 255
+
 #include <stdint.h>
 #include "memory/mmap/memoryMap.h"
 #include "memory/structs/physAddr.h"

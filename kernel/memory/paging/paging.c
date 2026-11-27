@@ -1,4 +1,5 @@
 #include "memory/paging/paging.h"
+#include "memory/boundaries/boundaries.h"
 #include <stdint.h>
 #include "memory/frameAlloc/frameAllocator.h"
 #include "memory/mmap/memoryMap.h"
@@ -224,6 +225,15 @@ void paging_init(MBIInfo *info)
       map_pae_page(kernel_pdpt,a, (phys_addr_t){a}, PAGE_PRESENT | PAGE_RW);
     }
 
+    uint64_t *first_dir = (uint64_t *)((uint32_t)(kernel_pdpt[0] & (~PAGE_PRESENT)));
+    for (int i = PDPT_SELF_POINT_BASE; i < PDPT_SELF_POINT_BASE + PDPT_SELF_POINT_AMT; i++) {
+      uint64_t *dir = (uint64_t *)((uint32_t) kernel_pdpt[i - PDPT_SELF_POINT_BASE]);
+
+      first_dir[i] = (uint64_t)((uint32_t) dir) | PAGE_PRESENT | PAGE_RW;
+    }
+
+    kernel_ceiling = PDPT_SELF_POINT_BASE << 21;
+
     paging_enable((uint32_t) kernel_pdpt);
 
     return;
@@ -240,6 +250,8 @@ void paging_init(MBIInfo *info)
   for(uint32_t a = 0x1000; a < ram_top; a += 0x1000) {
     map_page(kernel_dir, a, (phys_addr_t){a}, PAGE_PRESENT | PAGE_RW);
   }
+
+  kernel_dir[KERNEL_DIR_SELF_POINT] = (uint32_t)(((uint32_t) kernel_dir) | PAGE_PRESENT | PAGE_RW);
 
   paging_enable((uint32_t) kernel_dir);
 }
