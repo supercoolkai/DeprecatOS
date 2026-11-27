@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include "memory/frameAlloc/frameAllocator.h"
 #include "memory/mmap/memoryMap.h"
+#include "cpu/cpu.h"
 #include "min/min.h"
 
 static uint32_t frame_bitmap[FRAME_BITMAP_LENGTH];
@@ -12,6 +13,9 @@ static void mark_free_region(uint64_t base, uint64_t len, uint32_t type)
 
   uint64_t first = ((base + 0xFFF) & ~0xFFFull) >> 12;
   uint64_t last = min(((base + len) & ~0xFFFull) >> 12, FRAME_BITMAP_LENGTH * 32);
+  
+  if (!pae_on)
+    last = min(last, FRAME_BITMAP_LENGTH_NO_PAE * 32);
 
   for(uint64_t i = first; i < last; i++){
     frame_bitmap[i / 32] &= ~(1u << (i % 32));

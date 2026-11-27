@@ -5,6 +5,7 @@
 #include "memory/structs/physAddr.h"
 
 #define FRAME_BITMAP_LENGTH 1048576
+#define FRAME_BITMAP_LENGTH_NO_PAE 32768
 #define FRAME_SIZE_BYTES 4096
 
 void frame_alloc_init(const MBIInfo *info);

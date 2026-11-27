@@ -1,4 +1,5 @@
 #include "idt/idtController.h"
+#include "cpu/cpu.h"
 #include "drivers/timer/timerController.h"
 #include "fs/mount/mount.h"
 #include "drivers/serial/serialController.h"
@@ -37,6 +38,10 @@ void mainInitScript(MBIInfo *info)
 
   kprintf(KPRINTF_GREEN "* " KPRINTF_RESET KPRINTF_WHITE "Initializing the exceptions handler...      ");
   exceptions_init();
+  kprintf(KPRINTF_WHITE "[ " KPRINTF_RESET KPRINTF_GREEN "OK" KPRINTF_RESET KPRINTF_WHITE " ]\n");
+
+  kprintf(KPRINTF_GREEN "* " KPRINTF_RESET KPRINTF_WHITE "Checking for PAE support...                 ");
+  cpu_init();
   kprintf(KPRINTF_WHITE "[ " KPRINTF_RESET KPRINTF_GREEN "OK" KPRINTF_RESET KPRINTF_WHITE " ]\n");
 
   kprintf(KPRINTF_GREEN "* " KPRINTF_RESET KPRINTF_WHITE "Initializing the frame allocator...         ");
