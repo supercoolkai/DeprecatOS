@@ -5,6 +5,8 @@
 #define PAGE_USER (1 << 2)
 #define PAGE_GROWABLE (1 << 9)
 #define PAGE_SIZE 4096
+#define PDPT_SIZE 32
+#define PDPT_ENTRY_OFFSET 30 // for virt
 
 #include <stdint.h>
 #include "memory/mmap/memoryMap.h"

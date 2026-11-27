@@ -68,6 +68,7 @@ _start:
 
     lgdt gdt_descriptor
     ljmp $KERNEL_CODE_SEGMENT_SEL, $reload_segments
+
 reload_segments:
     movw $KERNEL_DATA_SEGMENT_SEL, %ax
     movw %ax, %ds
@@ -164,9 +165,22 @@ exc\n:
 paging_enable:
   movl 4(%esp), %eax
   mov %eax, %cr3
-  movl %cr0, %ecx
-  orl $0x80000000, %ecx
-  movl %ecx, %cr0
+  
+  // pae setup
+  cmpb $0, pae_on
+  je skip_label
+
+  // if pae is on
+  movl %cr4, %ecx
+  orl $0x20, %ecx
+  movl %ecx, %cr4
+
+  skip_label:
+    // cr0 stuff
+    movl %cr0, %ecx
+    orl $0x80000000, %ecx
+    movl %ecx, %cr0
+
   ret
 
 .global read_cr2
