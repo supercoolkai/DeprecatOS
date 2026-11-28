@@ -18,7 +18,7 @@ void heap_init(void)
   heap_start = HEAP_START;
   heap_end = HEAP_END_MIN;
 
-  map_kernel_page(heap_start, alloc_frame(), PAGE_PRESENT | PAGE_RW);
+  map_kernel_page(heap_start, alloc_frame(), PAGE_PRESENT | PAGE_RW | PAGE_NX);
 
   BlockHeader *h = (BlockHeader*)heap_start;
   h->size = FRAME_SIZE_BYTES - sizeof(BlockHeader);
@@ -62,7 +62,7 @@ void *kmalloc(uint32_t size)
     heap_end += growth;
 
     for (uint32_t i = old_heap_end; i <= heap_end - 0x1000 && i <= kernel_ceiling - 0x1000; i += 0x1000){
-      map_kernel_page(i, frameAlloc, PAGE_PRESENT | PAGE_RW);
+      map_kernel_page(i, frameAlloc, PAGE_PRESENT | PAGE_RW | PAGE_NX);
       frameAlloc = alloc_frame();
       if(frameAlloc.addr == 0){
         heap_end = i + 0x1000;

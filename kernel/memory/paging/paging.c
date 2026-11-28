@@ -107,7 +107,7 @@ static void map_pae_page(uint64_t *pdpt, uint32_t virt, phys_addr_t phys, uint32
     pdpt[pdpt_entry] = table_frame.addr | PAGE_PRESENT;
   }
   
-  uint64_t *dir = (uint64_t *)((uint32_t)(pdpt[pdpt_entry] & ~0xFFFull));
+  uint64_t *dir = (uint64_t *)((uint32_t)(pdpt[pdpt_entry] & PAE_ENTRY_ADDR_MASK));
 
   uint64_t di = (virt >> 21) & 0x1FF;
 
@@ -141,7 +141,7 @@ static void map_pae_page(uint64_t *pdpt, uint32_t virt, phys_addr_t phys, uint32
     }
   }
 
-  if ((!window_usable && (dir[di] & ~0xFFFull) >= HEAP_START) || (dir[di] & ~0xFFFull) == 0) {
+  if ((!window_usable && (dir[di] & PAE_ENTRY_ADDR_MASK) >= HEAP_START) || (dir[di] & PAE_ENTRY_ADDR_MASK) == 0) {
     kprintf(KPRINTF_RED "map_pae_page: FAILED TO MAP PAGE, MEMORY OUT OF RANGE, TABLE ADDR: " KPRINTF_RESET); 
     print_hex((uint32_t)(dir[di] >> 32), RED);
     print_hex((uint32_t)dir[di] & ~0xFFFu, RED);
@@ -155,11 +155,15 @@ static void map_pae_page(uint64_t *pdpt, uint32_t virt, phys_addr_t phys, uint32
   uint64_t *table;
   
   if (!window_usable)
-    table = (uint64_t *)(((uint32_t) dir[di]) & ~0xFFFu);
+    table = (uint64_t *)((uint32_t)(dir[di] & PAE_ENTRY_ADDR_MASK));
   else
     table = (uint64_t *)((PAE_WINDOW_BASE + ((virt >> 21) * 0x1000)));
+  
+  uint64_t to_or = (uint64_t) flags;
+  if (nx_on && (flags & PAGE_NX))
+    to_or |= ENTRY_NX;
 
-  table[(virt >> 12) & 0x1FF] = phys.addr | flags;
+  table[(virt >> 12) & 0x1FF] = phys.addr | to_or;
 }
 
 void map_kernel_page(uint32_t virt, phys_addr_t phys, uint32_t flags)
@@ -204,7 +208,7 @@ static phys_addr_t unmap_pae_page(uint64_t *pdpt, uint32_t virt)
   if (!(pdpt[pdpt_entry] & PAGE_PRESENT))
     return (phys_addr_t){0};
 
-  uint64_t *dir = (uint64_t *)((uint32_t)(pdpt[pdpt_entry] & ~0xFFFull));
+  uint64_t *dir = (uint64_t *)((uint32_t)(pdpt[pdpt_entry] & PAE_ENTRY_ADDR_MASK));
   uint64_t di = (virt >> 21) & 0x1FF;
 
   if(!(dir[di] & PAGE_PRESENT))
@@ -213,7 +217,7 @@ static phys_addr_t unmap_pae_page(uint64_t *pdpt, uint32_t virt)
   uint64_t *table;
   
   if (!window_usable)
-    table = (uint64_t *)(((uint32_t) dir[di]) & ~0xFFFu);
+    table = (uint64_t *)((uint32_t)(dir[di] & PAE_ENTRY_ADDR_MASK));
   else
     table = (uint64_t *)((PAE_WINDOW_BASE + ((virt >> 21) * 0x1000)));
 
@@ -222,7 +226,7 @@ static phys_addr_t unmap_pae_page(uint64_t *pdpt, uint32_t virt)
   if(!(table[ti] & PAGE_PRESENT))
     return (phys_addr_t){0};
 
-  phys_addr_t phys = {table[ti] & ~0xFFFull};
+  phys_addr_t phys = {table[ti] & PAE_ENTRY_ADDR_MASK};
   table[ti] = 0;
 
   __asm__ volatile ("invlpg (%0)" :: "r"(virt) : "memory");

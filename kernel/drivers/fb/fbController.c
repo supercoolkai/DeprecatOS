@@ -90,7 +90,7 @@ void fb_init(MBIInfo *info)
 
   uint32_t j = phys_start;
   for (uint32_t i = virt_start; i < virt_end; i += 0x1000){
-    map_kernel_page(i, (phys_addr_t){j}, PAGE_PRESENT | PAGE_RW);
+    map_kernel_page(i, (phys_addr_t){j}, PAGE_PRESENT | PAGE_RW | PAGE_NX);
     j+=0x1000;
   }
 

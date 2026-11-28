@@ -55,7 +55,7 @@ void userland_init(void)
 
   map_kernel_page(CODE_ADDR, code_frame, PAGE_PRESENT | PAGE_RW | PAGE_USER);
   map_misc_pages();
-  map_kernel_page(STACK_ADDR, stack_frame, PAGE_PRESENT | PAGE_RW | PAGE_USER);
+  map_kernel_page(STACK_ADDR, stack_frame, PAGE_PRESENT | PAGE_RW | PAGE_USER | PAGE_NX);
   
   
 
@@ -87,7 +87,7 @@ void userland_init(void)
     PAGE_PRESENT | PAGE_RW | PAGE_USER};
   rows[1] = (struct region_row) {STACK_ADDR, // stack row
     STACK_ADDR + 0x1000,
-    PAGE_PRESENT | PAGE_RW | PAGE_USER};
+    PAGE_PRESENT | PAGE_RW | PAGE_USER | PAGE_NX};
 
   create_user_process(CODE_ADDR, STACK_ADDR + 0x1000, rows);
 }
