@@ -9,11 +9,13 @@
 #include "memory/heap/kernelHeap.h"
 #include "exceptions/exceptions.h"
 #include "cpu/cpu.h"
+#include <stdbool.h>
 
 static uint32_t *kernel_dir;
 static uint64_t kernel_pdpt[PDPT_SIZE / sizeof(uint64_t)]
 __attribute__((aligned(32)));
 static uint32_t ram_top;
+static bool window_usable = false;
 
 static void track_ram_top(uint64_t base, uint64_t len, uint32_t type)
 {
@@ -33,7 +35,7 @@ static void map_page(uint32_t *dir, uint32_t virt, phys_addr_t phys, uint32_t fl
   if(!(dir[di] & PAGE_PRESENT)) {
     phys_addr_t table_frame = alloc_frame();
 
-    if (table_frame.addr >= HEAP_START || table_frame.addr == 0) {
+    if ((!window_usable && table_frame.addr >= HEAP_START) || table_frame.addr == 0) {
       if (table_frame.addr != 0) free_frame(table_frame);
       kprintf(KPRINTF_RED "map_page: FAILED TO MAP PAGE, MEMORY OUT OF RANGE, TABLE ADDR  = " KPRINTF_RESET);
       print_hex((uint32_t)(table_frame.addr >> 32), RED);
@@ -41,18 +43,26 @@ static void map_page(uint32_t *dir, uint32_t virt, phys_addr_t phys, uint32_t fl
       kprintf(KPRINTF_RED "\n" KPRINTF_RESET);
       return;
     }
+    uint32_t table_addr;
+    uint32_t *table;
 
-    uint32_t table_addr = (uint32_t)table_frame.addr;
-    uint32_t *table = (uint32_t *)table_addr;
+    if (!window_usable){
+      table_addr = (uint32_t)table_frame.addr;
+      table = (uint32_t *)table_addr;
+    }
+    else{
+      table_addr = WINDOW_BASE + ((virt >> 22) * 0x1000);
+      table = (uint32_t *)table_addr;
+    }
 
+    dir[di] = ((uint32_t) table_frame.addr) | PAGE_PRESENT | PAGE_RW;
+    
     for(int i = 0; i < 1024; i++){
       table[i] = 0;
     }
-
-    dir[di] = table_addr | PAGE_PRESENT | PAGE_RW;
   }
 
-  if ((dir[di] & ~0xFFFu) >= HEAP_START || (dir[di] & ~0xFFFu) == 0) {
+  if ((!window_usable && (dir[di] & ~0xFFFu) >= HEAP_START) || (dir[di] & ~0xFFFu) == 0) {
     kprintf(KPRINTF_RED "map_page: FAILED TO MAP PAGE, MEMORY OUT OF RANGE, TABLE ADDR: " KPRINTF_RESET); 
     print_hex((dir[di] & ~0xFFFu), RED);
     kprintf(KPRINTF_RED "\n" KPRINTF_RESET);
@@ -63,7 +73,11 @@ static void map_page(uint32_t *dir, uint32_t virt, phys_addr_t phys, uint32_t fl
     dir[di] |= PAGE_USER;
   }
   
-  uint32_t *table = (uint32_t *)(dir[di] & ~0xFFFu);
+  uint32_t *table;
+  if (!window_usable)
+    table = (uint32_t *)(dir[di] & ~0xFFFu);
+  else
+    table = (uint32_t *)(WINDOW_BASE + ((virt >> 22) * 0x1000));
 
   table[(virt >> 12) & 0x3FF] = (uint32_t)phys.addr | flags;
 }
@@ -90,7 +104,7 @@ static void map_pae_page(uint64_t *pdpt, uint32_t virt, phys_addr_t phys, uint32
       table[i] = 0;
     }
 
-    pdpt[pdpt_entry] = table_addr | PAGE_PRESENT;
+    pdpt[pdpt_entry] = table_frame.addr | PAGE_PRESENT;
   }
   
   uint64_t *dir = (uint64_t *)((uint32_t)(pdpt[pdpt_entry] & ~0xFFFull));
@@ -100,7 +114,7 @@ static void map_pae_page(uint64_t *pdpt, uint32_t virt, phys_addr_t phys, uint32
   if(!(dir[di] & PAGE_PRESENT)) {
     phys_addr_t table_frame = alloc_frame();
 
-    if (table_frame.addr >= HEAP_START || table_frame.addr == 0) {
+    if ((!window_usable && table_frame.addr >= HEAP_START) || table_frame.addr == 0) {
       if (table_frame.addr != 0) free_frame(table_frame);
       kprintf(KPRINTF_RED "map_pae_page: FAILED TO MAP PAGE, MEMORY OUT OF RANGE, TABLE ADDR  = " KPRINTF_RESET);
       print_hex((uint32_t)(table_frame.addr >> 32), RED);
@@ -108,18 +122,26 @@ static void map_pae_page(uint64_t *pdpt, uint32_t virt, phys_addr_t phys, uint32
       kprintf(KPRINTF_RED "\n" KPRINTF_RESET);
       return;
     }
+    
+    uint32_t table_addr;
+    uint64_t *table;
+    if (!window_usable){
+      table_addr = (uint32_t) table_frame.addr;
+      table = (uint64_t *)table_addr;
+    }
+    else{
+      table_addr = (PAE_WINDOW_BASE + ((virt >> 21) * 0x1000));
+      table = (uint64_t *) table_addr;
+    }
 
-    uint32_t table_addr = (uint32_t) table_frame.addr;
-    uint64_t *table = (uint64_t *)table_addr;
+    dir[di] = table_frame.addr | PAGE_PRESENT | PAGE_RW;
 
     for(int i = 0; i < 512; i++){
       table[i] = 0;
     }
-
-    dir[di] = table_addr | PAGE_PRESENT | PAGE_RW;
   }
 
-  if ((dir[di] & ~0xFFFull) >= HEAP_START || (dir[di] & ~0xFFFull) == 0) {
+  if ((!window_usable && (dir[di] & ~0xFFFull) >= HEAP_START) || (dir[di] & ~0xFFFull) == 0) {
     kprintf(KPRINTF_RED "map_pae_page: FAILED TO MAP PAGE, MEMORY OUT OF RANGE, TABLE ADDR: " KPRINTF_RESET); 
     print_hex((uint32_t)(dir[di] >> 32), RED);
     print_hex((uint32_t)dir[di] & ~0xFFFu, RED);
@@ -130,8 +152,12 @@ static void map_pae_page(uint64_t *pdpt, uint32_t virt, phys_addr_t phys, uint32
   if (flags & PAGE_USER){
     dir[di] |= PAGE_USER;
   }
+  uint64_t *table;
   
-  uint64_t *table = (uint64_t *)(((uint32_t) dir[di]) & ~0xFFFu);
+  if (!window_usable)
+    table = (uint64_t *)(((uint32_t) dir[di]) & ~0xFFFu);
+  else
+    table = (uint64_t *)((PAE_WINDOW_BASE + ((virt >> 21) * 0x1000)));
 
   table[(virt >> 12) & 0x1FF] = phys.addr | flags;
 }
@@ -153,7 +179,12 @@ static phys_addr_t unmap_page(uint32_t *dir, uint32_t virt)
   if(!(dir[di] & PAGE_PRESENT))
     return (phys_addr_t){0};
 
-  uint32_t *table = (uint32_t *)(dir[di] & ~0xFFFu);
+  uint32_t *table;
+  if (!window_usable)
+    table = (uint32_t *)(dir[di] & ~0xFFFu);
+  else
+    table = (uint32_t *)(WINDOW_BASE + ((virt >> 22) * 0x1000));
+  
   uint32_t ti = (virt >> 12) & 0x3FF;
 
   if(!(table[ti] & PAGE_PRESENT))
@@ -179,7 +210,13 @@ static phys_addr_t unmap_pae_page(uint64_t *pdpt, uint32_t virt)
   if(!(dir[di] & PAGE_PRESENT))
     return (phys_addr_t){0};
 
-  uint64_t *table = (uint64_t *)((uint32_t)(dir[di] & ~0xFFFull));
+  uint64_t *table;
+  
+  if (!window_usable)
+    table = (uint64_t *)(((uint32_t) dir[di]) & ~0xFFFu);
+  else
+    table = (uint64_t *)((PAE_WINDOW_BASE + ((virt >> 21) * 0x1000)));
+
   uint64_t ti = (virt >> 12) & 0x1FF;
 
   if(!(table[ti] & PAGE_PRESENT))
@@ -232,9 +269,10 @@ void paging_init(MBIInfo *info)
       first_dir[i] = (uint64_t)((uint32_t) dir) | PAGE_PRESENT | PAGE_RW;
     }
 
-    kernel_ceiling = PDPT_SELF_POINT_BASE << 21;
+    kernel_ceiling = PAE_WINDOW_BASE;
 
     paging_enable((uint32_t) kernel_pdpt);
+    window_usable = true;
 
     return;
   }
@@ -252,8 +290,11 @@ void paging_init(MBIInfo *info)
   }
 
   kernel_dir[KERNEL_DIR_SELF_POINT] = (uint32_t)(((uint32_t) kernel_dir) | PAGE_PRESENT | PAGE_RW);
+  
+  kernel_ceiling = WINDOW_BASE;
 
   paging_enable((uint32_t) kernel_dir);
+  window_usable = true;
 }
 
 

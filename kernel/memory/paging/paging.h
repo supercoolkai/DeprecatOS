@@ -13,6 +13,9 @@
 
 #define KERNEL_DIR_SELF_POINT 255
 
+#define PAE_WINDOW_BASE (PDPT_SELF_POINT_BASE << 21)
+#define WINDOW_BASE (KERNEL_DIR_SELF_POINT << 22)
+
 #include <stdint.h>
 #include "memory/mmap/memoryMap.h"
 #include "memory/structs/physAddr.h"
